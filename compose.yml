@@ -1,0 +1,63 @@
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - core-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U core -d core"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - core-network
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - core-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - core-network
+
+  core:
+    build:
+      context: .
+      dockerfile: apps/core/Dockerfile
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      WEBSOCKET_URL: ${WEBSOCKET_URL}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - core-network
+
+  api-gateway:
+    build:
+      context: apps/api-gateway
+      dockerfile: Dockerfile
+    networks:
+      - core-network
+    ports:
+      - "8080:8080"
+
+volumes:
+  core-postgres-data:
+  core-redis-data:
+
+networks:
+  core-network:
