@@ -1,0 +1,10 @@
+{
+  "name": "api-gateway",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "go build -o bin/server main.go",
+    "dev": "go run main.go",
+    "start": "go run main.go"
+  }
+}
