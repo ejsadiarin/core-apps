@@ -4,10 +4,10 @@ import { motion } from "motion/react";
 import { NavigationHeader } from "./navigation-header";
 
 export function MainLayout({
-    children,
-  }: Readonly<{
-    children: React.ReactNode;
-  }>) {
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <NavigationHeader />

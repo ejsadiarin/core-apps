@@ -1,46 +1,119 @@
+"use client";
+
 import { motion } from "motion/react";
-import { LucideIcon } from "lucide-react";
+import {
+  Globe,
+  Server,
+  Database,
+  Cloud,
+  Lock,
+  FileText,
+  Video,
+  Download,
+  Mail,
+  Code,
+  HardDrive,
+  Wifi,
+  Activity,
+  type LucideIcon,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import type { Service } from "@/types/api";
+import { formatDistanceToNow } from "date-fns";
+
+// Map of service type/icon names to Lucide icons
+const iconMap: Record<string, LucideIcon> = {
+  server: Server,
+  database: Database,
+  cloud: Cloud,
+  lock: Lock,
+  file: FileText,
+  video: Video,
+  download: Download,
+  globe: Globe,
+  mail: Mail,
+  code: Code,
+  storage: HardDrive,
+  wifi: Wifi,
+  web: Globe,
+  api: Server,
+  default: Activity,
+};
+
+// Get icon based on service type or icon field
+function getServiceIcon(service: Service): LucideIcon {
+  // First try the icon field
+  if (service.icon) {
+    const iconKey = service.icon.toLowerCase();
+    if (iconMap[iconKey]) return iconMap[iconKey];
+  }
+  // Then try service_type
+  if (service.service_type) {
+    const typeKey = service.service_type.toLowerCase();
+    if (iconMap[typeKey]) return iconMap[typeKey];
+  }
+  // Default
+  return iconMap.default;
+}
+
+type ServiceStatus = "online" | "offline" | "degraded" | "maintenance" | "unknown";
 
 interface ServiceCardProps {
-  icon: LucideIcon;
-  title: string;
-  description: string;
-  status: "online" | "offline" | "maintenance";
-  metrics?: {
-    label: string;
-    value: string;
-  }[];
+  service: Service;
+  onClick?: () => void;
   delay?: number;
 }
 
-export function ServiceCard({ icon: Icon, title, description, status, metrics, delay = 0 }: ServiceCardProps) {
-  const statusColors = {
-    online: "text-accent border-accent/50 bg-accent/10",
-    offline: "text-destructive border-destructive/50 bg-destructive/10",
-    maintenance: "text-secondary border-secondary/50 bg-secondary/10",
-  };
+const statusColors: Record<ServiceStatus, string> = {
+  online: "text-accent border-accent/50 bg-accent/10",
+  offline: "text-destructive border-destructive/50 bg-destructive/10",
+  degraded: "text-yellow-500 border-yellow-500/50 bg-yellow-500/10",
+  maintenance: "text-secondary border-secondary/50 bg-secondary/10",
+  unknown: "text-muted-foreground border-muted-foreground/50 bg-muted-foreground/10",
+};
 
-  const statusLabels = {
-    online: "ONLINE",
-    offline: "OFFLINE",
-    maintenance: "MAINTENANCE",
-  };
+const statusLabels: Record<ServiceStatus, string> = {
+  online: "ONLINE",
+  offline: "OFFLINE",
+  degraded: "DEGRADED",
+  maintenance: "MAINTENANCE",
+  unknown: "UNKNOWN",
+};
+
+function formatResponseTime(ms?: number): string {
+  if (!ms) return "N/A";
+  if (ms < 1000) return `${ms}ms`;
+  return `${(ms / 1000).toFixed(2)}s`;
+}
+
+function formatLastCheck(timestamp?: string): string {
+  if (!timestamp) return "Never";
+  try {
+    return formatDistanceToNow(new Date(timestamp), { addSuffix: true });
+  } catch {
+    return "Unknown";
+  }
+}
+
+export function ServiceCard({ service, onClick, delay = 0 }: ServiceCardProps) {
+  const Icon = getServiceIcon(service);
+  const status: ServiceStatus = service.current_status ?? "unknown";
 
   return (
     <motion.div
-      className="group relative overflow-hidden rounded-lg border border-border bg-card backdrop-blur-md p-6 transition-all duration-300 hover:border-primary/50 hover:shadow-lg hover:shadow-primary/20"
+      className="group relative overflow-hidden rounded-lg border border-border bg-card backdrop-blur-md p-6 transition-all duration-300 hover:border-primary/50 hover:shadow-lg hover:shadow-primary/20 cursor-pointer"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay }}
       whileHover={{ y: -5 }}
+      onClick={onClick}
     >
       {/* Shimmer Effect on Hover */}
       <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
         <div
           className="absolute inset-0 w-1/2 h-full bg-gradient-to-r from-transparent via-primary/10 to-transparent"
           style={{
-            animation: 'shimmer 2s ease-in-out infinite',
+            animation: "shimmer 2s ease-in-out infinite",
           }}
         />
       </div>
@@ -53,8 +126,10 @@ export function ServiceCard({ icon: Icon, title, description, status, metrics, d
               <Icon className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h3 className="text-card-foreground">{title}</h3>
-              <p className="text-xs text-muted-foreground mt-1">{description}</p>
+              <h3 className="text-card-foreground font-medium">{service.name}</h3>
+              <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
+                {service.description || service.service_type || "Service"}
+              </p>
             </div>
           </div>
           <Badge className={`${statusColors[status]} border text-xs`}>
@@ -64,16 +139,20 @@ export function ServiceCard({ icon: Icon, title, description, status, metrics, d
         </div>
 
         {/* Metrics */}
-        {metrics && metrics.length > 0 && (
-          <div className="grid grid-cols-2 gap-3 pt-4 border-t border-border/50">
-            {metrics.map((metric, idx) => (
-              <div key={idx} className="flex flex-col">
-                <span className="text-xs text-muted-foreground">{metric.label}</span>
-                <span className="text-sm text-card-foreground mt-1">{metric.value}</span>
-              </div>
-            ))}
+        <div className="grid grid-cols-2 gap-3 pt-4 border-t border-border/50">
+          <div className="flex flex-col">
+            <span className="text-xs text-muted-foreground">Response Time</span>
+            <span className="text-sm text-card-foreground mt-1">
+              {formatResponseTime(service.response_time)}
+            </span>
           </div>
-        )}
+          <div className="flex flex-col">
+            <span className="text-xs text-muted-foreground">Last Check</span>
+            <span className="text-sm text-card-foreground mt-1">
+              {formatLastCheck(service.last_check)}
+            </span>
+          </div>
+        </div>
 
         {/* Hover Accent Line */}
         <motion.div
@@ -82,6 +161,39 @@ export function ServiceCard({ icon: Icon, title, description, status, metrics, d
           whileHover={{ width: "100%" }}
           transition={{ duration: 0.3 }}
         />
+      </div>
+    </motion.div>
+  );
+}
+
+// Loading skeleton for service card
+export function ServiceCardSkeleton({ delay = 0 }: { delay?: number }) {
+  return (
+    <motion.div
+      className="relative overflow-hidden rounded-lg border border-border bg-card backdrop-blur-md p-6"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay }}
+    >
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-muted animate-pulse" />
+          <div>
+            <div className="h-4 w-24 bg-muted rounded animate-pulse" />
+            <div className="h-3 w-32 bg-muted rounded animate-pulse mt-2" />
+          </div>
+        </div>
+        <div className="h-5 w-16 bg-muted rounded animate-pulse" />
+      </div>
+      <div className="grid grid-cols-2 gap-3 pt-4 border-t border-border/50">
+        <div>
+          <div className="h-3 w-16 bg-muted rounded animate-pulse" />
+          <div className="h-4 w-12 bg-muted rounded animate-pulse mt-2" />
+        </div>
+        <div>
+          <div className="h-3 w-16 bg-muted rounded animate-pulse" />
+          <div className="h-4 w-20 bg-muted rounded animate-pulse mt-2" />
+        </div>
       </div>
     </motion.div>
   );

@@ -4,22 +4,27 @@ import { motion } from "motion/react";
 import { Server, Zap, Shield, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 export function EntrancePortal() {
   const router = useRouter();
-  
+  const [ yes, setYes ] = useState(null)
+
   return (
     <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Animated Grid Background */}
       <div className="absolute inset-0 opacity-30">
-        <div className="absolute inset-0" style={{
-          backgroundImage: `
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage: `
             linear-gradient(rgba(0, 229, 204, 0.1) 1px, transparent 1px),
             linear-gradient(90deg, rgba(0, 229, 204, 0.1) 1px, transparent 1px)
           `,
-          backgroundSize: '50px 50px',
-          animation: 'grid-glow 4s ease-in-out infinite'
-        }} />
+            backgroundSize: "50px 50px",
+            animation: "grid-glow 4s ease-in-out infinite",
+          }}
+        />
       </div>
 
       {/* Scanning Line Effect */}
@@ -51,14 +56,14 @@ export function EntrancePortal() {
       </div>
 
       {/* Main Content */}
-      <div className="relative z-10 text-center px-4 max-w-5xl mx-auto">
+      <section className="relative z-10 text-center px-4 max-w-5xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
         >
           {/* Status Indicators */}
-          <div className="flex justify-center gap-6 mb-12">
+          <section className="flex justify-center gap-6 mb-12">
             {[
               { icon: Server, label: "SYSTEMS", status: "ONLINE" },
               { icon: Shield, label: "SECURITY", status: "ACTIVE" },
@@ -71,14 +76,19 @@ export function EntrancePortal() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.5, delay: idx * 0.1 }}
               >
-                <item.icon className="w-4 h-4 text-primary" style={{ animation: 'glow-pulse 2s ease-in-out infinite' }} />
+                <item.icon
+                  className="w-4 h-4 text-primary"
+                  style={{ animation: "glow-pulse 2s ease-in-out infinite" }}
+                />
                 <div className="flex flex-col items-start">
-                  <span className="text-xs text-muted-foreground">{item.label}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {item.label}
+                  </span>
                   <span className="text-xs text-accent">{item.status}</span>
                 </div>
               </motion.div>
             ))}
-          </div>
+          </section>
 
           {/* Main Title */}
           <motion.h1
@@ -97,20 +107,22 @@ export function EntrancePortal() {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.5 }}
           >
-            Welcome to the central management interface for your homelab infrastructure.
-            All systems are operational and awaiting commands.
+            Welcome to the central management interface for your homelab
+            infrastructure. All systems are operational and awaiting commands.
           </motion.p>
 
           {/* Version Badge */}
-          <motion.div
+          <motion.section
             className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-accent/30 bg-accent/10 mb-12"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.6 }}
           >
             <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-            <span className="text-xs text-accent">CORE v1.0.0 | MATRIX ACTIVE</span>
-          </motion.div>
+            <span className="text-xs text-accent">
+              CORE v1.0.0 | MATRIX ACTIVE
+            </span>
+          </motion.section>
 
           {/* Central Hexagon Portal */}
           <motion.div
@@ -121,16 +133,22 @@ export function EntrancePortal() {
           >
             <svg viewBox="0 0 100 100" className="w-full h-full">
               <defs>
-                <linearGradient id="hexGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <linearGradient
+                  id="hexGradient"
+                  x1="0%"
+                  y1="0%"
+                  x2="100%"
+                  y2="100%"
+                >
                   <stop offset="0%" stopColor="#00e5cc" stopOpacity="0.8" />
                   <stop offset="50%" stopColor="#10b981" stopOpacity="0.6" />
                   <stop offset="100%" stopColor="#6366f1" stopOpacity="0.8" />
                 </linearGradient>
                 <filter id="glow">
-                  <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+                  <feGaussianBlur stdDeviation="2" result="coloredBlur" />
                   <feMerge>
-                    <feMergeNode in="coloredBlur"/>
-                    <feMergeNode in="SourceGraphic"/>
+                    <feMergeNode in="coloredBlur" />
+                    <feMergeNode in="SourceGraphic" />
                   </feMerge>
                 </filter>
               </defs>
@@ -164,13 +182,7 @@ export function EntrancePortal() {
                   delay: 0.5,
                 }}
               />
-              <circle
-                cx="50"
-                cy="50"
-                r="8"
-                fill="#00e5cc"
-                opacity="0.6"
-              >
+              <circle cx="50" cy="50" r="8" fill="#00e5cc" opacity="0.6">
                 <animate
                   attributeName="r"
                   values="6;10;6"
@@ -207,7 +219,7 @@ export function EntrancePortal() {
             </Button>
           </motion.div>
         </motion.div>
-      </div>
+      </section>
 
       {/* Corner Decorations */}
       <div className="absolute top-8 left-8 w-16 h-16 border-l-2 border-t-2 border-primary/50" />
