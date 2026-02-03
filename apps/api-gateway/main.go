@@ -10,7 +10,6 @@
 // @license.url https://opensource.org/licenses/MIT
 
 // @host localhost:8080
-// @BasePath /
 // @schemes http https
 
 package main
@@ -30,6 +29,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	_ "github.com/joho/godotenv/autoload"
 	"github.com/labstack/echo/v4"
 	echomiddleware "github.com/labstack/echo/v4/middleware"
 	"github.com/rs/zerolog"
@@ -55,6 +55,8 @@ type ServiceStatus struct {
 	Status string `json:"status"`
 	Type   string `json:"type"`
 }
+
+const tite = "asdf"
 
 func main() {
 	// Initialize zerolog
@@ -101,6 +103,7 @@ func main() {
 
 	// Initialize handlers
 	serviceHandler := handlers.NewServiceHandler(queries, &logger)
+	budgetHandler := handlers.NewBudgetHandler(queries, &logger)
 
 	// Initialize Echo
 	e := echo.New()
@@ -176,6 +179,37 @@ func main() {
 			services.GET("/:id/history", serviceHandler.GetServiceHistory)
 			services.GET("/:id/stats", serviceHandler.GetServiceStats)
 			services.GET("/stats/all", serviceHandler.GetAllServicesStats)
+		}
+
+		budget := api.Group("/budget")
+		{
+			// Categories
+			categories := budget.Group("/categories")
+			categories.POST("", budgetHandler.CreateCategory)
+			categories.GET("", budgetHandler.ListCategories)
+			categories.PUT("/:id", budgetHandler.UpdateCategory)
+			categories.DELETE("/:id", budgetHandler.DeleteCategory)
+
+			// Tags
+			tags := budget.Group("/tags")
+			tags.POST("", budgetHandler.CreateTag)
+			tags.GET("", budgetHandler.ListTags)
+			tags.PUT("/:id", budgetHandler.UpdateTag)
+			tags.DELETE("/:id", budgetHandler.DeleteTag)
+
+			// Expenses
+			expenses := budget.Group("/expenses")
+			expenses.POST("", budgetHandler.CreateExpense)
+			expenses.GET("", budgetHandler.ListExpenses)
+			expenses.GET("/:id", budgetHandler.GetExpense)
+			expenses.PUT("/:id", budgetHandler.UpdateExpense)
+			expenses.DELETE("/:id", budgetHandler.DeleteExpense)
+
+			// Stats
+			stats := budget.Group("/stats")
+			stats.GET("/summary", budgetHandler.GetSummary)
+			stats.GET("/trends", budgetHandler.GetTrends)
+			stats.GET("/category-breakdown", budgetHandler.GetCategoryBreakdown)
 		}
 	}
 

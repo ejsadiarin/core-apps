@@ -1,0 +1,175 @@
+-- Categories
+
+-- name: CreateCategory :one
+INSERT INTO budget_categories (
+    name, color, icon
+) VALUES (
+    $1, $2, $3
+)
+RETURNING *;
+
+-- name: GetCategory :one
+SELECT * FROM budget_categories
+WHERE id = $1 LIMIT 1;
+
+-- name: ListCategories :many
+SELECT * FROM budget_categories
+ORDER BY name;
+
+-- name: UpdateCategory :one
+UPDATE budget_categories
+SET
+    name = COALESCE(sqlc.narg('name'), name),
+    color = COALESCE(sqlc.narg('color'), color),
+    icon = COALESCE(sqlc.narg('icon'), icon)
+WHERE id = $1
+RETURNING *;
+
+-- name: DeleteCategory :exec
+DELETE FROM budget_categories
+WHERE id = $1;
+
+-- Tags
+
+-- name: CreateTag :one
+INSERT INTO budget_tags (
+    name, color
+) VALUES (
+    $1, $2
+)
+RETURNING *;
+
+-- name: GetTag :one
+SELECT * FROM budget_tags
+WHERE id = $1 LIMIT 1;
+
+-- name: ListTags :many
+SELECT * FROM budget_tags
+ORDER BY name;
+
+-- name: UpdateTag :one
+UPDATE budget_tags
+SET
+    name = COALESCE(sqlc.narg('name'), name),
+    color = COALESCE(sqlc.narg('color'), color)
+WHERE id = $1
+RETURNING *;
+
+-- name: DeleteTag :exec
+DELETE FROM budget_tags
+WHERE id = $1;
+
+-- Expenses
+
+-- name: CreateExpense :one
+INSERT INTO budget_expenses (
+    description, amount, currency, category_id, expense_date, notes
+) VALUES (
+    $1, $2, $3, $4, $5, $6
+)
+RETURNING *;
+
+-- name: GetExpense :one
+SELECT * FROM budget_expenses
+WHERE id = $1 LIMIT 1;
+
+-- name: ListExpenses :many
+SELECT e.*, c.name as category_name, c.color as category_color, c.icon as category_icon
+FROM budget_expenses e
+LEFT JOIN budget_categories c ON e.category_id = c.id
+WHERE
+    (sqlc.narg('category_id')::uuid IS NULL OR e.category_id = sqlc.narg('category_id'))
+    AND (sqlc.narg('start_date')::date IS NULL OR e.expense_date >= sqlc.narg('start_date')::date)
+    AND (sqlc.narg('end_date')::date IS NULL OR e.expense_date <= sqlc.narg('end_date')::date)
+ORDER BY e.expense_date DESC, e.created_at DESC;
+
+-- name: UpdateExpense :one
+UPDATE budget_expenses
+SET
+    description = COALESCE(sqlc.narg('description'), description),
+    amount = COALESCE(sqlc.narg('amount'), amount),
+    currency = COALESCE(sqlc.narg('currency'), currency),
+    category_id = COALESCE(sqlc.narg('category_id'), category_id),
+    expense_date = COALESCE(sqlc.narg('expense_date'), expense_date),
+    notes = COALESCE(sqlc.narg('notes'), notes),
+    updated_at = NOW()
+WHERE id = $1
+RETURNING *;
+
+-- name: DeleteExpense :exec
+DELETE FROM budget_expenses
+WHERE id = $1;
+
+-- Expense Tags
+
+-- name: AddExpenseTag :exec
+INSERT INTO budget_expense_tags (expense_id, tag_id)
+VALUES ($1, $2)
+ON CONFLICT DO NOTHING;
+
+-- name: RemoveExpenseTag :exec
+DELETE FROM budget_expense_tags
+WHERE expense_id = $1 AND tag_id = $2;
+
+-- name: RemoveAllExpenseTags :exec
+DELETE FROM budget_expense_tags
+WHERE expense_id = $1;
+
+-- name: GetExpenseTags :many
+SELECT t.*
+FROM budget_tags t
+JOIN budget_expense_tags et ON t.id = et.tag_id
+WHERE et.expense_id = $1;
+
+-- Statistics
+
+-- name: GetExpensesByDateRange :many
+SELECT * FROM budget_expenses
+WHERE expense_date BETWEEN $1 AND $2
+ORDER BY expense_date DESC;
+
+-- name: GetCategorySpending :many
+SELECT
+    c.id,
+    c.name,
+    c.color,
+    COALESCE(SUM(e.amount), 0::numeric) as total_amount,
+    COUNT(e.id) as transaction_count
+FROM budget_expenses e
+JOIN budget_categories c ON e.category_id = c.id
+WHERE
+    (sqlc.narg('start_date')::date IS NULL OR e.expense_date >= sqlc.narg('start_date')::date)
+    AND (sqlc.narg('end_date')::date IS NULL OR e.expense_date <= sqlc.narg('end_date')::date)
+GROUP BY c.id, c.name, c.color
+ORDER BY total_amount DESC;
+
+-- name: GetDailySpending :many
+SELECT
+    expense_date,
+    COALESCE(SUM(amount), 0::numeric) as total_amount,
+    COUNT(id) as transaction_count
+FROM budget_expenses
+WHERE
+    (sqlc.narg('start_date')::date IS NULL OR expense_date >= sqlc.narg('start_date')::date)
+    AND (sqlc.narg('end_date')::date IS NULL OR expense_date <= sqlc.narg('end_date')::date)
+GROUP BY expense_date
+ORDER BY expense_date ASC;
+
+-- name: GetMonthlySpending :many
+SELECT
+    TO_CHAR(expense_date, 'YYYY-MM') as month,
+    COALESCE(SUM(amount), 0::numeric) as total_amount,
+    COUNT(id) as transaction_count
+FROM budget_expenses
+GROUP BY month
+ORDER BY month DESC
+LIMIT 12;
+
+-- name: GetTotalSpending :one
+SELECT
+    COALESCE(SUM(amount), 0::numeric) as total_amount,
+    COUNT(id) as transaction_count
+FROM budget_expenses
+WHERE
+    (sqlc.narg('start_date')::date IS NULL OR expense_date >= sqlc.narg('start_date')::date)
+    AND (sqlc.narg('end_date')::date IS NULL OR expense_date <= sqlc.narg('end_date')::date);

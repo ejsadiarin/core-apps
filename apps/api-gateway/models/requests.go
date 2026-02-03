@@ -1,3 +1,4 @@
+// Package models provides request and response data structures for the API.
 package models
 
 // CreateServiceRequest represents the request to create a new service

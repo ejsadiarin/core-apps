@@ -304,12 +304,12 @@ Structured Logging (zerolog)
 
 ### Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DATABASE_URL` | `postgresql://core:core@postgres:5432/core` | PostgreSQL connection string |
-| `PORT` | `8080` | Server port |
-| `ENV` | `development` | Environment (development/production) |
-| `FRONTEND_URL` | - | Frontend URL for CORS |
+| Variable       | Default                                     | Description                          |
+| -------------- | ------------------------------------------- | ------------------------------------ |
+| `DATABASE_URL` | `postgresql://core:core@postgres:5432/core` | PostgreSQL connection string         |
+| `PORT`         | `8080`                                      | Server port                          |
+| `ENV`          | `development`                               | Environment (development/production) |
+| `FRONTEND_URL` | -                                           | Frontend URL for CORS                |
 
 ### Logging
 
@@ -334,13 +334,13 @@ Validation errors return:
 
 ```json
 {
-  "error": "Validation failed",
-  "details": [
-    {
-      "field": "URL",
-      "message": "Invalid URL format"
-    }
-  ]
+    "error": "Validation failed",
+    "details": [
+        {
+            "field": "URL",
+            "message": "Invalid URL format"
+        }
+    ]
 }
 ```
 

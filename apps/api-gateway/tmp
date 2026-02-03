@@ -1,0 +1,4 @@
+Alright before proceeding, i have a few questions:
+- I added godotenv and imported the autoload package, where should i import it? Should i import it in the @web/apps/api-gateway/main.go or in @web/apps/api-gateway/db/db.go (the idea is that if i import it in main.go, will it load the env vars that can be used by the other files like db.go or should i autoload import it only on things that needs it like db.go, what are the implications of this)?
+- for database management and migrations, im planning to use sqlc and goose. Is this better?
+Don'
