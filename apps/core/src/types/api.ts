@@ -85,3 +85,100 @@ export interface UpdateServiceRequest {
     is_active?: boolean;
 }
 
+// Budget Types
+
+export interface Category {
+    id: string;
+    name: string;
+    color?: string;
+    icon?: string;
+}
+
+export interface Tag {
+    id: string;
+    name: string;
+    color?: string;
+}
+
+export interface Expense {
+    id: string;
+    description: string;
+    amount: number;
+    currency: string;
+    category?: Category;
+    expense_date: string;
+    notes?: string;
+    tags?: Tag[];
+    created_at: string;
+    updated_at: string;
+}
+
+export interface CreateCategoryRequest {
+    name: string;
+    color?: string;
+    icon?: string;
+}
+
+export interface UpdateCategoryRequest {
+    name?: string;
+    color?: string;
+    icon?: string;
+}
+
+export interface CreateTagRequest {
+    name: string;
+    color?: string;
+}
+
+export interface UpdateTagRequest {
+    name?: string;
+    color?: string;
+}
+
+export interface CreateExpenseRequest {
+    description: string;
+    amount: number;
+    currency?: string;
+    category_id?: string;
+    expense_date: string;
+    notes?: string;
+    tag_ids?: string[];
+}
+
+export interface UpdateExpenseRequest {
+    description?: string;
+    amount?: number;
+    currency?: string;
+    category_id?: string;
+    expense_date?: string;
+    notes?: string;
+    tag_ids?: string[];
+}
+
+export interface ExpenseFilters {
+    start_date?: string;
+    end_date?: string;
+    category_id?: string;
+}
+
+export interface SummaryStats {
+    total_spent: number;
+    transaction_count: number;
+    period: string;
+}
+
+export interface CategoryBreakdown {
+    category_id: string;
+    category_name: string;
+    color?: string;
+    total_amount: number;
+    count: number;
+    percentage: number;
+}
+
+export interface TrendItem {
+    date: string;
+    total_amount: number;
+    count: number;
+}
+
