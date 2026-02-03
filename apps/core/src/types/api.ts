@@ -12,7 +12,7 @@ export interface SystemStats {
 
 export interface ServiceStatus {
     name: string;
-    status: "online" | "offline" | "maintenance";
+    status: "online" | "offline" | "degraded" | "maintenance" | "unknown";
     type: string;
 }
 
