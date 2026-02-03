@@ -59,6 +59,7 @@ export function NavigationHeader() {
           <nav className="hidden md:flex items-center gap-1">
             {[
               { name: "Dashboard", path: "/dashboard" },
+              { name: "Budget", path: "/dashboard/budget" },
               { name: "Services", path: "/services" },
               { name: "Analytics", path: "/analytics" },
               { name: "Logs", path: "/logs" },

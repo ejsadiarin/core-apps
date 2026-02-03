@@ -1,0 +1,172 @@
+"use client";
+
+import { motion } from "motion/react";
+import { useState } from "react";
+import { ExpenseStats } from "@/components/budget/expense-stats";
+import { useSummaryStats, useExpenses } from "@/hooks/use-budget";
+import { Button } from "@/components/ui/button";
+import { Plus, ArrowRight, Receipt, Settings } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import Link from "next/link";
+import { formatDistanceToNow } from "date-fns";
+
+export default function BudgetDashboard() {
+  const [period] = useState<string>("month");
+  const { data: summaryStats, isLoading: statsLoading } = useSummaryStats(period);
+  const { data: recentExpenses, isLoading: expensesLoading } = useExpenses();
+
+  // get last 5 expenses
+  const displayExpenses = recentExpenses?.slice(0, 5) || [];
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      {/* Header */}
+      <motion.div
+        className="mb-8 flex items-center justify-between"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <div>
+          <h1 className="text-primary mb-2">BUDGET TRACKER</h1>
+          <p className="text-sm text-muted-foreground">
+            Track and manage your expenses
+          </p>
+        </div>
+        <Link href="/dashboard/budget/expenses/new">
+          <Button>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Expense
+          </Button>
+        </Link>
+      </motion.div>
+
+      {/* Summary Statistics */}
+      <motion.div
+        className="mb-8"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.1 }}
+      >
+        <ExpenseStats stats={summaryStats} isLoading={statsLoading} />
+      </motion.div>
+
+      {/* Recent Expenses */}
+      <motion.div
+        className="grid gap-6 lg:grid-cols-2"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+      >
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Recent Expenses</CardTitle>
+                <CardDescription>Your latest transactions</CardDescription>
+              </div>
+              <Link href="/dashboard/budget/expenses">
+                <Button variant="ghost" size="sm">
+                  View All
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {expensesLoading ? (
+              <div className="space-y-4">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="flex items-center space-x-4 animate-pulse">
+                    <div className="h-10 w-10 bg-muted rounded-full" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 w-3/4 bg-muted rounded" />
+                      <div className="h-3 w-1/2 bg-muted rounded" />
+                    </div>
+                    <div className="h-6 w-20 bg-muted rounded" />
+                  </div>
+                ))}
+              </div>
+            ) : displayExpenses.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <p>No expenses yet</p>
+                <Link href="/dashboard/budget/expenses/new">
+                  <Button variant="outline" size="sm" className="mt-4">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add your first expense
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {displayExpenses.map((expense) => (
+                  <div
+                    key={expense.id}
+                    className="flex items-center justify-between p-3 rounded-lg border border-border/50 hover:border-border transition-colors"
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">{expense.description}</p>
+                        {expense.category && (
+                          <span
+                            className="text-xs px-2 py-0.5 rounded-full"
+                            style={{
+                              backgroundColor: expense.category.color
+                                ? `${expense.category.color}20`
+                                : undefined,
+                              color: expense.category.color || "inherit",
+                            }}
+                          >
+                            {expense.category.name}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {formatDistanceToNow(new Date(expense.expense_date), {
+                          addSuffix: true,
+                        })}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold">
+                        {expense.currency} {expense.amount.toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Quick Actions */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Quick Actions</CardTitle>
+            <CardDescription>Manage your budget</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <Link href="/dashboard/budget/expenses/new" className="block">
+              <Button variant="outline" className="w-full justify-start">
+                <Plus className="mr-2 h-4 w-4" />
+                Add New Expense
+              </Button>
+            </Link>
+            <Link href="/dashboard/budget/expenses" className="block">
+              <Button variant="outline" className="w-full justify-start">
+                <Receipt className="mr-2 h-4 w-4" />
+                View All Expenses
+              </Button>
+            </Link>
+            <Link href="/dashboard/budget/settings" className="block">
+              <Button variant="outline" className="w-full justify-start">
+                <Settings className="mr-2 h-4 w-4" />
+                Manage Categories & Tags
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </motion.div>
+    </div>
+  );
+}
