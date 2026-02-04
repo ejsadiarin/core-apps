@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -70,7 +69,7 @@ export function ExpenseDetailDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="max-w-[95vw] sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Expense Details</DialogTitle>
             <DialogDescription>
@@ -78,95 +77,102 @@ export function ExpenseDetailDialog({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 mt-4">
-            <div className="flex items-start gap-4">
-              <div className="min-w-0 flex-1 overflow-hidden">
-                <h3 className="text-lg font-semibold break-words overflow-wrap-anywhere" title={expense.description}>
-                  {expense.description}
-                </h3>
-                {expense.category && (
+          <div className="space-y-4 mt-2">
+            {/* Category */}
+            {expense.category && (
+              <div>
+                <Badge
+                  variant="outline"
+                  className="text-sm"
+                  style={{
+                    backgroundColor: expense.category.color
+                      ? `${expense.category.color}20`
+                      : undefined,
+                    borderColor: expense.category.color || undefined,
+                    color: expense.category.color || "inherit",
+                  }}
+                >
+                  {expense.category.icon && <span className="mr-1">{expense.category.icon}</span>}
+                  {expense.category.name}
+                </Badge>
+              </div>
+            )}
+
+            {/* Title + Price row */}
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+              <h3 
+                className="text-lg font-semibold leading-tight break-words min-w-0 flex-1"
+                style={{ wordBreak: "break-word", overflowWrap: "anywhere" }}
+              >
+                {expense.description}
+              </h3>
+              <p className="text-2xl font-bold text-primary shrink-0">
+                {expense.currency} {expense.amount.toFixed(2)}
+              </p>
+            </div>
+
+            {/* Notes */}
+            {expense.notes && (
+              <div className="rounded-lg bg-muted/50 p-3">
+                <p 
+                  className="text-sm text-muted-foreground"
+                  style={{ wordBreak: "break-word", overflowWrap: "anywhere", whiteSpace: "pre-wrap" }}
+                >
+                  {expense.notes}
+                </p>
+              </div>
+            )}
+
+            {/* Tags */}
+            {expense.tags && expense.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {(tagsExpanded ? expense.tags : expense.tags.slice(0, 5)).map((tag) => (
+                  <Badge
+                    key={tag.id}
+                    variant="secondary"
+                    className="text-xs"
+                    style={{
+                      backgroundColor: tag.color ? `${tag.color}15` : undefined,
+                      color: tag.color || "inherit",
+                    }}
+                  >
+                    <TagIcon className="mr-1 h-3 w-3" />
+                    {tag.name}
+                  </Badge>
+                ))}
+                {expense.tags.length > 5 && !tagsExpanded && (
                   <Badge
                     variant="outline"
-                    className="mt-1 inline-block"
-                    style={{
-                      backgroundColor: expense.category.color
-                        ? `${expense.category.color}20`
-                        : undefined,
-                      borderColor: expense.category.color || undefined,
-                      color: expense.category.color || "inherit",
-                    }}
-                    title={expense.category.name}
+                    className="text-xs cursor-pointer hover:bg-accent transition-colors"
+                    onClick={() => setTagsExpanded(true)}
                   >
-                    {expense.category.icon && <span className="mr-1">{expense.category.icon}</span>}
-                    <span className="truncate max-w-[150px] inline-block">{expense.category.name}</span>
+                    +{expense.tags.length - 5} more
+                    <ChevronDown className="ml-1 h-3 w-3" />
+                  </Badge>
+                )}
+                {tagsExpanded && expense.tags.length > 5 && (
+                  <Badge
+                    variant="outline"
+                    className="text-xs cursor-pointer hover:bg-accent transition-colors"
+                    onClick={() => setTagsExpanded(false)}
+                  >
+                    Show less
+                    <ChevronUp className="ml-1 h-3 w-3" />
                   </Badge>
                 )}
               </div>
-              <div className="text-right shrink-0">
-                <p className="text-2xl font-bold text-primary whitespace-nowrap">
-                  {expense.currency} {expense.amount.toFixed(2)}
-                </p>
-              </div>
-            </div>
-
-            {expense.notes && (
-              <Card>
-                <CardContent className="p-3">
-                  <p className="text-sm text-muted-foreground break-words whitespace-pre-wrap">{expense.notes}</p>
-                </CardContent>
-              </Card>
             )}
 
-            <div className="flex flex-wrap gap-2">
-              {expense.tags && expense.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {(tagsExpanded ? expense.tags : expense.tags.slice(0, 3)).map((tag) => (
-                    <Badge
-                      key={tag.id}
-                      variant="secondary"
-                      className="text-xs"
-                      style={{
-                        backgroundColor: tag.color ? `${tag.color}15` : undefined,
-                        color: tag.color || "inherit",
-                      }}
-                    >
-                      <TagIcon className="mr-1 h-3 w-3" />
-                      {tag.name}
-                    </Badge>
-                  ))}
-                  {expense.tags.length > 3 && !tagsExpanded && (
-                    <Badge
-                      variant="outline"
-                      className="text-xs cursor-pointer hover:bg-accent"
-                      onClick={() => setTagsExpanded(true)}
-                    >
-                      +{expense.tags.length - 3} more
-                      <ChevronDown className="ml-1 h-3 w-3" />
-                    </Badge>
-                  )}
-                  {tagsExpanded && expense.tags.length > 3 && (
-                    <Badge
-                      variant="default"
-                      className="text-xs cursor-pointer hover:bg-accent"
-                      onClick={() => setTagsExpanded(false)}
-                    >
-                      Show less
-                      <ChevronUp className="ml-1 h-3 w-3" />
-                    </Badge>
-                  )}
-                </div>
-              )}
-            </div>
-
+            {/* Date */}
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Calendar className="h-4 w-4" />
+              <Calendar className="h-4 w-4 shrink-0" />
               <span>{format(new Date(expense.expense_date), "MMMM dd, yyyy")}</span>
             </div>
 
-            <div className="flex gap-2 pt-4">
+            {/* Action Buttons */}
+            <div className="flex gap-3 pt-2">
               <Button
                 variant="outline"
-                size="sm"
                 onClick={handleEditClick}
                 className="flex-1"
               >
@@ -175,9 +181,8 @@ export function ExpenseDetailDialog({
               </Button>
               <Button
                 variant="outline"
-                size="sm"
                 onClick={handleDeleteClick}
-                className="flex-1 text-destructive hover:text-destructive"
+                className="flex-1 text-destructive hover:text-destructive hover:bg-destructive/10"
               >
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete
