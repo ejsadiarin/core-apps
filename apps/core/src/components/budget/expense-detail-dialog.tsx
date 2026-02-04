@@ -24,7 +24,7 @@ interface ExpenseDetailDialogProps {
   expense: Expense | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onEdit?: (expense: Expense) => void;
+  onEdit?: (data: any) => Promise<void>;
   onDelete?: (id: string) => void;
   showToast?: (message: string, type?: "info" | "warning" | "error" | "success") => void;
   isGuest?: boolean;
@@ -46,7 +46,10 @@ export function ExpenseDetailDialog({
   if (!expense) return null;
 
   const handleEditClick = () => {
-    onEdit?.(expense);
+    if (isGuest && showToast) {
+      showToast("Guest user is read-only. Create an account to save changes", "warning");
+      return;
+    }
     setEditDialogOpen(true);
   };
 
@@ -78,13 +81,13 @@ export function ExpenseDetailDialog({
           <div className="space-y-4 mt-4">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0 flex-1">
-                <h3 className="text-lg font-semibold truncate" title={expense.description}>
+                <h3 className="text-lg font-semibold break-words" title={expense.description}>
                   {expense.description}
                 </h3>
                 {expense.category && (
                   <Badge
                     variant="outline"
-                    className="mt-1 truncate max-w-[150px]"
+                    className="mt-1 inline-block max-w-full"
                     style={{
                       backgroundColor: expense.category.color
                         ? `${expense.category.color}20`
@@ -95,12 +98,12 @@ export function ExpenseDetailDialog({
                     title={expense.category.name}
                   >
                     {expense.category.icon && <span className="mr-1">{expense.category.icon}</span>}
-                    {expense.category.name}
+                    <span className="truncate">{expense.category.name}</span>
                   </Badge>
                 )}
               </div>
               <div className="text-right shrink-0">
-                <p className="text-2xl font-bold text-primary">
+                <p className="text-2xl font-bold text-primary whitespace-nowrap">
                   {expense.currency} {expense.amount.toFixed(2)}
                 </p>
               </div>
@@ -109,7 +112,7 @@ export function ExpenseDetailDialog({
             {expense.notes && (
               <Card>
                 <CardContent className="p-3">
-                  <p className="text-sm text-muted-foreground break-words">{expense.notes}</p>
+                  <p className="text-sm text-muted-foreground break-words whitespace-pre-wrap">{expense.notes}</p>
                 </CardContent>
               </Card>
             )}
@@ -187,15 +190,10 @@ export function ExpenseDetailDialog({
       <EditExpenseDialog
         expense={expense}
         open={editDialogOpen}
-        onOpenChange={(open) => {
-          setEditDialogOpen(open);
-          if (!open && expense) {
-            onEdit?.(expense);
-          }
-        }}
+        onOpenChange={setEditDialogOpen}
         onSubmit={async (data) => {
           if (onEdit) {
-            await onEdit(expense);
+            await onEdit(data);
           }
           setEditDialogOpen(false);
           onOpenChange(false);

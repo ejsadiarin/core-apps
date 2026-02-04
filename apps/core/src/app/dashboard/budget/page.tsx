@@ -34,10 +34,26 @@ export default function BudgetDashboard() {
     }
   };
 
+  const handleEdit = async (data: any) => {
+    try {
+      if (!viewingExpense) return;
+      await updateExpense.mutateAsync({ id: viewingExpense.id, data });
+      showToast("Expense updated successfully", "success");
+      setViewingExpense(null);
+    } catch (error) {
+      if (error instanceof GuestBlockedError) {
+        showToast(error.message, "warning");
+      } else {
+        showToast("Failed to update expense", "error");
+      }
+    }
+  };
+
   const handleDelete = async (id: string) => {
     try {
       await deleteExpense.mutateAsync(id);
       showToast("Expense deleted successfully", "success");
+      setViewingExpense(null);
     } catch (error) {
       if (error instanceof GuestBlockedError) {
         showToast(error.message, "warning");
@@ -242,7 +258,12 @@ export default function BudgetDashboard() {
       <ExpenseDetailDialog
         expense={viewingExpense}
         open={!!viewingExpense}
-        onOpenChange={(open) => !open && setViewingExpense(null)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setViewingExpense(null);
+          }
+        }}
+        onEdit={handleEdit}
         onDelete={handleDelete}
         showToast={showToast}
         isGuest={isGuest}

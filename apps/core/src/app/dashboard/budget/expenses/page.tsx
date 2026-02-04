@@ -216,13 +216,18 @@ export default function ExpensesPage() {
       <ExpenseDetailDialog
         expense={viewingExpense}
         open={!!viewingExpense}
-        onOpenChange={(open) => !open && setViewingExpense(null)}
-        onEdit={(exp) => {
+        onOpenChange={(open) => {
+          if (!open) {
+            setViewingExpense(null);
+          }
+        }}
+        onEdit={async (data) => {
+          await handleUpdate(data);
           setViewingExpense(null);
-          setEditingExpense(exp);
         }}
         onDelete={handleDelete}
         showToast={showToast}
+        isGuest={isGuest}
       />
     </div>
   );
