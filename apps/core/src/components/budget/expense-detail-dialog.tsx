@@ -69,7 +69,7 @@ export function ExpenseDetailDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[95vw] sm:max-w-[500px]">
+        <DialogContent className="max-w-[95vw] sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>Expense Details</DialogTitle>
             <DialogDescription>
@@ -77,7 +77,7 @@ export function ExpenseDetailDialog({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 mt-2">
+          <div className="space-y-5 mt-2">
             {/* Category */}
             {expense.category && (
               <div>
@@ -99,7 +99,7 @@ export function ExpenseDetailDialog({
             )}
 
             {/* Title + Price row */}
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-6">
               <h3 
                 className="text-lg font-semibold leading-tight break-words min-w-0 flex-1"
                 style={{ wordBreak: "break-word", overflowWrap: "anywhere" }}
