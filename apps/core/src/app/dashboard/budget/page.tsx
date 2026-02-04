@@ -5,13 +5,15 @@ import { useState } from "react";
 import { ExpenseStats } from "@/components/budget/expense-stats";
 import { useSummaryStats, useExpenses } from "@/hooks/use-budget";
 import { Button } from "@/components/ui/button";
-import { Plus, ArrowRight, Receipt, Settings, EyeOff } from "lucide-react";
+import { Plus, ArrowRight, Receipt, Settings } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/components/ui/toast";
+import { ExpenseDetailDialog } from "@/components/budget/expense-detail-dialog";
+import type { Expense } from "@/types/api";
 
 export default function BudgetDashboard() {
   const [period] = useState<string>("month");
@@ -19,6 +21,7 @@ export default function BudgetDashboard() {
   const { data: recentExpenses, isLoading: expensesLoading } = useExpenses();
   const { isGuest } = useAuth();
   const { showToast } = useToast();
+  const [viewingExpense, setViewingExpense] = useState<Expense | null>(null);
 
   const displayExpenses = recentExpenses?.slice(0, 5) || [];
 
@@ -130,20 +133,22 @@ export default function BudgetDashboard() {
                 {displayExpenses.map((expense) => (
                   <div
                     key={expense.id}
-                    className="flex items-center justify-between p-3 rounded-lg border border-border/50 hover:border-border transition-colors cursor-pointer"
+                    className="flex items-center justify-between p-3 rounded-lg border border-border/50 hover:border-border transition-colors cursor-pointer hover:bg-accent/50"
+                    onClick={() => setViewingExpense(expense)}
                   >
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-medium">{expense.description}</p>
+                        <p className="font-medium truncate">{expense.description}</p>
                         {expense.category && (
                           <span
-                            className="text-xs px-2 py-0.5 rounded-full"
+                            className="text-xs px-2 py-0.5 rounded-full truncate max-w-[100px]"
                             style={{
                               backgroundColor: expense.category.color
                                 ? `${expense.category.color}20`
                                 : undefined,
                               color: expense.category.color || "inherit",
                             }}
+                            title={expense.category.name}
                           >
                             {expense.category.name}
                           </span>
@@ -177,8 +182,8 @@ export default function BudgetDashboard() {
                         })}
                       </p>
                     </div>
-                    <div className="text-right">
-                      <p className="font-semibold">
+                    <div className="text-right ml-4">
+                      <p className="font-semibold shrink-0">
                         {expense.currency} {expense.amount.toFixed(2)}
                       </p>
                     </div>
@@ -217,6 +222,13 @@ export default function BudgetDashboard() {
           </CardContent>
         </Card>
       </motion.div>
+
+      <ExpenseDetailDialog
+        expense={viewingExpense}
+        open={!!viewingExpense}
+        onOpenChange={(open) => !open && setViewingExpense(null)}
+        showToast={showToast}
+      />
     </div>
   );
 }

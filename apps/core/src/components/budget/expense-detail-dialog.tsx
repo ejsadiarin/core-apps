@@ -5,11 +5,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2, Calendar, Tag as TagIcon } from "lucide-react";
+import { Edit, Trash2, Calendar, Tag as TagIcon, ChevronDown, ChevronUp } from "lucide-react";
 import type { Expense } from "@/types/api";
 import { format } from "date-fns";
 import { EditExpenseDialog } from "./expense-edit-dialog";
-import { GuestBlockedError } from "@/hooks/use-budget";
 
 interface ExpenseDetailDialogProps {
   expense: Expense | null;
@@ -29,6 +28,7 @@ export function ExpenseDetailDialog({
   showToast,
 }: ExpenseDetailDialogProps) {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [tagsExpanded, setTagsExpanded] = useState(false);
 
   if (!expense) return null;
 
@@ -53,7 +53,7 @@ export function ExpenseDetailDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[450px]">
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Expense Details</DialogTitle>
             <DialogDescription>
@@ -63,33 +63,35 @@ export function ExpenseDetailDialog({
 
           <div className="space-y-4 mt-4">
             <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold">{expense.description}</h3>
+              <div className="min-w-0">
+                <h3 className="text-lg font-semibold truncate">{expense.description}</h3>
                 <p className="text-2xl font-bold text-primary">
                   {expense.currency} {expense.amount.toFixed(2)}
                 </p>
               </div>
-              {expense.category && (
-                <Badge
-                  variant="outline"
-                  style={{
-                    backgroundColor: expense.category.color
-                      ? `${expense.category.color}20`
-                      : undefined,
-                    borderColor: expense.category.color || undefined,
-                    color: expense.category.color || "inherit",
-                  }}
-                >
-                  {expense.category.icon && <span className="mr-1">{expense.category.icon}</span>}
-                  {expense.category.name}
-                </Badge>
-              )}
+                {expense.category && (
+                  <Badge
+                    variant="outline"
+                    className="truncate max-w-[150px]"
+                    style={{
+                      backgroundColor: expense.category.color
+                        ? `${expense.category.color}20`
+                        : undefined,
+                      borderColor: expense.category.color || undefined,
+                      color: expense.category.color || "inherit",
+                    }}
+                    title={expense.category.name}
+                  >
+                    {expense.category.icon && <span className="mr-1">{expense.category.icon}</span>}
+                    {expense.category.name}
+                  </Badge>
+                )}
             </div>
 
             {expense.notes && (
               <Card>
                 <CardContent className="p-3">
-                  <p className="text-sm text-muted-foreground">{expense.notes}</p>
+                  <p className="text-sm text-muted-foreground break-words">{expense.notes}</p>
                 </CardContent>
               </Card>
             )}
@@ -97,7 +99,7 @@ export function ExpenseDetailDialog({
             <div className="flex flex-wrap gap-2">
               {expense.tags && expense.tags.length > 0 && (
                 <div className="flex flex-wrap gap-1">
-                  {expense.tags.map((tag) => (
+                  {(tagsExpanded ? expense.tags : expense.tags.slice(0, 3)).map((tag) => (
                     <Badge
                       key={tag.id}
                       variant="secondary"
@@ -111,6 +113,26 @@ export function ExpenseDetailDialog({
                       {tag.name}
                     </Badge>
                   ))}
+                  {expense.tags.length > 3 && !tagsExpanded && (
+                    <Badge
+                      variant="outline"
+                      className="text-xs cursor-pointer hover:bg-accent"
+                      onClick={() => setTagsExpanded(true)}
+                    >
+                      +{expense.tags.length - 3} more
+                      <ChevronDown className="ml-1 h-3 w-3" />
+                    </Badge>
+                  )}
+                  {tagsExpanded && expense.tags.length > 3 && (
+                    <Badge
+                      variant="ghost"
+                      className="text-xs cursor-pointer hover:bg-accent"
+                      onClick={() => setTagsExpanded(false)}
+                    >
+                      Show less
+                      <ChevronUp className="ml-1 h-3 w-3" />
+                    </Badge>
+                  )}
                 </div>
               )}
             </div>
@@ -148,7 +170,7 @@ export function ExpenseDetailDialog({
         expense={expense}
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
-        onSubmit={async (data) => {
+        onSubmit={async () => {
           await onEdit?.(expense);
         }}
         isLoading={false}

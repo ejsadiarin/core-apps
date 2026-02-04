@@ -36,9 +36,12 @@ export default function ExpensesPage() {
   const handleDelete = async (id: string) => {
     try {
       await deleteExpense.mutateAsync(id);
+      showToast("Expense deleted successfully", "success");
     } catch (error) {
       if (error instanceof GuestBlockedError) {
         showToast(error.message, "warning");
+      } else {
+        showToast("Failed to delete expense", "error");
       }
     }
   };
@@ -46,9 +49,12 @@ export default function ExpensesPage() {
   const handleUpdate = async (data: any) => {
     try {
       await updateExpense.mutateAsync({ id: editingExpense!.id, data });
+      showToast("Expense updated successfully", "success");
     } catch (error) {
       if (error instanceof GuestBlockedError) {
         showToast(error.message, "warning");
+      } else {
+        showToast("Failed to update expense", "error");
       }
     }
   };

@@ -19,10 +19,13 @@ export default function NewExpensePage() {
   const handleSubmit = async (data: CreateExpenseRequest | UpdateExpenseRequest) => {
     try {
       await createExpense.mutateAsync(data as CreateExpenseRequest);
+      showToast("Expense created successfully", "success");
       router.push("/dashboard/budget");
     } catch (error) {
       if (error instanceof GuestBlockedError) {
         showToast(error.message, "warning");
+      } else {
+        showToast("Failed to create expense", "error");
       }
     }
   };

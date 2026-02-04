@@ -41,4 +41,4 @@
 - [x] 7.2 Test toast notification appears for guest write attempts
 - [x] 7.3 Test no database records are created/updated/deleted for guests
 - [x] 7.4 Test authenticated users can still perform all operations
-- [ ] 7.5 Test edit dialog opens with correct pre-filled values
+- [x] 7.5 Test edit dialog opens with correct pre-filled values

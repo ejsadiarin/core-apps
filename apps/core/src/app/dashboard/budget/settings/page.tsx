@@ -20,6 +20,8 @@ import { Plus, Trash2, Edit2, Save, X, ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { Category, Tag } from "@/types/api";
 import Link from "next/link";
+import { useToast } from "@/components/ui/toast";
+import { GuestBlockedError } from "@/hooks/use-budget";
 
 export default function SettingsPage() {
   const { data: categories, isLoading: categoriesLoading } = useCategories();
@@ -31,6 +33,7 @@ export default function SettingsPage() {
   const createTag = useCreateTag();
   const updateTag = useUpdateTag();
   const deleteTag = useDeleteTag();
+  const { showToast } = useToast();
 
   // Category form state
   const [newCategory, setNewCategory] = useState({ name: "", color: "#3b82f6", icon: "" });
@@ -43,51 +46,105 @@ export default function SettingsPage() {
   // Category handlers
   const handleCreateCategory = async () => {
     if (!newCategory.name.trim()) return;
-    await createCategory.mutateAsync(newCategory);
-    setNewCategory({ name: "", color: "#3b82f6", icon: "" });
+    try {
+      await createCategory.mutateAsync(newCategory);
+      showToast("Category created successfully", "success");
+      setNewCategory({ name: "", color: "#3b82f6", icon: "" });
+    } catch (error) {
+      if (error instanceof GuestBlockedError) {
+        showToast(error.message, "warning");
+      } else {
+        showToast("Failed to create category", "error");
+      }
+    }
   };
 
   const handleUpdateCategory = async () => {
     if (!editingCategory) return;
-    await updateCategory.mutateAsync({
-      id: editingCategory.id,
-      data: {
-        name: editingCategory.name,
-        color: editingCategory.color,
-        icon: editingCategory.icon,
-      },
-    });
-    setEditingCategory(null);
+    try {
+      await updateCategory.mutateAsync({
+        id: editingCategory.id,
+        data: {
+          name: editingCategory.name,
+          color: editingCategory.color,
+          icon: editingCategory.icon,
+        },
+      });
+      showToast("Category updated successfully", "success");
+      setEditingCategory(null);
+    } catch (error) {
+      if (error instanceof GuestBlockedError) {
+        showToast(error.message, "warning");
+      } else {
+        showToast("Failed to update category", "error");
+      }
+    }
   };
 
   const handleDeleteCategory = async (id: string) => {
     if (confirm("Delete this category? This will not delete expenses.")) {
-      await deleteCategory.mutateAsync(id);
+      try {
+        await deleteCategory.mutateAsync(id);
+        showToast("Category deleted successfully", "success");
+      } catch (error) {
+        if (error instanceof GuestBlockedError) {
+          showToast(error.message, "warning");
+        } else {
+          showToast("Failed to delete category", "error");
+        }
+      }
     }
   };
 
   // Tag handlers
   const handleCreateTag = async () => {
     if (!newTag.name.trim()) return;
-    await createTag.mutateAsync(newTag);
-    setNewTag({ name: "", color: "#8b5cf6" });
+    try {
+      await createTag.mutateAsync(newTag);
+      showToast("Tag created successfully", "success");
+      setNewTag({ name: "", color: "#8b5cf6" });
+    } catch (error) {
+      if (error instanceof GuestBlockedError) {
+        showToast(error.message, "warning");
+      } else {
+        showToast("Failed to create tag", "error");
+      }
+    }
   };
 
   const handleUpdateTag = async () => {
     if (!editingTag) return;
-    await updateTag.mutateAsync({
-      id: editingTag.id,
-      data: {
-        name: editingTag.name,
-        color: editingTag.color,
-      },
-    });
-    setEditingTag(null);
+    try {
+      await updateTag.mutateAsync({
+        id: editingTag.id,
+        data: {
+          name: editingTag.name,
+          color: editingTag.color,
+        },
+      });
+      showToast("Tag updated successfully", "success");
+      setEditingTag(null);
+    } catch (error) {
+      if (error instanceof GuestBlockedError) {
+        showToast(error.message, "warning");
+      } else {
+        showToast("Failed to update tag", "error");
+      }
+    }
   };
 
   const handleDeleteTag = async (id: string) => {
     if (confirm("Delete this tag? This will remove it from all expenses.")) {
-      await deleteTag.mutateAsync(id);
+      try {
+        await deleteTag.mutateAsync(id);
+        showToast("Tag deleted successfully", "success");
+      } catch (error) {
+        if (error instanceof GuestBlockedError) {
+          showToast(error.message, "warning");
+        } else {
+          showToast("Failed to delete tag", "error");
+        }
+      }
     }
   };
 

@@ -98,6 +98,11 @@ export function useCreateCategory() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: budgetKeys.categories() });
+    },
+    onError: (error: Error) => {
+      if (!(error instanceof GuestBlockedError)) {
+        console.error("Failed to create category:", error);
+      }
     }
   });
 }
@@ -116,6 +121,11 @@ export function useUpdateCategory() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: budgetKeys.categories() });
       queryClient.invalidateQueries({ queryKey: budgetKeys.categoryDetail(variables.id) });
+    },
+    onError: (error: Error) => {
+      if (!(error instanceof GuestBlockedError)) {
+        console.error("Failed to update category:", error);
+      }
     }
   });
 }
@@ -133,6 +143,12 @@ export function useDeleteCategory() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: budgetKeys.categories() });
+      queryClient.invalidateQueries({ queryKey: budgetKeys.expenses() });
+    },
+    onError: (error: Error) => {
+      if (!(error instanceof GuestBlockedError)) {
+        console.error("Failed to delete category:", error);
+      }
     }
   });
 }
@@ -168,6 +184,11 @@ export function useCreateTag() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: budgetKeys.tags() });
+    },
+    onError: (error: Error) => {
+      if (!(error instanceof GuestBlockedError)) {
+        console.error("Failed to create tag:", error);
+      }
     }
   });
 }
@@ -186,6 +207,11 @@ export function useUpdateTag() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: budgetKeys.tags() });
       queryClient.invalidateQueries({ queryKey: budgetKeys.tagDetail(variables.id) });
+    },
+    onError: (error: Error) => {
+      if (!(error instanceof GuestBlockedError)) {
+        console.error("Failed to update tag:", error);
+      }
     }
   });
 }
@@ -203,6 +229,12 @@ export function useDeleteTag() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: budgetKeys.tags() });
+      queryClient.invalidateQueries({ queryKey: budgetKeys.expenses() });
+    },
+    onError: (error: Error) => {
+      if (!(error instanceof GuestBlockedError)) {
+        console.error("Failed to delete tag:", error);
+      }
     }
   });
 }
@@ -213,7 +245,8 @@ export function useExpenses(filters?: ExpenseFilters) {
   return useQuery<Expense[]>({
     queryKey: budgetKeys.expensesList(filters),
     queryFn: () => fetchExpenses(filters),
-    staleTime: 60000 // 1 minute
+    staleTime: 60000,
+    refetchOnMount: true
   });
 }
 
@@ -239,6 +272,11 @@ export function useCreateExpense() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: budgetKeys.expenses() });
       queryClient.invalidateQueries({ queryKey: budgetKeys.stats() });
+    },
+    onError: (error: Error) => {
+      if (!(error instanceof GuestBlockedError)) {
+        console.error("Failed to create expense:", error);
+      }
     }
   });
 }
@@ -258,6 +296,11 @@ export function useUpdateExpense() {
       queryClient.invalidateQueries({ queryKey: budgetKeys.expenses() });
       queryClient.invalidateQueries({ queryKey: budgetKeys.expenseDetail(variables.id) });
       queryClient.invalidateQueries({ queryKey: budgetKeys.stats() });
+    },
+    onError: (error: Error) => {
+      if (!(error instanceof GuestBlockedError)) {
+        console.error("Failed to update expense:", error);
+      }
     }
   });
 }
@@ -276,6 +319,11 @@ export function useDeleteExpense() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: budgetKeys.expenses() });
       queryClient.invalidateQueries({ queryKey: budgetKeys.stats() });
+    },
+    onError: (error: Error) => {
+      if (!(error instanceof GuestBlockedError)) {
+        console.error("Failed to delete expense:", error);
+      }
     }
   });
 }
@@ -286,7 +334,8 @@ export function useSummaryStats(period?: string) {
   return useQuery<SummaryStats>({
     queryKey: budgetKeys.summary(period),
     queryFn: () => fetchSummaryStats(period),
-    staleTime: 60000 // 1 minute
+    staleTime: 60000,
+    refetchOnMount: true
   });
 }
 
