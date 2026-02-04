@@ -130,10 +130,10 @@ export default function BudgetDashboard() {
                 {displayExpenses.map((expense) => (
                   <div
                     key={expense.id}
-                    className="flex items-center justify-between p-3 rounded-lg border border-border/50 hover:border-border transition-colors"
+                    className="flex items-center justify-between p-3 rounded-lg border border-border/50 hover:border-border transition-colors cursor-pointer"
                   >
                     <div className="flex-1">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-medium">{expense.description}</p>
                         {expense.category && (
                           <span
@@ -147,6 +147,28 @@ export default function BudgetDashboard() {
                           >
                             {expense.category.name}
                           </span>
+                        )}
+                        {expense.tags && expense.tags.length > 0 && (
+                          <div className="flex gap-1">
+                            {expense.tags.slice(0, 2).map((tag) => (
+                              <Badge
+                                key={tag.id}
+                                variant="secondary"
+                                className="text-xs py-0 h-5"
+                                style={{
+                                  backgroundColor: tag.color ? `${tag.color}15` : undefined,
+                                  color: tag.color || "inherit",
+                                }}
+                              >
+                                {tag.name}
+                              </Badge>
+                            ))}
+                            {expense.tags.length > 2 && (
+                              <Badge variant="outline" className="text-xs py-0 h-5">
+                                +{expense.tags.length - 2}
+                              </Badge>
+                            )}
+                          </div>
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground">

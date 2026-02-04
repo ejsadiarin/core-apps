@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useExpenses, useCategories, useDeleteExpense, useUpdateExpense, GuestBlockedError } from "@/hooks/use-budget";
 import { ExpenseCard } from "@/components/budget/expense-card";
 import { EditExpenseDialog } from "@/components/budget/expense-edit-dialog";
+import { ExpenseDetailDialog } from "@/components/budget/expense-detail-dialog";
 import { Button } from "@/components/ui/button";
 import { Plus, Filter, ArrowLeft, EyeOff } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +20,8 @@ export default function ExpensesPage() {
   const [filters, setFilters] = useState<ExpenseFilters>({});
   const [searchTerm, setSearchTerm] = useState("");
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
-  
+  const [viewingExpense, setViewingExpense] = useState<Expense | null>(null);
+
   const { data: expenses, isLoading } = useExpenses(filters);
   const { data: categories } = useCategories();
   const deleteExpense = useDeleteExpense();
@@ -49,6 +51,10 @@ export default function ExpensesPage() {
         showToast(error.message, "warning");
       }
     }
+  };
+
+  const handleView = (expense: Expense) => {
+    setViewingExpense(expense);
   };
 
   return (
@@ -165,6 +171,7 @@ export default function ExpensesPage() {
             <ExpenseCard
               key={expense.id}
               expense={expense}
+              onView={handleView}
               onEdit={(exp) => setEditingExpense(exp)}
               onDelete={handleDelete}
               showToast={showToast}
@@ -197,6 +204,19 @@ export default function ExpensesPage() {
         onOpenChange={(open) => !open && setEditingExpense(null)}
         onSubmit={handleUpdate}
         isLoading={updateExpense.isPending}
+      />
+
+      {/* Detail Dialog */}
+      <ExpenseDetailDialog
+        expense={viewingExpense}
+        open={!!viewingExpense}
+        onOpenChange={(open) => !open && setViewingExpense(null)}
+        onEdit={(exp) => {
+          setViewingExpense(null);
+          setEditingExpense(exp);
+        }}
+        onDelete={handleDelete}
+        showToast={showToast}
       />
     </div>
   );

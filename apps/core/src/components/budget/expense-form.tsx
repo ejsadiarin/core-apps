@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,7 +32,13 @@ export function ExpenseForm({ initialData, onSubmit, onCancel, isLoading }: Expe
     tag_ids: initialData?.tag_ids || [],
   });
 
-  const [selectedTags, setSelectedTags] = useState<string[]>(formData.tag_ids || []);
+  const [selectedTags, setSelectedTags] = useState<string[]>(initialData?.tag_ids || []);
+
+  useEffect(() => {
+    if (initialData?.tag_ids) {
+      setSelectedTags(initialData.tag_ids);
+    }
+  }, [initialData?.tag_ids]);
 
   const handleTagToggle = (tagId: string) => {
     setSelectedTags((prev) =>
