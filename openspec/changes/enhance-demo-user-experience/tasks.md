@@ -40,5 +40,5 @@
 - [x] 7.1 Test guest user can see and click all UI elements
 - [x] 7.2 Test toast notification appears for guest write attempts
 - [x] 7.3 Test no database records are created/updated/deleted for guests
-- [ ] 7.4 Test authenticated users can still perform all operations
+- [x] 7.4 Test authenticated users can still perform all operations
 - [ ] 7.5 Test edit dialog opens with correct pre-filled values

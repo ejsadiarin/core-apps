@@ -542,6 +542,16 @@ func (h *BudgetHandler) ListExpenses(c echo.Context) error {
 			}
 		}
 
+		tags, _ := h.queries.GetExpenseTags(c.Request().Context(), row.ID)
+		tagResps := make([]models.TagResponse, len(tags))
+		for j, t := range tags {
+			tagResps[j] = models.TagResponse{
+				ID:    t.ID,
+				Name:  t.Name,
+				Color: textToStringPtr(t.Color),
+			}
+		}
+
 		res[i] = models.ExpenseResponse{
 			ID:          row.ID,
 			Description: row.Description,
@@ -550,6 +560,7 @@ func (h *BudgetHandler) ListExpenses(c echo.Context) error {
 			Category:    cat,
 			ExpenseDate: dateToString(row.ExpenseDate),
 			Notes:       textToStringPtr(row.Notes),
+			Tags:        tagResps,
 			CreatedAt:   row.CreatedAt.Time.Format(time.RFC3339),
 			UpdatedAt:   row.UpdatedAt.Time.Format(time.RFC3339),
 		}
