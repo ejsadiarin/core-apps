@@ -3,7 +3,8 @@
 import { motion } from "motion/react";
 import { useState } from "react";
 import { ExpenseStats } from "@/components/budget/expense-stats";
-import { useSummaryStats, useExpenses } from "@/hooks/use-budget";
+import { useSummaryStats, useExpenses, useUpdateExpense, useDeleteExpense } from "@/hooks/use-budget";
+import { GuestBlockedError } from "@/hooks/use-budget";
 import { Button } from "@/components/ui/button";
 import { Plus, ArrowRight, Receipt, Settings } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,12 +23,27 @@ export default function BudgetDashboard() {
   const { isGuest } = useAuth();
   const { showToast } = useToast();
   const [viewingExpense, setViewingExpense] = useState<Expense | null>(null);
+  const updateExpense = useUpdateExpense();
+  const deleteExpense = useDeleteExpense();
 
   const displayExpenses = recentExpenses?.slice(0, 5) || [];
 
   const handleActionClick = () => {
     if (isGuest) {
       showToast("Guest user is read-only. Create an account to save changes", "warning");
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteExpense.mutateAsync(id);
+      showToast("Expense deleted successfully", "success");
+    } catch (error) {
+      if (error instanceof GuestBlockedError) {
+        showToast(error.message, "warning");
+      } else {
+        showToast("Failed to delete expense", "error");
+      }
     }
   };
 
@@ -227,7 +243,9 @@ export default function BudgetDashboard() {
         expense={viewingExpense}
         open={!!viewingExpense}
         onOpenChange={(open) => !open && setViewingExpense(null)}
+        onDelete={handleDelete}
         showToast={showToast}
+        isGuest={isGuest}
       />
     </div>
   );

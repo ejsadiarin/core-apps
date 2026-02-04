@@ -5,6 +5,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Edit, Trash2, Calendar, Tag as TagIcon, ChevronDown, ChevronUp } from "lucide-react";
 import type { Expense } from "@/types/api";
 import { format } from "date-fns";
@@ -17,6 +27,7 @@ interface ExpenseDetailDialogProps {
   onEdit?: (expense: Expense) => void;
   onDelete?: (id: string) => void;
   showToast?: (message: string, type?: "info" | "warning" | "error" | "success") => void;
+  isGuest?: boolean;
 }
 
 export function ExpenseDetailDialog({
@@ -26,9 +37,11 @@ export function ExpenseDetailDialog({
   onEdit,
   onDelete,
   showToast,
+  isGuest = false,
 }: ExpenseDetailDialogProps) {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [tagsExpanded, setTagsExpanded] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   if (!expense) return null;
 
@@ -38,22 +51,23 @@ export function ExpenseDetailDialog({
   };
 
   const handleDeleteClick = () => {
-    if (showToast) {
+    if (isGuest && showToast) {
       showToast("Guest user is read-only. Create an account to save changes", "warning");
       return;
     }
-    if (onDelete) {
-      if (confirm("Are you sure you want to delete this expense?")) {
-        onDelete(expense.id);
-        onOpenChange(false);
-      }
-    }
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    onDelete?.(expense.id);
+    onOpenChange(false);
+    setDeleteDialogOpen(false);
   };
 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>Expense Details</DialogTitle>
             <DialogDescription>
@@ -62,17 +76,15 @@ export function ExpenseDetailDialog({
           </DialogHeader>
 
           <div className="space-y-4 mt-4">
-            <div className="flex items-center justify-between">
-              <div className="min-w-0">
-                <h3 className="text-lg font-semibold truncate">{expense.description}</h3>
-                <p className="text-2xl font-bold text-primary">
-                  {expense.currency} {expense.amount.toFixed(2)}
-                </p>
-              </div>
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <h3 className="text-lg font-semibold truncate" title={expense.description}>
+                  {expense.description}
+                </h3>
                 {expense.category && (
                   <Badge
                     variant="outline"
-                    className="truncate max-w-[150px]"
+                    className="mt-1 truncate max-w-[150px]"
                     style={{
                       backgroundColor: expense.category.color
                         ? `${expense.category.color}20`
@@ -86,6 +98,12 @@ export function ExpenseDetailDialog({
                     {expense.category.name}
                   </Badge>
                 )}
+              </div>
+              <div className="text-right shrink-0">
+                <p className="text-2xl font-bold text-primary">
+                  {expense.currency} {expense.amount.toFixed(2)}
+                </p>
+              </div>
             </div>
 
             {expense.notes && (
@@ -169,12 +187,38 @@ export function ExpenseDetailDialog({
       <EditExpenseDialog
         expense={expense}
         open={editDialogOpen}
-        onOpenChange={setEditDialogOpen}
-        onSubmit={async () => {
-          await onEdit?.(expense);
+        onOpenChange={(open) => {
+          setEditDialogOpen(open);
+          if (!open && expense) {
+            onEdit?.(expense);
+          }
+        }}
+        onSubmit={async (data) => {
+          if (onEdit) {
+            await onEdit(expense);
+          }
+          setEditDialogOpen(false);
+          onOpenChange(false);
         }}
         isLoading={false}
       />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Expense</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this expense? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
