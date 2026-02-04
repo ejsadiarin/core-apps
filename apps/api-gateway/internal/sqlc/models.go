@@ -15,6 +15,7 @@ type BudgetCategory struct {
 	Color     pgtype.Text      `json:"color"`
 	Icon      pgtype.Text      `json:"icon"`
 	CreatedAt pgtype.Timestamp `json:"created_at"`
+	UserID    uuid.UUID        `json:"user_id"`
 }
 
 type BudgetExpense struct {
@@ -27,6 +28,7 @@ type BudgetExpense struct {
 	CreatedAt   pgtype.Timestamp `json:"created_at"`
 	UpdatedAt   pgtype.Timestamp `json:"updated_at"`
 	Notes       pgtype.Text      `json:"notes"`
+	UserID      uuid.UUID        `json:"user_id"`
 }
 
 type BudgetExpenseTag struct {
@@ -39,6 +41,7 @@ type BudgetTag struct {
 	Name      string           `json:"name"`
 	Color     pgtype.Text      `json:"color"`
 	CreatedAt pgtype.Timestamp `json:"created_at"`
+	UserID    uuid.UUID        `json:"user_id"`
 }
 
 type Service struct {
@@ -65,4 +68,21 @@ type ServiceHealthHistory struct {
 	StatusCode   pgtype.Int4      `json:"status_code"`
 	ErrorMessage pgtype.Text      `json:"error_message"`
 	CheckedAt    pgtype.Timestamp `json:"checked_at"`
+}
+
+type Session struct {
+	ID        uuid.UUID        `json:"id"`
+	UserID    uuid.UUID        `json:"user_id"`
+	TokenHash string           `json:"token_hash"`
+	ExpiresAt pgtype.Timestamp `json:"expires_at"`
+	CreatedAt pgtype.Timestamp `json:"created_at"`
+}
+
+type User struct {
+	ID           uuid.UUID        `json:"id"`
+	Email        string           `json:"email"`
+	PasswordHash pgtype.Text      `json:"password_hash"`
+	Role         string           `json:"role"`
+	CreatedAt    pgtype.Timestamp `json:"created_at"`
+	UpdatedAt    pgtype.Timestamp `json:"updated_at"`
 }

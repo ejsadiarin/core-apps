@@ -11,11 +11,33 @@ interface ExpenseCardProps {
   expense: Expense;
   onEdit?: (expense: Expense) => void;
   onDelete?: (id: string) => void;
+  disabled?: boolean;
+  showToast?: (message: string, type?: "info" | "warning" | "error" | "success") => void;
 }
 
-export function ExpenseCard({ expense, onEdit, onDelete }: ExpenseCardProps) {
+export function ExpenseCard({ expense, onEdit, onDelete, disabled, showToast }: ExpenseCardProps) {
+  const handleEditClick = () => {
+    if (disabled && showToast) {
+      showToast("Guest user is read-only. Create an account to save changes", "warning");
+      return;
+    }
+    onEdit?.(expense);
+  };
+
+  const handleDeleteClick = () => {
+    if (disabled && showToast) {
+      showToast("Guest user is read-only. Create an account to save changes", "warning");
+      return;
+    }
+    if (onDelete) {
+      if (confirm("Are you sure you want to delete this expense?")) {
+        onDelete(expense.id);
+      }
+    }
+  };
+
   return (
-    <Card className="hover:border-primary/50 transition-colors">
+    <Card className="hover:border-primary/50 transition-colors opacity-90">
       <CardContent className="p-4">
         <div className="flex items-start justify-between">
           <div className="flex-1">
@@ -72,25 +94,24 @@ export function ExpenseCard({ expense, onEdit, onDelete }: ExpenseCardProps) {
               {expense.currency} {expense.amount.toFixed(2)}
             </div>
             <div className="flex gap-1">
-              {onEdit && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onEdit(expense)}
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
-              )}
-              {onDelete && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onDelete(expense.id)}
-                  className="text-destructive hover:text-destructive"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleEditClick}
+                disabled={disabled}
+                className={disabled ? "opacity-50" : ""}
+              >
+                <Edit className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleDeleteClick}
+                disabled={disabled}
+                className={disabled ? "opacity-50 text-muted-foreground" : "text-destructive hover:text-destructive"}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         </div>

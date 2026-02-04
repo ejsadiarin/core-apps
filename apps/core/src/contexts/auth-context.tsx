@@ -1,85 +1,62 @@
 "use client";
 
-import { createContext, useContext, useState, ReactNode, useEffect } from "react";
-
-export type UserRole = "admin" | "user" | "viewer";
-
-export interface User {
-    id: string;
-    username: string;
-    email: string;
-    role: UserRole;
-    avatar?: string;
-}
+import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from "react";
+import type { User, UserRole, LoginRequest, RegisterRequest } from "@/types/api";
+import * as api from "@/lib/api";
 
 interface AuthContextType {
     user: User | null;
-    login: (username: string, password: string) => Promise<boolean>;
-    logout: () => void;
+    login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
+    register: (email: string, password: string) => Promise<void>;
+    logout: () => Promise<void>;
+    demoLogin: () => Promise<void>;
     isAuthenticated: boolean;
+    isGuest: boolean;
+    isAdmin: boolean;
     hasPermission: (requiredRole: UserRole) => boolean;
     isLoading: boolean;
+    refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock users for demo
-const MOCK_USERS: Record<string, { password: string; user: User }> = {
-    admin: {
-        password: "admin123",
-        user: {
-            id: "1",
-            username: "admin",
-            email: "admin@homelab.local",
-            role: "admin",
-        },
-    },
-    user: {
-        password: "user123",
-        user: {
-            id: "2",
-            username: "user",
-            email: "user@homelab.local",
-            role: "user",
-        },
-    },
-    viewer: {
-        password: "viewer123",
-        user: {
-            id: "3",
-            username: "viewer",
-            email: "viewer@homelab.local",
-            role: "viewer",
-        },
-    },
-};
-
 const ROLE_HIERARCHY: Record<UserRole, number> = {
-    admin: 3,
+    guest: 1,
     user: 2,
-    viewer: 1,
+    admin: 3,
 };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    const login = async (username: string, password: string): Promise<boolean> => {
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 800));
-
-        const mockUser = MOCK_USERS[username.toLowerCase()];
-        if (mockUser && mockUser.password === password) {
-            setUser(mockUser.user);
-            localStorage.setItem("user", JSON.stringify(mockUser.user));
-            return true;
+    const refreshUser = useCallback(async () => {
+        try {
+            const currentUser = await api.fetchCurrentUser();
+            setUser(currentUser);
+        } catch {
+            setUser(null);
         }
-        return false;
+    }, []);
+
+    const login = async (email: string, password: string, rememberMe = false): Promise<void> => {
+        const loggedInUser = await api.login({ email, password, remember_me: rememberMe });
+        setUser(loggedInUser);
     };
 
-    const logout = () => {
+    const register = async (email: string, password: string): Promise<void> => {
+        const newUser = await api.register({ email, password });
+        setUser(newUser);
+    };
+
+    const logout = async (): Promise<void> => {
+        await api.logout();
         setUser(null);
-        localStorage.removeItem("user");
+    };
+
+    const demoLogin = async (): Promise<void> => {
+        const demoUser = await api.demoLogin();
+        setUser(demoUser);
     };
 
     const hasPermission = (requiredRole: UserRole): boolean => {
@@ -88,26 +65,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     useEffect(() => {
-        const storedUser = localStorage.getItem("user");
-        if (storedUser) {
-            try {
-                setUser(JSON.parse(storedUser));
-            } catch (e) {
-                localStorage.removeItem("user");
-            }
-        }
-        setIsLoading(false);
-    }, []);
+        const initAuth = async () => {
+            setIsLoading(true);
+            await refreshUser();
+            setIsLoading(false);
+        };
+        initAuth();
+    }, [refreshUser]);
 
     return (
         <AuthContext.Provider
             value={{
                 user,
                 login,
+                register,
                 logout,
+                demoLogin,
                 isAuthenticated: !!user,
+                isGuest: user?.role === "guest",
+                isAdmin: user?.role === "admin",
                 hasPermission,
                 isLoading,
+                refreshUser,
             }}
         >
             {children}

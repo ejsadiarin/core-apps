@@ -36,7 +36,7 @@ export function ExpenseStats({ stats, isLoading }: ExpenseStatsProps) {
   const statCards = [
     {
       title: "Total Spent",
-      value: `$${stats.total_spent.toFixed(2)}`,
+      value: `₱${stats.total_spent.toFixed(2)}`,
       description: stats.period,
       icon: DollarSign,
       iconColor: "text-green-500",
@@ -50,9 +50,9 @@ export function ExpenseStats({ stats, isLoading }: ExpenseStatsProps) {
     },
     {
       title: "Avg per Transaction",
-      value: stats.transaction_count > 0 
-        ? `$${(stats.total_spent / stats.transaction_count).toFixed(2)}`
-        : "$0.00",
+      value: stats.transaction_count > 0
+        ? `₱${(stats.total_spent / stats.transaction_count).toFixed(2)}`
+        : "₱0.00",
       description: "average amount",
       icon: TrendingUp,
       iconColor: "text-purple-500",

@@ -182,3 +182,36 @@ export interface TrendItem {
     count: number;
 }
 
+// Auth Types
+
+export type UserRole = "guest" | "user" | "admin";
+
+export interface User {
+    id: string;
+    email: string;
+    role: UserRole;
+    created_at: string;
+}
+
+export interface LoginRequest {
+    email: string;
+    password: string;
+    remember_me?: boolean;
+}
+
+export interface RegisterRequest {
+    email: string;
+    password: string;
+}
+
+export interface CreateUserRequest {
+    email: string;
+    password: string;
+    role: UserRole;
+}
+
+export interface UpdateUserRequest {
+    email?: string;
+    password?: string;
+    role?: UserRole;
+}

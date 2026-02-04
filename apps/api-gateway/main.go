@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"core-gateway/auth"
 	"core-gateway/handlers"
 	"core-gateway/health"
 	"core-gateway/internal/middleware"
@@ -97,13 +98,23 @@ func main() {
 	// Initialize sqlc queries
 	queries := sqlc.New(dbPool)
 
+	// Seed initial users (admin and demo)
+	if err := auth.SeedUsers(context.Background(), queries, &logger); err != nil {
+		logger.Warn().Err(err).Msg("Failed to seed users")
+	}
+
 	// Initialize health checker
 	checker := health.NewChecker(queries, &logger)
 	checker.StartHealthCheckScheduler(60 * time.Second)
 
+	// Start session cleanup scheduler (runs every hour)
+	go startSessionCleanupScheduler(queries, &logger)
+
 	// Initialize handlers
 	serviceHandler := handlers.NewServiceHandler(queries, &logger)
 	budgetHandler := handlers.NewBudgetHandler(queries, &logger)
+	authHandler := handlers.NewAuthHandler(queries, &logger)
+	userHandler := handlers.NewUserHandler(queries, &logger)
 
 	// Initialize Echo
 	e := echo.New()
@@ -123,10 +134,14 @@ func main() {
 	}))
 	e.Use(echomiddleware.Recover())
 	e.Use(echomiddleware.CORSWithConfig(echomiddleware.CORSConfig{
-		AllowOrigins: []string{"http://localhost:3000", "http://localhost:3001", os.Getenv("FRONTEND_URL")},
-		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization},
-		AllowMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions},
+		AllowOrigins:     []string{"http://localhost:3000", "http://localhost:3001", os.Getenv("FRONTEND_URL")},
+		AllowHeaders:     []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization},
+		AllowMethods:     []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions},
+		AllowCredentials: true,
 	}))
+
+	// Auth middleware - applies to all requests, extracts user from session if present
+	e.Use(auth.AuthMiddleware(queries))
 
 	// Custom error handler
 	e.HTTPErrorHandler = func(err error, c echo.Context) {
@@ -169,6 +184,27 @@ func main() {
 	// API v1 - Service monitoring
 	api := e.Group("/api")
 	{
+		// Auth routes (public)
+		authGroup := api.Group("/auth")
+		{
+			authGroup.POST("/register", authHandler.Register)
+			authGroup.POST("/login", authHandler.Login)
+			authGroup.POST("/logout", authHandler.Logout)
+			authGroup.POST("/demo", authHandler.LoginAsDemo)
+			authGroup.GET("/me", authHandler.Me)
+		}
+
+		// User management routes (admin only, except get/update own)
+		users := api.Group("/users")
+		users.Use(auth.RequireAuth())
+		{
+			users.GET("", userHandler.ListUsers, auth.RequireRole(auth.RoleAdmin))
+			users.POST("", userHandler.CreateUser, auth.RequireRole(auth.RoleAdmin))
+			users.GET("/:id", userHandler.GetUser)    // auth check in handler (admin or self)
+			users.PUT("/:id", userHandler.UpdateUser) // auth check in handler (admin or self)
+			users.DELETE("/:id", userHandler.DeleteUser, auth.RequireRole(auth.RoleAdmin))
+		}
+
 		services := api.Group("/services")
 		{
 			services.POST("", serviceHandler.CreateService)
@@ -286,4 +322,20 @@ func getLegacyServices(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, services)
+}
+
+// startSessionCleanupScheduler runs a background goroutine that periodically deletes expired sessions
+func startSessionCleanupScheduler(queries *sqlc.Queries, logger *zerolog.Logger) {
+	ticker := time.NewTicker(1 * time.Hour)
+	defer ticker.Stop()
+
+	logger.Info().Msg("Session cleanup scheduler started")
+
+	for range ticker.C {
+		if err := queries.DeleteExpiredSessions(context.Background()); err != nil {
+			logger.Error().Err(err).Msg("Failed to delete expired sessions")
+		} else {
+			logger.Debug().Msg("Expired sessions cleaned up")
+		}
+	}
 }

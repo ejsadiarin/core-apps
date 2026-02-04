@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"core-gateway/auth"
 	"core-gateway/internal/sqlc"
 	"core-gateway/internal/validator"
 	"core-gateway/models"
@@ -104,6 +105,43 @@ func getCurrency(t pgtype.Text) string {
 	return t.String
 }
 
+// getUserID gets the current user's ID from context, or returns demo user ID for guests
+func (h *BudgetHandler) getUserID(c echo.Context) (uuid.UUID, error) {
+	user := auth.GetUserFromContext(c)
+	if user != nil {
+		return user.ID, nil
+	}
+
+	// for unauthenticated users, use demo user's data (read-only)
+	demoUserID, err := auth.GetDemoUserID(c.Request().Context(), h.queries)
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to get demo user ID")
+		return uuid.Nil, err
+	}
+	return demoUserID, nil
+}
+
+// requireAuth checks if user is authenticated (for write operations)
+func (h *BudgetHandler) requireAuth(c echo.Context) (uuid.UUID, error) {
+	user := auth.GetUserFromContext(c)
+	if user == nil {
+		return uuid.Nil, echo.NewHTTPError(http.StatusUnauthorized, "Authentication required")
+	}
+	return user.ID, nil
+}
+
+// requireUser checks if user is authenticated and has role 'user' or 'admin' (not guest)
+func (h *BudgetHandler) requireUser(c echo.Context) (uuid.UUID, error) {
+	user := auth.GetUserFromContext(c)
+	if user == nil {
+		return uuid.Nil, echo.NewHTTPError(http.StatusUnauthorized, "Authentication required")
+	}
+	if user.Role == auth.RoleGuest {
+		return uuid.Nil, echo.NewHTTPError(http.StatusForbidden, "Guest users cannot modify data")
+	}
+	return user.ID, nil
+}
+
 // Categories
 
 // CreateCategory godoc
@@ -114,17 +152,25 @@ func getCurrency(t pgtype.Text) string {
 // @Param category body models.CreateCategoryRequest true "Category to create"
 // @Success 201 {object} models.CategoryResponse
 // @Failure 400 {object} models.ErrorResponse
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 403 {object} models.ErrorResponse
 // @Router /api/budget/categories [post]
 func (h *BudgetHandler) CreateCategory(c echo.Context) error {
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return c.JSON(http.StatusForbidden, models.ErrorResponse{Error: "Guest users cannot create categories"})
+	}
+
 	req, err := validator.BindAndValidate[models.CreateCategoryRequest](c)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: err.Error()})
 	}
 
 	arg := sqlc.CreateCategoryParams{
-		Name:  req.Name,
-		Color: stringPtrToText(req.Color),
-		Icon:  stringPtrToText(req.Icon),
+		Name:   req.Name,
+		Color:  stringPtrToText(req.Color),
+		Icon:   stringPtrToText(req.Icon),
+		UserID: userID,
 	}
 
 	cat, err := h.queries.CreateCategory(c.Request().Context(), arg)
@@ -148,7 +194,12 @@ func (h *BudgetHandler) CreateCategory(c echo.Context) error {
 // @Success 200 {array} models.CategoryResponse
 // @Router /api/budget/categories [get]
 func (h *BudgetHandler) ListCategories(c echo.Context) error {
-	cats, err := h.queries.ListCategories(c.Request().Context())
+	userID, err := h.getUserID(c)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to get user context"})
+	}
+
+	cats, err := h.queries.ListCategories(c.Request().Context(), userID)
 	if err != nil {
 		h.logger.Error().Err(err).Msg("Failed to list categories")
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to list categories"})
@@ -175,8 +226,15 @@ func (h *BudgetHandler) ListCategories(c echo.Context) error {
 // @Param id path string true "Category ID"
 // @Param category body models.UpdateCategoryRequest true "Category updates"
 // @Success 200 {object} models.CategoryResponse
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 403 {object} models.ErrorResponse
 // @Router /api/budget/categories/{id} [put]
 func (h *BudgetHandler) UpdateCategory(c echo.Context) error {
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return c.JSON(http.StatusForbidden, models.ErrorResponse{Error: "Guest users cannot modify categories"})
+	}
+
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid ID format"})
@@ -188,10 +246,11 @@ func (h *BudgetHandler) UpdateCategory(c echo.Context) error {
 	}
 
 	arg := sqlc.UpdateCategoryParams{
-		ID:    id,
-		Name:  stringPtrToText(req.Name),
-		Color: stringPtrToText(req.Color),
-		Icon:  stringPtrToText(req.Icon),
+		ID:     id,
+		UserID: userID,
+		Name:   stringPtrToText(req.Name),
+		Color:  stringPtrToText(req.Color),
+		Icon:   stringPtrToText(req.Icon),
 	}
 
 	cat, err := h.queries.UpdateCategory(c.Request().Context(), arg)
@@ -213,14 +272,24 @@ func (h *BudgetHandler) UpdateCategory(c echo.Context) error {
 // @Tags budget
 // @Param id path string true "Category ID"
 // @Success 204 "No Content"
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 403 {object} models.ErrorResponse
 // @Router /api/budget/categories/{id} [delete]
 func (h *BudgetHandler) DeleteCategory(c echo.Context) error {
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return c.JSON(http.StatusForbidden, models.ErrorResponse{Error: "Guest users cannot delete categories"})
+	}
+
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid ID format"})
 	}
 
-	err = h.queries.DeleteCategory(c.Request().Context(), id)
+	err = h.queries.DeleteCategory(c.Request().Context(), sqlc.DeleteCategoryParams{
+		ID:     id,
+		UserID: userID,
+	})
 	if err != nil {
 		h.logger.Error().Err(err).Msg("Failed to delete category")
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to delete category"})
@@ -238,16 +307,24 @@ func (h *BudgetHandler) DeleteCategory(c echo.Context) error {
 // @Produce json
 // @Param tag body models.CreateTagRequest true "Tag to create"
 // @Success 201 {object} models.TagResponse
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 403 {object} models.ErrorResponse
 // @Router /api/budget/tags [post]
 func (h *BudgetHandler) CreateTag(c echo.Context) error {
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return c.JSON(http.StatusForbidden, models.ErrorResponse{Error: "Guest users cannot create tags"})
+	}
+
 	req, err := validator.BindAndValidate[models.CreateTagRequest](c)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: err.Error()})
 	}
 
 	arg := sqlc.CreateTagParams{
-		Name:  req.Name,
-		Color: stringPtrToText(req.Color),
+		Name:   req.Name,
+		Color:  stringPtrToText(req.Color),
+		UserID: userID,
 	}
 
 	tag, err := h.queries.CreateTag(c.Request().Context(), arg)
@@ -270,7 +347,12 @@ func (h *BudgetHandler) CreateTag(c echo.Context) error {
 // @Success 200 {array} models.TagResponse
 // @Router /api/budget/tags [get]
 func (h *BudgetHandler) ListTags(c echo.Context) error {
-	tags, err := h.queries.ListTags(c.Request().Context())
+	userID, err := h.getUserID(c)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to get user context"})
+	}
+
+	tags, err := h.queries.ListTags(c.Request().Context(), userID)
 	if err != nil {
 		h.logger.Error().Err(err).Msg("Failed to list tags")
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to list tags"})
@@ -296,8 +378,15 @@ func (h *BudgetHandler) ListTags(c echo.Context) error {
 // @Param id path string true "Tag ID"
 // @Param tag body models.UpdateTagRequest true "Tag updates"
 // @Success 200 {object} models.TagResponse
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 403 {object} models.ErrorResponse
 // @Router /api/budget/tags/{id} [put]
 func (h *BudgetHandler) UpdateTag(c echo.Context) error {
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return c.JSON(http.StatusForbidden, models.ErrorResponse{Error: "Guest users cannot modify tags"})
+	}
+
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid ID format"})
@@ -309,9 +398,10 @@ func (h *BudgetHandler) UpdateTag(c echo.Context) error {
 	}
 
 	arg := sqlc.UpdateTagParams{
-		ID:    id,
-		Name:  stringPtrToText(req.Name),
-		Color: stringPtrToText(req.Color),
+		ID:     id,
+		UserID: userID,
+		Name:   stringPtrToText(req.Name),
+		Color:  stringPtrToText(req.Color),
 	}
 
 	tag, err := h.queries.UpdateTag(c.Request().Context(), arg)
@@ -332,14 +422,24 @@ func (h *BudgetHandler) UpdateTag(c echo.Context) error {
 // @Tags budget
 // @Param id path string true "Tag ID"
 // @Success 204 "No Content"
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 403 {object} models.ErrorResponse
 // @Router /api/budget/tags/{id} [delete]
 func (h *BudgetHandler) DeleteTag(c echo.Context) error {
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return c.JSON(http.StatusForbidden, models.ErrorResponse{Error: "Guest users cannot delete tags"})
+	}
+
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid ID format"})
 	}
 
-	err = h.queries.DeleteTag(c.Request().Context(), id)
+	err = h.queries.DeleteTag(c.Request().Context(), sqlc.DeleteTagParams{
+		ID:     id,
+		UserID: userID,
+	})
 	if err != nil {
 		h.logger.Error().Err(err).Msg("Failed to delete tag")
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to delete tag"})
@@ -357,8 +457,15 @@ func (h *BudgetHandler) DeleteTag(c echo.Context) error {
 // @Produce json
 // @Param expense body models.CreateExpenseRequest true "Expense to create"
 // @Success 201 {object} models.ExpenseResponse
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 403 {object} models.ErrorResponse
 // @Router /api/budget/expenses [post]
 func (h *BudgetHandler) CreateExpense(c echo.Context) error {
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return c.JSON(http.StatusForbidden, models.ErrorResponse{Error: "Guest users cannot create expenses"})
+	}
+
 	req, err := validator.BindAndValidate[models.CreateExpenseRequest](c)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: err.Error()})
@@ -371,6 +478,7 @@ func (h *BudgetHandler) CreateExpense(c echo.Context) error {
 		CategoryID:  uuidPtrToNullUUID(req.CategoryID),
 		ExpenseDate: stringToDate(req.ExpenseDate),
 		Notes:       stringPtrToText(req.Notes),
+		UserID:      userID,
 	}
 
 	exp, err := h.queries.CreateExpense(c.Request().Context(), arg)
@@ -386,7 +494,7 @@ func (h *BudgetHandler) CreateExpense(c echo.Context) error {
 		})
 	}
 
-	return h.getExpenseResponse(c, exp.ID)
+	return h.getExpenseResponse(c, exp.ID, userID)
 }
 
 // ListExpenses godoc
@@ -399,12 +507,18 @@ func (h *BudgetHandler) CreateExpense(c echo.Context) error {
 // @Success 200 {array} models.ExpenseResponse
 // @Router /api/budget/expenses [get]
 func (h *BudgetHandler) ListExpenses(c echo.Context) error {
+	userID, err := h.getUserID(c)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to get user context"})
+	}
+
 	var filters models.ExpenseFilters
 	if err := c.Bind(&filters); err != nil {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid filters"})
 	}
 
 	arg := sqlc.ListExpensesParams{
+		UserID:     userID,
 		CategoryID: uuidPtrToNullUUID(filters.CategoryID),
 		StartDate:  stringPtrToDate(filters.StartDate),
 		EndDate:    stringPtrToDate(filters.EndDate),
@@ -451,11 +565,16 @@ func (h *BudgetHandler) ListExpenses(c echo.Context) error {
 // @Success 200 {object} models.ExpenseResponse
 // @Router /api/budget/expenses/{id} [get]
 func (h *BudgetHandler) GetExpense(c echo.Context) error {
+	userID, err := h.getUserID(c)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to get user context"})
+	}
+
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid ID format"})
 	}
-	return h.getExpenseResponse(c, id)
+	return h.getExpenseResponse(c, id, userID)
 }
 
 // UpdateExpense godoc
@@ -466,8 +585,15 @@ func (h *BudgetHandler) GetExpense(c echo.Context) error {
 // @Param id path string true "Expense ID"
 // @Param expense body models.UpdateExpenseRequest true "Expense updates"
 // @Success 200 {object} models.ExpenseResponse
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 403 {object} models.ErrorResponse
 // @Router /api/budget/expenses/{id} [put]
 func (h *BudgetHandler) UpdateExpense(c echo.Context) error {
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return c.JSON(http.StatusForbidden, models.ErrorResponse{Error: "Guest users cannot modify expenses"})
+	}
+
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid ID format"})
@@ -480,6 +606,7 @@ func (h *BudgetHandler) UpdateExpense(c echo.Context) error {
 
 	arg := sqlc.UpdateExpenseParams{
 		ID:          id,
+		UserID:      userID,
 		Description: stringPtrToText(req.Description),
 		Currency:    stringPtrToText(req.Currency),
 		CategoryID:  uuidPtrToNullUUID(req.CategoryID),
@@ -506,7 +633,7 @@ func (h *BudgetHandler) UpdateExpense(c echo.Context) error {
 		}
 	}
 
-	return h.getExpenseResponse(c, id)
+	return h.getExpenseResponse(c, id, userID)
 }
 
 // DeleteExpense godoc
@@ -514,14 +641,24 @@ func (h *BudgetHandler) UpdateExpense(c echo.Context) error {
 // @Tags budget
 // @Param id path string true "Expense ID"
 // @Success 204 "No Content"
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 403 {object} models.ErrorResponse
 // @Router /api/budget/expenses/{id} [delete]
 func (h *BudgetHandler) DeleteExpense(c echo.Context) error {
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return c.JSON(http.StatusForbidden, models.ErrorResponse{Error: "Guest users cannot delete expenses"})
+	}
+
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid ID format"})
 	}
 
-	err = h.queries.DeleteExpense(c.Request().Context(), id)
+	err = h.queries.DeleteExpense(c.Request().Context(), sqlc.DeleteExpenseParams{
+		ID:     id,
+		UserID: userID,
+	})
 	if err != nil {
 		h.logger.Error().Err(err).Msg("Failed to delete expense")
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to delete expense"})
@@ -541,10 +678,16 @@ func (h *BudgetHandler) DeleteExpense(c echo.Context) error {
 // @Success 200 {object} models.SummaryStatsResponse
 // @Router /api/budget/stats/summary [get]
 func (h *BudgetHandler) GetSummary(c echo.Context) error {
+	userID, err := h.getUserID(c)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to get user context"})
+	}
+
 	startDate := stringPtrToDate(stringPtr(c.QueryParam("start_date")))
 	endDate := stringPtrToDate(stringPtr(c.QueryParam("end_date")))
 
 	summary, err := h.queries.GetTotalSpending(c.Request().Context(), sqlc.GetTotalSpendingParams{
+		UserID:    userID,
 		StartDate: startDate,
 		EndDate:   endDate,
 	})
@@ -569,10 +712,16 @@ func (h *BudgetHandler) GetSummary(c echo.Context) error {
 // @Success 200 {array} models.TrendItem
 // @Router /api/budget/stats/trends [get]
 func (h *BudgetHandler) GetTrends(c echo.Context) error {
+	userID, err := h.getUserID(c)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to get user context"})
+	}
+
 	startDate := stringPtrToDate(stringPtr(c.QueryParam("start_date")))
 	endDate := stringPtrToDate(stringPtr(c.QueryParam("end_date")))
 
 	trends, err := h.queries.GetDailySpending(c.Request().Context(), sqlc.GetDailySpendingParams{
+		UserID:    userID,
 		StartDate: startDate,
 		EndDate:   endDate,
 	})
@@ -601,10 +750,16 @@ func (h *BudgetHandler) GetTrends(c echo.Context) error {
 // @Success 200 {array} models.CategoryBreakdownItem
 // @Router /api/budget/stats/category-breakdown [get]
 func (h *BudgetHandler) GetCategoryBreakdown(c echo.Context) error {
+	userID, err := h.getUserID(c)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to get user context"})
+	}
+
 	startDate := stringPtrToDate(stringPtr(c.QueryParam("start_date")))
 	endDate := stringPtrToDate(stringPtr(c.QueryParam("end_date")))
 
 	breakdown, err := h.queries.GetCategorySpending(c.Request().Context(), sqlc.GetCategorySpendingParams{
+		UserID:    userID,
 		StartDate: startDate,
 		EndDate:   endDate,
 	})
@@ -639,15 +794,21 @@ func (h *BudgetHandler) GetCategoryBreakdown(c echo.Context) error {
 	return c.JSON(http.StatusOK, res)
 }
 
-func (h *BudgetHandler) getExpenseResponse(c echo.Context, id uuid.UUID) error {
-	exp, err := h.queries.GetExpense(c.Request().Context(), id)
+func (h *BudgetHandler) getExpenseResponse(c echo.Context, id uuid.UUID, userID uuid.UUID) error {
+	exp, err := h.queries.GetExpense(c.Request().Context(), sqlc.GetExpenseParams{
+		ID:     id,
+		UserID: userID,
+	})
 	if err != nil {
 		return c.JSON(http.StatusNotFound, models.ErrorResponse{Error: "Expense not found"})
 	}
 
 	var catResp *models.CategoryResponse
 	if exp.CategoryID.Valid {
-		cat, err := h.queries.GetCategory(c.Request().Context(), exp.CategoryID.Bytes)
+		cat, err := h.queries.GetCategory(c.Request().Context(), sqlc.GetCategoryParams{
+			ID:     exp.CategoryID.Bytes,
+			UserID: userID,
+		})
 		if err == nil {
 			catResp = &models.CategoryResponse{
 				ID:    cat.ID,

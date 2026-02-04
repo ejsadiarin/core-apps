@@ -5,18 +5,28 @@ import { useState } from "react";
 import { ExpenseStats } from "@/components/budget/expense-stats";
 import { useSummaryStats, useExpenses } from "@/hooks/use-budget";
 import { Button } from "@/components/ui/button";
-import { Plus, ArrowRight, Receipt, Settings } from "lucide-react";
+import { Plus, ArrowRight, Receipt, Settings, EyeOff } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
+import { useAuth } from "@/contexts/auth-context";
+import { useToast } from "@/components/ui/toast";
 
 export default function BudgetDashboard() {
   const [period] = useState<string>("month");
   const { data: summaryStats, isLoading: statsLoading } = useSummaryStats(period);
   const { data: recentExpenses, isLoading: expensesLoading } = useExpenses();
+  const { isGuest } = useAuth();
+  const { showToast } = useToast();
 
-  // get last 5 expenses
   const displayExpenses = recentExpenses?.slice(0, 5) || [];
+
+  const handleActionClick = () => {
+    if (isGuest) {
+      showToast("Guest user is read-only. Create an account to save changes", "warning");
+    }
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -28,12 +38,21 @@ export default function BudgetDashboard() {
         transition={{ duration: 0.5 }}
       >
         <div>
-          <h1 className="text-primary mb-2">BUDGET TRACKER</h1>
+          <div className="flex items-center gap-2 mb-2">
+            <h1 className="text-primary">BUDGET TRACKER</h1>
+            {isGuest && (
+              <Badge variant="outline" className="bg-accent/10 text-accent border-accent/30">
+                Demo Mode
+              </Badge>
+            )}
+          </div>
           <p className="text-sm text-muted-foreground">
-            Track and manage your expenses
+            {isGuest
+              ? "Viewing sample data. Register to create your own budget."
+              : "Track and manage your expenses"}
           </p>
         </div>
-        <Link href="/dashboard/budget/expenses/new">
+        <Link href="/dashboard/budget/expenses/new" onClick={handleActionClick}>
           <Button>
             <Plus className="mr-2 h-4 w-4" />
             Add Expense
@@ -89,13 +108,22 @@ export default function BudgetDashboard() {
               </div>
             ) : displayExpenses.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                <p>No expenses yet</p>
-                <Link href="/dashboard/budget/expenses/new">
-                  <Button variant="outline" size="sm" className="mt-4">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add your first expense
-                  </Button>
-                </Link>
+                {isGuest ? (
+                  <div className="space-y-2">
+                    <p>No sample expenses available.</p>
+                    <p className="text-xs">Register to create your own budget and track expenses.</p>
+                  </div>
+                ) : (
+                  <>
+                    <p>No expenses yet</p>
+                    <Link href="/dashboard/budget/expenses/new">
+                      <Button variant="outline" size="sm" className="mt-4">
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add your first expense
+                      </Button>
+                    </Link>
+                  </>
+                )}
               </div>
             ) : (
               <div className="space-y-4">
@@ -146,19 +174,19 @@ export default function BudgetDashboard() {
             <CardDescription>Manage your budget</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
-            <Link href="/dashboard/budget/expenses/new" className="block">
+            <Link href="/dashboard/budget/expenses/new" className="block" onClick={handleActionClick}>
               <Button variant="outline" className="w-full justify-start">
                 <Plus className="mr-2 h-4 w-4" />
                 Add New Expense
               </Button>
             </Link>
-            <Link href="/dashboard/budget/expenses" className="block">
+            <Link href="/dashboard/budget/expenses" className="block" onClick={handleActionClick}>
               <Button variant="outline" className="w-full justify-start">
                 <Receipt className="mr-2 h-4 w-4" />
                 View All Expenses
               </Button>
             </Link>
-            <Link href="/dashboard/budget/settings" className="block">
+            <Link href="/dashboard/budget/settings" className="block" onClick={handleActionClick}>
               <Button variant="outline" className="w-full justify-start">
                 <Settings className="mr-2 h-4 w-4" />
                 Manage Categories & Tags

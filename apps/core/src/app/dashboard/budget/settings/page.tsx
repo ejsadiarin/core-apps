@@ -16,9 +16,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, Edit2, Save, X } from "lucide-react";
+import { Plus, Trash2, Edit2, Save, X, ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { Category, Tag } from "@/types/api";
+import Link from "next/link";
 
 export default function SettingsPage() {
   const { data: categories, isLoading: categoriesLoading } = useCategories();
@@ -91,7 +92,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8">
       {/* Header */}
       <motion.div
         className="mb-8"
@@ -99,6 +100,12 @@ export default function SettingsPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
+        <Link href="/dashboard/budget">
+          <Button variant="ghost" size="sm" className="mb-4">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Budget
+          </Button>
+        </Link>
         <h1 className="text-primary mb-2">BUDGET SETTINGS</h1>
         <p className="text-sm text-muted-foreground">
           Manage your categories and tags

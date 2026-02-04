@@ -25,7 +25,7 @@ export function ExpenseForm({ initialData, onSubmit, onCancel, isLoading }: Expe
   const [formData, setFormData] = useState<CreateExpenseRequest>({
     description: initialData?.description || "",
     amount: initialData?.amount || 0,
-    currency: initialData?.currency || "USD",
+    currency: initialData?.currency || "PHP",
     category_id: initialData?.category_id,
     expense_date: initialData?.expense_date || new Date().toISOString().split('T')[0],
     notes: initialData?.notes,
@@ -82,7 +82,7 @@ export function ExpenseForm({ initialData, onSubmit, onCancel, isLoading }: Expe
             maxLength={3}
             value={formData.currency}
             onChange={(e) => setFormData({ ...formData, currency: e.target.value.toUpperCase() })}
-            placeholder="USD"
+            placeholder="PHP"
           />
         </div>
       </div>

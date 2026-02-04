@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { motion } from "motion/react";
-import { Terminal, Lock, User, AlertCircle, Eye, EyeOff } from "lucide-react";
+import { Terminal, Lock, Mail, AlertCircle, Eye, EyeOff, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,12 +12,13 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/contexts/auth-context";
 
 export default function LoginPage() {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, demoLogin } = useAuth();
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -25,14 +27,24 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const success = await login(username, password);
-      if (success) {
-        router.push("/dashboard");
-      } else {
-        setError("Invalid credentials. Please try again.");
-      }
+      await login(email, password, rememberMe);
+      router.push("/dashboard");
     } catch (err) {
-      setError("An error occurred. Please try again.");
+      setError(err instanceof Error ? err.message : "Invalid credentials. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDemoLogin = async () => {
+    setError("");
+    setIsLoading(true);
+
+    try {
+      await demoLogin();
+      router.push("/dashboard");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Demo login failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -89,16 +101,6 @@ export default function LoginPage() {
             </p>
           </div>
 
-          {/* Demo Credentials Info */}
-          <div className="mb-6 p-3 rounded-lg bg-accent/10 border border-accent/30">
-            <p className="text-xs text-accent mb-2">Demo Credentials:</p>
-            <div className="text-xs text-muted-foreground space-y-1">
-              <p>Admin: admin / admin123</p>
-              <p>User: user / user123</p>
-              <p>Viewer: viewer / viewer123</p>
-            </div>
-          </div>
-
           {/* Error Alert */}
           {error && (
             <motion.div
@@ -116,20 +118,20 @@ export default function LoginPage() {
           {/* Login Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username" className="text-card-foreground">
-                Username
+              <Label htmlFor="email" className="text-card-foreground">
+                Email
               </Label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  id="username"
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="pl-10 bg-input-background border-border focus:border-primary"
-                  placeholder="Enter username"
+                  placeholder="Enter email"
                   required
-                  autoComplete="username"
+                  autoComplete="email"
                 />
               </div>
             </div>
@@ -164,6 +166,19 @@ export default function LoginPage() {
               </div>
             </div>
 
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="rememberMe"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="h-4 w-4 rounded border-border bg-input-background text-primary focus:ring-primary"
+              />
+              <Label htmlFor="rememberMe" className="text-sm text-muted-foreground cursor-pointer">
+                Remember me for 30 days
+              </Label>
+            </div>
+
             <Button
               type="submit"
               className="w-full bg-primary text-primary-foreground hover:bg-primary/90 relative overflow-hidden"
@@ -183,6 +198,41 @@ export default function LoginPage() {
               )}
             </Button>
           </form>
+
+          {/* Divider */}
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-border/50"></div>
+            </div>
+            <div className="relative flex justify-center text-xs">
+              <span className="bg-card px-2 text-muted-foreground">or</span>
+            </div>
+          </div>
+
+          {/* Demo Login */}
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full border-accent/50 text-accent hover:bg-accent/10"
+            onClick={handleDemoLogin}
+            disabled={isLoading}
+          >
+            Try Demo Mode (Guest Access)
+          </Button>
+
+          {/* Register Link */}
+          <div className="mt-6 text-center">
+            <p className="text-sm text-muted-foreground">
+              Don't have an account?{" "}
+              <Link
+                href="/register"
+                className="text-primary hover:underline inline-flex items-center gap-1"
+              >
+                <UserPlus className="w-3 h-3" />
+                Register
+              </Link>
+            </p>
+          </div>
 
           {/* Footer */}
           <div className="mt-6 pt-6 border-t border-border/50 text-center">

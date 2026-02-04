@@ -23,6 +23,167 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/api/auth/demo": {
+            "post": {
+                "description": "Login as the demo user (read-only access)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Login as demo user",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.UserResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/auth/login": {
+            "post": {
+                "description": "Authenticate user and create session",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Login user",
+                "parameters": [
+                    {
+                        "description": "Login credentials",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.LoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.UserResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/auth/logout": {
+            "post": {
+                "description": "Delete session and clear cookie",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Logout user",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/auth/me": {
+            "get": {
+                "description": "Get the currently authenticated user",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Get current user",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.UserResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/auth/register": {
+            "post": {
+                "description": "Create a new user account",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Register a new user",
+                "parameters": [
+                    {
+                        "description": "Registration details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.RegisterRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.UserResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/budget/categories": {
             "get": {
                 "produces": [
@@ -38,7 +199,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/models.CategoryResponse"
+                                "$ref": "#/definitions/core-gateway_models.CategoryResponse"
                             }
                         }
                     }
@@ -62,7 +223,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.CreateCategoryRequest"
+                            "$ref": "#/definitions/core-gateway_models.CreateCategoryRequest"
                         }
                     }
                 ],
@@ -70,13 +231,25 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/models.CategoryResponse"
+                            "$ref": "#/definitions/core-gateway_models.CategoryResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
                         }
                     }
                 }
@@ -108,7 +281,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.UpdateCategoryRequest"
+                            "$ref": "#/definitions/core-gateway_models.UpdateCategoryRequest"
                         }
                     }
                 ],
@@ -116,7 +289,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/models.CategoryResponse"
+                            "$ref": "#/definitions/core-gateway_models.CategoryResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
                         }
                     }
                 }
@@ -138,6 +323,18 @@ const docTemplate = `{
                 "responses": {
                     "204": {
                         "description": "No Content"
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                        }
                     }
                 }
             }
@@ -177,7 +374,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/models.ExpenseResponse"
+                                "$ref": "#/definitions/core-gateway_models.ExpenseResponse"
                             }
                         }
                     }
@@ -201,7 +398,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.CreateExpenseRequest"
+                            "$ref": "#/definitions/core-gateway_models.CreateExpenseRequest"
                         }
                     }
                 ],
@@ -209,7 +406,19 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/models.ExpenseResponse"
+                            "$ref": "#/definitions/core-gateway_models.ExpenseResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
                         }
                     }
                 }
@@ -234,7 +443,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/models.ExpenseResponse"
+                            "$ref": "#/definitions/core-gateway_models.ExpenseResponse"
                         }
                     }
                 }
@@ -264,7 +473,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.UpdateExpenseRequest"
+                            "$ref": "#/definitions/core-gateway_models.UpdateExpenseRequest"
                         }
                     }
                 ],
@@ -272,7 +481,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/models.ExpenseResponse"
+                            "$ref": "#/definitions/core-gateway_models.ExpenseResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
                         }
                     }
                 }
@@ -294,6 +515,18 @@ const docTemplate = `{
                 "responses": {
                     "204": {
                         "description": "No Content"
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                        }
                     }
                 }
             }
@@ -327,7 +560,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/models.CategoryBreakdownItem"
+                                "$ref": "#/definitions/core-gateway_models.CategoryBreakdownItem"
                             }
                         }
                     }
@@ -361,7 +594,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/models.SummaryStatsResponse"
+                            "$ref": "#/definitions/core-gateway_models.SummaryStatsResponse"
                         }
                     }
                 }
@@ -396,7 +629,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/models.TrendItem"
+                                "$ref": "#/definitions/core-gateway_models.TrendItem"
                             }
                         }
                     }
@@ -418,7 +651,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/models.TagResponse"
+                                "$ref": "#/definitions/core-gateway_models.TagResponse"
                             }
                         }
                     }
@@ -442,7 +675,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.CreateTagRequest"
+                            "$ref": "#/definitions/core-gateway_models.CreateTagRequest"
                         }
                     }
                 ],
@@ -450,7 +683,19 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/models.TagResponse"
+                            "$ref": "#/definitions/core-gateway_models.TagResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
                         }
                     }
                 }
@@ -482,7 +727,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.UpdateTagRequest"
+                            "$ref": "#/definitions/core-gateway_models.UpdateTagRequest"
                         }
                     }
                 ],
@@ -490,7 +735,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/models.TagResponse"
+                            "$ref": "#/definitions/core-gateway_models.TagResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
                         }
                     }
                 }
@@ -512,6 +769,18 @@ const docTemplate = `{
                 "responses": {
                     "204": {
                         "description": "No Content"
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                        }
                     }
                 }
             }
@@ -533,7 +802,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/main.ServiceStatus"
+                                "$ref": "#/definitions/apps_api-gateway.ServiceStatus"
                             }
                         }
                     }
@@ -558,7 +827,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.CreateServiceRequest"
+                            "$ref": "#/definitions/core-gateway_models.CreateServiceRequest"
                         }
                     }
                 ],
@@ -566,19 +835,19 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/sqlc.Service"
+                            "$ref": "#/definitions/core-gateway_internal_sqlc.Service"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
                         }
                     }
                 }
@@ -600,14 +869,14 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/sqlc.ListServicesRow"
+                                "$ref": "#/definitions/core-gateway_internal_sqlc.ListServicesRow"
                             }
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
                         }
                     }
                 }
@@ -634,7 +903,7 @@ const docTemplate = `{
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
                         }
                     }
                 }
@@ -663,25 +932,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/sqlc.Service"
+                            "$ref": "#/definitions/core-gateway_internal_sqlc.Service"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
                         }
                     }
                 }
@@ -712,7 +981,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.UpdateServiceRequest"
+                            "$ref": "#/definitions/core-gateway_models.UpdateServiceRequest"
                         }
                     }
                 ],
@@ -720,25 +989,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/sqlc.Service"
+                            "$ref": "#/definitions/core-gateway_internal_sqlc.Service"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
                         }
                     }
                 }
@@ -765,19 +1034,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
                         }
                     }
                 }
@@ -815,20 +1084,20 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/sqlc.ServiceHealthHistory"
+                                "$ref": "#/definitions/core-gateway_internal_sqlc.ServiceHealthHistory"
                             }
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
                         }
                     }
                 }
@@ -864,13 +1133,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
                         }
                     }
                 }
@@ -890,7 +1159,253 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/main.SystemStats"
+                            "$ref": "#/definitions/apps_api-gateway.SystemStats"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/users": {
+            "get": {
+                "description": "List all users (admin only)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "List all users",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/core-gateway_models.UserResponse"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Create a new user with specified role (admin only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Create a new user",
+                "parameters": [
+                    {
+                        "description": "User details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.CreateUserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.UserResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/users/{id}": {
+            "get": {
+                "description": "Get user details (admin or own user)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Get user by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.UserResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Update user details (admin or own user, only admin can change role)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Update user",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "User updates",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.UpdateUserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.UserResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Delete a user (admin only, cannot delete self or demo user)",
+                "tags": [
+                    "users"
+                ],
+                "summary": "Delete user",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
                         }
                     }
                 }
@@ -921,7 +1436,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "main.ServiceStatus": {
+        "apps_api-gateway.ServiceStatus": {
             "type": "object",
             "properties": {
                 "name": {
@@ -935,7 +1450,7 @@ const docTemplate = `{
                 }
             }
         },
-        "main.SystemStats": {
+        "apps_api-gateway.SystemStats": {
             "type": "object",
             "properties": {
                 "cpu": {
@@ -966,7 +1481,136 @@ const docTemplate = `{
                 }
             }
         },
-        "models.CategoryBreakdownItem": {
+        "core-gateway_internal_sqlc.ListServicesRow": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "$ref": "#/definitions/pgtype.Timestamp"
+                },
+                "current_status": {
+                    "type": "string"
+                },
+                "description": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "expected_status_codes": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "health_check_interval": {
+                    "$ref": "#/definitions/pgtype.Int4"
+                },
+                "health_check_method": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "icon": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "$ref": "#/definitions/pgtype.Bool"
+                },
+                "last_check": {
+                    "$ref": "#/definitions/pgtype.Timestamp"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "response_time": {
+                    "$ref": "#/definitions/pgtype.Int4"
+                },
+                "service_type": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "timeout": {
+                    "$ref": "#/definitions/pgtype.Int4"
+                },
+                "updated_at": {
+                    "$ref": "#/definitions/pgtype.Timestamp"
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "core-gateway_internal_sqlc.Service": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "$ref": "#/definitions/pgtype.Timestamp"
+                },
+                "description": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "expected_status_codes": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "health_check_interval": {
+                    "$ref": "#/definitions/pgtype.Int4"
+                },
+                "health_check_method": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "icon": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "$ref": "#/definitions/pgtype.Bool"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "service_type": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "timeout": {
+                    "$ref": "#/definitions/pgtype.Int4"
+                },
+                "updated_at": {
+                    "$ref": "#/definitions/pgtype.Timestamp"
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "core-gateway_internal_sqlc.ServiceHealthHistory": {
+            "type": "object",
+            "properties": {
+                "checked_at": {
+                    "$ref": "#/definitions/pgtype.Timestamp"
+                },
+                "error_message": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "response_time": {
+                    "$ref": "#/definitions/pgtype.Int4"
+                },
+                "service_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "status_code": {
+                    "$ref": "#/definitions/pgtype.Int4"
+                }
+            }
+        },
+        "core-gateway_models.CategoryBreakdownItem": {
             "type": "object",
             "properties": {
                 "category_id": {
@@ -989,7 +1633,7 @@ const docTemplate = `{
                 }
             }
         },
-        "models.CategoryResponse": {
+        "core-gateway_models.CategoryResponse": {
             "type": "object",
             "properties": {
                 "color": {
@@ -1006,7 +1650,7 @@ const docTemplate = `{
                 }
             }
         },
-        "models.CreateCategoryRequest": {
+        "core-gateway_models.CreateCategoryRequest": {
             "type": "object",
             "required": [
                 "name"
@@ -1026,7 +1670,7 @@ const docTemplate = `{
                 }
             }
         },
-        "models.CreateExpenseRequest": {
+        "core-gateway_models.CreateExpenseRequest": {
             "type": "object",
             "required": [
                 "amount",
@@ -1062,7 +1706,7 @@ const docTemplate = `{
                 }
             }
         },
-        "models.CreateServiceRequest": {
+        "core-gateway_models.CreateServiceRequest": {
             "type": "object",
             "required": [
                 "name",
@@ -1112,7 +1756,7 @@ const docTemplate = `{
                 }
             }
         },
-        "models.CreateTagRequest": {
+        "core-gateway_models.CreateTagRequest": {
             "type": "object",
             "required": [
                 "name"
@@ -1128,7 +1772,33 @@ const docTemplate = `{
                 }
             }
         },
-        "models.ErrorResponse": {
+        "core-gateway_models.CreateUserRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "password",
+                "role"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string",
+                    "maxLength": 128,
+                    "minLength": 8
+                },
+                "role": {
+                    "type": "string",
+                    "enum": [
+                        "guest",
+                        "user",
+                        "admin"
+                    ]
+                }
+            }
+        },
+        "core-gateway_models.ErrorResponse": {
             "type": "object",
             "properties": {
                 "details": {},
@@ -1137,14 +1807,14 @@ const docTemplate = `{
                 }
             }
         },
-        "models.ExpenseResponse": {
+        "core-gateway_models.ExpenseResponse": {
             "type": "object",
             "properties": {
                 "amount": {
                     "type": "number"
                 },
                 "category": {
-                    "$ref": "#/definitions/models.CategoryResponse"
+                    "$ref": "#/definitions/core-gateway_models.CategoryResponse"
                 },
                 "created_at": {
                     "type": "string"
@@ -1168,7 +1838,7 @@ const docTemplate = `{
                 "tags": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/models.TagResponse"
+                        "$ref": "#/definitions/core-gateway_models.TagResponse"
                     }
                 },
                 "updated_at": {
@@ -1176,7 +1846,42 @@ const docTemplate = `{
                 }
             }
         },
-        "models.SummaryStatsResponse": {
+        "core-gateway_models.LoginRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "remember_me": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "core-gateway_models.RegisterRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string",
+                    "maxLength": 128,
+                    "minLength": 8
+                }
+            }
+        },
+        "core-gateway_models.SummaryStatsResponse": {
             "type": "object",
             "properties": {
                 "period": {
@@ -1191,7 +1896,7 @@ const docTemplate = `{
                 }
             }
         },
-        "models.TagResponse": {
+        "core-gateway_models.TagResponse": {
             "type": "object",
             "properties": {
                 "color": {
@@ -1205,7 +1910,7 @@ const docTemplate = `{
                 }
             }
         },
-        "models.TrendItem": {
+        "core-gateway_models.TrendItem": {
             "type": "object",
             "properties": {
                 "count": {
@@ -1220,7 +1925,7 @@ const docTemplate = `{
                 }
             }
         },
-        "models.UpdateCategoryRequest": {
+        "core-gateway_models.UpdateCategoryRequest": {
             "type": "object",
             "properties": {
                 "color": {
@@ -1237,7 +1942,7 @@ const docTemplate = `{
                 }
             }
         },
-        "models.UpdateExpenseRequest": {
+        "core-gateway_models.UpdateExpenseRequest": {
             "type": "object",
             "properties": {
                 "amount": {
@@ -1267,7 +1972,7 @@ const docTemplate = `{
                 }
             }
         },
-        "models.UpdateServiceRequest": {
+        "core-gateway_models.UpdateServiceRequest": {
             "type": "object",
             "properties": {
                 "description": {
@@ -1316,7 +2021,7 @@ const docTemplate = `{
                 }
             }
         },
-        "models.UpdateTagRequest": {
+        "core-gateway_models.UpdateTagRequest": {
             "type": "object",
             "properties": {
                 "color": {
@@ -1326,6 +2031,44 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 100,
                     "minLength": 1
+                }
+            }
+        },
+        "core-gateway_models.UpdateUserRequest": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string",
+                    "maxLength": 128,
+                    "minLength": 8
+                },
+                "role": {
+                    "type": "string",
+                    "enum": [
+                        "guest",
+                        "user",
+                        "admin"
+                    ]
+                }
+            }
+        },
+        "core-gateway_models.UserResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "role": {
+                    "type": "string"
                 }
             }
         },
@@ -1389,135 +2132,6 @@ const docTemplate = `{
                 },
                 "valid": {
                     "type": "boolean"
-                }
-            }
-        },
-        "sqlc.ListServicesRow": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "$ref": "#/definitions/pgtype.Timestamp"
-                },
-                "current_status": {
-                    "type": "string"
-                },
-                "description": {
-                    "$ref": "#/definitions/pgtype.Text"
-                },
-                "expected_status_codes": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                },
-                "health_check_interval": {
-                    "$ref": "#/definitions/pgtype.Int4"
-                },
-                "health_check_method": {
-                    "$ref": "#/definitions/pgtype.Text"
-                },
-                "icon": {
-                    "$ref": "#/definitions/pgtype.Text"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "is_active": {
-                    "$ref": "#/definitions/pgtype.Bool"
-                },
-                "last_check": {
-                    "$ref": "#/definitions/pgtype.Timestamp"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "response_time": {
-                    "$ref": "#/definitions/pgtype.Int4"
-                },
-                "service_type": {
-                    "$ref": "#/definitions/pgtype.Text"
-                },
-                "timeout": {
-                    "$ref": "#/definitions/pgtype.Int4"
-                },
-                "updated_at": {
-                    "$ref": "#/definitions/pgtype.Timestamp"
-                },
-                "url": {
-                    "type": "string"
-                }
-            }
-        },
-        "sqlc.Service": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "$ref": "#/definitions/pgtype.Timestamp"
-                },
-                "description": {
-                    "$ref": "#/definitions/pgtype.Text"
-                },
-                "expected_status_codes": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                },
-                "health_check_interval": {
-                    "$ref": "#/definitions/pgtype.Int4"
-                },
-                "health_check_method": {
-                    "$ref": "#/definitions/pgtype.Text"
-                },
-                "icon": {
-                    "$ref": "#/definitions/pgtype.Text"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "is_active": {
-                    "$ref": "#/definitions/pgtype.Bool"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "service_type": {
-                    "$ref": "#/definitions/pgtype.Text"
-                },
-                "timeout": {
-                    "$ref": "#/definitions/pgtype.Int4"
-                },
-                "updated_at": {
-                    "$ref": "#/definitions/pgtype.Timestamp"
-                },
-                "url": {
-                    "type": "string"
-                }
-            }
-        },
-        "sqlc.ServiceHealthHistory": {
-            "type": "object",
-            "properties": {
-                "checked_at": {
-                    "$ref": "#/definitions/pgtype.Timestamp"
-                },
-                "error_message": {
-                    "$ref": "#/definitions/pgtype.Text"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "response_time": {
-                    "$ref": "#/definitions/pgtype.Int4"
-                },
-                "service_id": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "string"
-                },
-                "status_code": {
-                    "$ref": "#/definitions/pgtype.Int4"
                 }
             }
         }

@@ -2,24 +2,31 @@
 
 import { motion } from "motion/react";
 import { useState } from "react";
-import { useExpenses, useCategories, useDeleteExpense } from "@/hooks/use-budget";
+import { useExpenses, useCategories, useDeleteExpense, useUpdateExpense } from "@/hooks/use-budget";
 import { ExpenseCard } from "@/components/budget/expense-card";
+import { EditExpenseDialog } from "@/components/budget/expense-edit-dialog";
 import { Button } from "@/components/ui/button";
-import { Plus, Filter } from "lucide-react";
-import Link from "next/link";
+import { Plus, Filter, ArrowLeft, EyeOff } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Link } from "next/link";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { ExpenseFilters } from "@/types/api";
+import type { ExpenseFilters, Expense } from "@/types/api";
+import { useAuth } from "@/contexts/auth-context";
+import { useToast } from "@/components/ui/toast";
 
 export default function ExpensesPage() {
   const [filters, setFilters] = useState<ExpenseFilters>({});
   const [searchTerm, setSearchTerm] = useState("");
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   
   const { data: expenses, isLoading } = useExpenses(filters);
   const { data: categories } = useCategories();
   const deleteExpense = useDeleteExpense();
+  const updateExpense = useUpdateExpense();
+  const { isGuest } = useAuth();
+  const { showToast } = useToast();
 
-  // filter by search term
   const filteredExpenses = expenses?.filter((expense) =>
     expense.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -27,6 +34,17 @@ export default function ExpensesPage() {
   const handleDelete = async (id: string) => {
     if (confirm("Are you sure you want to delete this expense?")) {
       await deleteExpense.mutateAsync(id);
+    }
+  };
+
+  const handleUpdate = async (data: any) => {
+    await updateExpense.mutateAsync({ id: editingExpense!.id, data });
+  };
+
+  const handleAddExpenseClick = () => {
+    if (isGuest) {
+      showToast("Guest user is read-only. Create an account to save changes", "warning");
+      return;
     }
   };
 
@@ -40,12 +58,27 @@ export default function ExpensesPage() {
         transition={{ duration: 0.5 }}
       >
         <div>
-          <h1 className="text-primary mb-2">EXPENSE LIST</h1>
+          <Link href="/dashboard/budget">
+            <Button variant="ghost" size="sm" className="mb-2 pl-0">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Budget
+            </Button>
+          </Link>
+          <div className="flex items-center gap-2 mb-2">
+            <h1 className="text-primary">EXPENSE LIST</h1>
+            {isGuest && (
+              <Badge variant="outline" className="bg-accent/10 text-accent border-accent/30">
+                Demo Mode
+              </Badge>
+            )}
+          </div>
           <p className="text-sm text-muted-foreground">
-            View and manage all your expenses
+            {isGuest
+              ? "Viewing sample expenses"
+              : "View and manage all your expenses"}
           </p>
         </div>
-        <Link href="/dashboard/budget/expenses/new">
+        <Link href="/dashboard/budget/expenses/new" onClick={handleAddExpenseClick}>
           <Button>
             <Plus className="mr-2 h-4 w-4" />
             Add Expense
@@ -129,21 +162,39 @@ export default function ExpensesPage() {
             <ExpenseCard
               key={expense.id}
               expense={expense}
+              onEdit={(exp) => setEditingExpense(exp)}
               onDelete={handleDelete}
+              showToast={showToast}
             />
           ))
         ) : (
           <div className="text-center py-12 text-muted-foreground">
-            <p className="mb-4">No expenses found</p>
-            <Link href="/dashboard/budget/expenses/new">
-              <Button variant="outline">
-                <Plus className="mr-2 h-4 w-4" />
-                Add your first expense
-              </Button>
-            </Link>
+            <div className="space-y-2">
+              <EyeOff className="w-8 h-8 mx-auto opacity-50" />
+              <p>No expenses found.</p>
+              {isGuest ? (
+                <p className="text-xs">Sign in or create an account to manage your own expenses.</p>
+              ) : (
+                <Link href="/dashboard/budget/expenses/new">
+                  <Button variant="outline" size="sm" className="mt-2">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add your first expense
+                  </Button>
+                </Link>
+              )}
+            </div>
           </div>
         )}
       </motion.div>
+
+      {/* Edit Dialog */}
+      <EditExpenseDialog
+        expense={editingExpense}
+        open={!!editingExpense}
+        onOpenChange={(open) => !open && setEditingExpense(null)}
+        onSubmit={handleUpdate}
+        isLoading={updateExpense.isPending}
+      />
     </div>
   );
 }

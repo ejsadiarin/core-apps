@@ -14,45 +14,69 @@ import (
 type Querier interface {
 	// Expense Tags
 	AddExpenseTag(ctx context.Context, arg AddExpenseTagParams) error
+	CountActiveSessions(ctx context.Context) (int64, error)
+	CountAdmins(ctx context.Context) (int64, error)
 	// Categories
 	CreateCategory(ctx context.Context, arg CreateCategoryParams) (BudgetCategory, error)
 	// Expenses
 	CreateExpense(ctx context.Context, arg CreateExpenseParams) (BudgetExpense, error)
 	CreateHealthHistory(ctx context.Context, arg CreateHealthHistoryParams) (ServiceHealthHistory, error)
 	CreateService(ctx context.Context, arg CreateServiceParams) (Service, error)
+	// Sessions
+	CreateSession(ctx context.Context, arg CreateSessionParams) (Session, error)
 	// Tags
 	CreateTag(ctx context.Context, arg CreateTagParams) (BudgetTag, error)
-	DeleteCategory(ctx context.Context, id uuid.UUID) error
-	DeleteExpense(ctx context.Context, id uuid.UUID) error
+	// Users
+	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
+	DeleteCategory(ctx context.Context, arg DeleteCategoryParams) error
+	DeleteExpense(ctx context.Context, arg DeleteExpenseParams) error
+	DeleteExpiredSessions(ctx context.Context) error
 	DeleteService(ctx context.Context, id uuid.UUID) error
-	DeleteTag(ctx context.Context, id uuid.UUID) error
+	DeleteSession(ctx context.Context, id uuid.UUID) error
+	DeleteSessionByTokenHash(ctx context.Context, tokenHash string) error
+	DeleteTag(ctx context.Context, arg DeleteTagParams) error
+	DeleteUser(ctx context.Context, id uuid.UUID) error
+	DeleteUserSessions(ctx context.Context, userID uuid.UUID) error
+	GetAllCategorySpending(ctx context.Context, arg GetAllCategorySpendingParams) ([]GetAllCategorySpendingRow, error)
 	GetAllServicesStats(ctx context.Context) (GetAllServicesStatsRow, error)
-	GetCategory(ctx context.Context, id uuid.UUID) (BudgetCategory, error)
+	GetAllTotalSpending(ctx context.Context, arg GetAllTotalSpendingParams) (GetAllTotalSpendingRow, error)
+	GetCategory(ctx context.Context, arg GetCategoryParams) (BudgetCategory, error)
+	GetCategoryByID(ctx context.Context, id uuid.UUID) (BudgetCategory, error)
 	GetCategorySpending(ctx context.Context, arg GetCategorySpendingParams) ([]GetCategorySpendingRow, error)
 	GetDailySpending(ctx context.Context, arg GetDailySpendingParams) ([]GetDailySpendingRow, error)
-	GetExpense(ctx context.Context, id uuid.UUID) (BudgetExpense, error)
+	GetExpense(ctx context.Context, arg GetExpenseParams) (BudgetExpense, error)
+	GetExpenseByID(ctx context.Context, id uuid.UUID) (BudgetExpense, error)
 	GetExpenseTags(ctx context.Context, expenseID uuid.UUID) ([]BudgetTag, error)
-	// Statistics
+	// Statistics (filtered by user)
 	GetExpensesByDateRange(ctx context.Context, arg GetExpensesByDateRangeParams) ([]BudgetExpense, error)
-	GetMonthlySpending(ctx context.Context) ([]GetMonthlySpendingRow, error)
+	GetMonthlySpending(ctx context.Context, userID uuid.UUID) ([]GetMonthlySpendingRow, error)
 	GetService(ctx context.Context, id uuid.UUID) (Service, error)
 	GetServiceHistory(ctx context.Context, arg GetServiceHistoryParams) ([]ServiceHealthHistory, error)
 	GetServiceStats24h(ctx context.Context, serviceID pgtype.UUID) (GetServiceStats24hRow, error)
 	GetServiceStats30d(ctx context.Context, serviceID pgtype.UUID) (GetServiceStats30dRow, error)
 	GetServiceStats7d(ctx context.Context, serviceID pgtype.UUID) (GetServiceStats7dRow, error)
-	GetTag(ctx context.Context, id uuid.UUID) (BudgetTag, error)
+	GetSessionByTokenHash(ctx context.Context, tokenHash string) (GetSessionByTokenHashRow, error)
+	GetTag(ctx context.Context, arg GetTagParams) (BudgetTag, error)
+	GetTagByID(ctx context.Context, id uuid.UUID) (BudgetTag, error)
 	GetTotalSpending(ctx context.Context, arg GetTotalSpendingParams) (GetTotalSpendingRow, error)
+	GetUser(ctx context.Context, id uuid.UUID) (User, error)
+	GetUserByEmail(ctx context.Context, email string) (User, error)
 	ListActiveServicesForHealthCheck(ctx context.Context) ([]ListActiveServicesForHealthCheckRow, error)
-	ListCategories(ctx context.Context) ([]BudgetCategory, error)
+	ListAllCategories(ctx context.Context) ([]ListAllCategoriesRow, error)
+	ListAllExpenses(ctx context.Context, arg ListAllExpensesParams) ([]ListAllExpensesRow, error)
+	ListAllTags(ctx context.Context) ([]ListAllTagsRow, error)
+	ListCategories(ctx context.Context, userID uuid.UUID) ([]BudgetCategory, error)
 	ListExpenses(ctx context.Context, arg ListExpensesParams) ([]ListExpensesRow, error)
 	ListServices(ctx context.Context) ([]ListServicesRow, error)
-	ListTags(ctx context.Context) ([]BudgetTag, error)
+	ListTags(ctx context.Context, userID uuid.UUID) ([]BudgetTag, error)
+	ListUsers(ctx context.Context) ([]User, error)
 	RemoveAllExpenseTags(ctx context.Context, expenseID uuid.UUID) error
 	RemoveExpenseTag(ctx context.Context, arg RemoveExpenseTagParams) error
 	UpdateCategory(ctx context.Context, arg UpdateCategoryParams) (BudgetCategory, error)
 	UpdateExpense(ctx context.Context, arg UpdateExpenseParams) (BudgetExpense, error)
 	UpdateService(ctx context.Context, arg UpdateServiceParams) (Service, error)
 	UpdateTag(ctx context.Context, arg UpdateTagParams) (BudgetTag, error)
+	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 }
 
 var _ Querier = (*Queries)(nil)

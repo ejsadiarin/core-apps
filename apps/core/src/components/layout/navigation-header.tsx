@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
-import { Terminal, Settings, Bell, User, LogOut } from "lucide-react";
+import { Terminal, Settings, Bell, User, LogOut, Shield } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,12 +18,26 @@ import {
 export function NavigationHeader() {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, logout } = useAuth();
+  const { user, logout, isGuest, isAdmin } = useAuth();
 
-  const handleLogout = () => {
-    logout();
-    router.push("/");
+  const handleLogout = async () => {
+    await logout();
+    router.push("/login");
   };
+
+  const getRoleBadgeColor = () => {
+    switch (user?.role) {
+      case "admin":
+        return "bg-destructive/10 text-destructive border-destructive/30";
+      case "user":
+        return "bg-primary/10 text-primary border-primary/30";
+      case "guest":
+        return "bg-muted text-muted-foreground border-muted";
+      default:
+        return "bg-primary/10 text-primary border-primary/30";
+    }
+  };
+
   return (
     <motion.header
       className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-lg"
@@ -60,10 +74,10 @@ export function NavigationHeader() {
             {[
               { name: "Dashboard", path: "/dashboard" },
               { name: "Budget", path: "/dashboard/budget" },
-              { name: "Services", path: "/services" },
+              { name: "Services", path: "/dashboard/services" },
               { name: "Analytics", path: "/analytics" },
               { name: "Logs", path: "/logs" },
-              ...(user?.role === "admin" ? [{ name: "Admin", path: "/admin" }] : []),
+              ...(isAdmin ? [{ name: "Users", path: "/dashboard/admin/users", isAdmin: true }] : []),
             ].map((item, idx) => (
               <motion.div
                 key={item.name}
@@ -77,11 +91,12 @@ export function NavigationHeader() {
                   className={`text-sm transition-colors ${
                     pathname === item.path
                       ? "text-primary bg-primary/10"
-                      : item.name === "Admin"
+                      : "isAdmin" in item && item.isAdmin
                       ? "text-destructive hover:text-destructive hover:bg-destructive/10"
                       : "text-muted-foreground hover:text-primary hover:bg-primary/10"
                   }`}
                 >
+                  {"isAdmin" in item && item.isAdmin && <Shield className="w-3 h-3 mr-1" />}
                   {item.name}
                 </Button>
               </motion.div>
@@ -90,6 +105,11 @@ export function NavigationHeader() {
 
           {/* Action Buttons */}
           <div className="flex items-center gap-2">
+            {isGuest && (
+              <Badge variant="outline" className="text-xs bg-accent/10 text-accent border-accent/30">
+                Guest Mode
+              </Badge>
+            )}
             <Button
               variant="ghost"
               size="icon"
@@ -121,9 +141,8 @@ export function NavigationHeader() {
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>
                   <div className="flex flex-col">
-                    <span className="text-sm">{user?.username}</span>
-                    <span className="text-xs text-muted-foreground">{user?.email}</span>
-                    <Badge className="mt-2 w-fit text-xs bg-primary/10 text-primary border-primary/30">
+                    <span className="text-sm">{user?.email}</span>
+                    <Badge className={`mt-2 w-fit text-xs ${getRoleBadgeColor()}`}>
                       {user?.role.toUpperCase()}
                     </Badge>
                   </div>
@@ -137,6 +156,12 @@ export function NavigationHeader() {
                   <Settings className="w-4 h-4 mr-2" />
                   Settings
                 </DropdownMenuItem>
+                {isAdmin && (
+                  <DropdownMenuItem onClick={() => router.push("/dashboard/admin/users")}>
+                    <Shield className="w-4 h-4 mr-2" />
+                    User Management
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="text-destructive">
                   <LogOut className="w-4 h-4 mr-2" />

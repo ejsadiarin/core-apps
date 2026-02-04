@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist_Mono as GeistMono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/auth-context";
+import { ToastProvider } from "@/components/ui/toast";
 
 const geistMono = GeistMono({
   variable: "--font-mono",
@@ -24,7 +25,9 @@ export default function RootLayout({
         className={`${geistMono.variable} font-mono antialiased`}
       >
         <AuthProvider>
+          <ToastProvider>
             {children}
+          </ToastProvider>
         </AuthProvider>
       </body>
     </html>

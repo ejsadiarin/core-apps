@@ -8,14 +8,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import type { CreateExpenseRequest } from "@/types/api";
+import type { CreateExpenseRequest, UpdateExpenseRequest } from "@/types/api";
 
 export default function NewExpensePage() {
   const router = useRouter();
   const createExpense = useCreateExpense();
 
-  const handleSubmit = async (data: CreateExpenseRequest) => {
-    await createExpense.mutateAsync(data);
+  const handleSubmit = async (data: CreateExpenseRequest | UpdateExpenseRequest) => {
+    await createExpense.mutateAsync(data as CreateExpenseRequest);
     router.push("/dashboard/budget");
   };
 

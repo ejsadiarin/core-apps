@@ -16,10 +16,146 @@ import type {
   ExpenseFilters,
   SummaryStats,
   CategoryBreakdown,
-  TrendItem
+  TrendItem,
+  User,
+  LoginRequest,
+  RegisterRequest,
+  CreateUserRequest,
+  UpdateUserRequest
 } from '@/types/api';
 
 const url = 'http://localhost:8080';
+
+// Auth API Functions
+
+export async function login(data: LoginRequest): Promise<User> {
+  const res = await fetch(url + '/api/auth/login', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    credentials: 'include',
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ message: 'Login failed' }));
+    throw new Error(error.message || 'Login failed');
+  }
+  return res.json();
+}
+
+export async function register(data: RegisterRequest): Promise<User> {
+  const res = await fetch(url + '/api/auth/register', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    credentials: 'include',
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    // TODO: detect duplicate email error and send "Email already exists"
+    const error = await res.json().catch(() => ({ message: 'Registration failed' }));
+    throw new Error(error.message || 'Registration failed');
+  }
+  return res.json();
+}
+
+export async function logout(): Promise<void> {
+  const res = await fetch(url + '/api/auth/logout', {
+    method: 'POST',
+    credentials: 'include'
+  });
+  if (!res.ok) {
+    throw new Error('Logout failed');
+  }
+}
+
+export async function fetchCurrentUser(): Promise<User> {
+  const res = await fetch(url + '/api/auth/me', {
+    credentials: 'include'
+  });
+  if (!res.ok) {
+    throw new Error('Not authenticated');
+  }
+  return res.json();
+}
+
+export async function demoLogin(): Promise<User> {
+  const res = await fetch(url + '/api/auth/demo', {
+    method: 'POST',
+    credentials: 'include'
+  });
+  if (!res.ok) {
+    throw new Error('Demo login failed');
+  }
+  return res.json();
+}
+
+// User Management API Functions (Admin)
+
+export async function fetchUsers(): Promise<User[]> {
+  const res = await fetch(url + '/api/users', {
+    credentials: 'include'
+  });
+  if (!res.ok) {
+    throw new Error(`Error fetching users: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function fetchUser(id: string): Promise<User> {
+  const res = await fetch(url + `/api/users/${id}`, {
+    credentials: 'include'
+  });
+  if (!res.ok) {
+    throw new Error(`Error fetching user: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function createUser(data: CreateUserRequest): Promise<User> {
+  const res = await fetch(url + '/api/users', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    credentials: 'include',
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ message: 'Create user failed' }));
+    throw new Error(error.message || 'Create user failed');
+  }
+  return res.json();
+}
+
+export async function updateUser(id: string, data: UpdateUserRequest): Promise<User> {
+  const res = await fetch(url + `/api/users/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    credentials: 'include',
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ message: 'Update user failed' }));
+    throw new Error(error.message || 'Update user failed');
+  }
+  return res.json();
+}
+
+export async function deleteUser(id: string): Promise<void> {
+  const res = await fetch(url + `/api/users/${id}`, {
+    method: 'DELETE',
+    credentials: 'include'
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ message: 'Delete user failed' }));
+    throw new Error(error.message || 'Delete user failed');
+  }
+}
 
 export async function fetchSystemStatus() {
   const res = await fetch(url + '/api/system/stats');
@@ -34,7 +170,9 @@ export async function fetchSystemStatus() {
 // Categories
 
 export async function fetchCategories(): Promise<Category[]> {
-  const res = await fetch(url + '/api/budget/categories');
+  const res = await fetch(url + '/api/budget/categories', {
+    credentials: 'include'
+  });
   if (!res.ok) {
     throw new Error(`Error fetching categories: ${res.status}`);
   }
@@ -42,7 +180,9 @@ export async function fetchCategories(): Promise<Category[]> {
 }
 
 export async function fetchCategory(id: string): Promise<Category> {
-  const res = await fetch(url + `/api/budget/categories/${id}`);
+  const res = await fetch(url + `/api/budget/categories/${id}`, {
+    credentials: 'include'
+  });
   if (!res.ok) {
     throw new Error(`Error fetching category: ${res.status}`);
   }
@@ -55,6 +195,7 @@ export async function createCategory(data: CreateCategoryRequest): Promise<Categ
     headers: {
       'Content-Type': 'application/json'
     },
+    credentials: 'include',
     body: JSON.stringify(data)
   });
   if (!res.ok) {
@@ -69,6 +210,7 @@ export async function updateCategory(id: string, data: UpdateCategoryRequest): P
     headers: {
       'Content-Type': 'application/json'
     },
+    credentials: 'include',
     body: JSON.stringify(data)
   });
   if (!res.ok) {
@@ -79,7 +221,8 @@ export async function updateCategory(id: string, data: UpdateCategoryRequest): P
 
 export async function deleteCategory(id: string): Promise<void> {
   const res = await fetch(url + `/api/budget/categories/${id}`, {
-    method: 'DELETE'
+    method: 'DELETE',
+    credentials: 'include'
   });
   if (!res.ok) {
     throw new Error(`Error deleting category: ${res.status}`);
@@ -89,7 +232,9 @@ export async function deleteCategory(id: string): Promise<void> {
 // Tags
 
 export async function fetchTags(): Promise<Tag[]> {
-  const res = await fetch(url + '/api/budget/tags');
+  const res = await fetch(url + '/api/budget/tags', {
+    credentials: 'include'
+  });
   if (!res.ok) {
     throw new Error(`Error fetching tags: ${res.status}`);
   }
@@ -97,7 +242,9 @@ export async function fetchTags(): Promise<Tag[]> {
 }
 
 export async function fetchTag(id: string): Promise<Tag> {
-  const res = await fetch(url + `/api/budget/tags/${id}`);
+  const res = await fetch(url + `/api/budget/tags/${id}`, {
+    credentials: 'include'
+  });
   if (!res.ok) {
     throw new Error(`Error fetching tag: ${res.status}`);
   }
@@ -110,6 +257,7 @@ export async function createTag(data: CreateTagRequest): Promise<Tag> {
     headers: {
       'Content-Type': 'application/json'
     },
+    credentials: 'include',
     body: JSON.stringify(data)
   });
   if (!res.ok) {
@@ -124,6 +272,7 @@ export async function updateTag(id: string, data: UpdateTagRequest): Promise<Tag
     headers: {
       'Content-Type': 'application/json'
     },
+    credentials: 'include',
     body: JSON.stringify(data)
   });
   if (!res.ok) {
@@ -134,7 +283,8 @@ export async function updateTag(id: string, data: UpdateTagRequest): Promise<Tag
 
 export async function deleteTag(id: string): Promise<void> {
   const res = await fetch(url + `/api/budget/tags/${id}`, {
-    method: 'DELETE'
+    method: 'DELETE',
+    credentials: 'include'
   });
   if (!res.ok) {
     throw new Error(`Error deleting tag: ${res.status}`);
@@ -152,7 +302,9 @@ export async function fetchExpenses(filters?: ExpenseFilters): Promise<Expense[]
   const queryString = params.toString();
   const endpoint = queryString ? `/api/budget/expenses?${queryString}` : '/api/budget/expenses';
 
-  const res = await fetch(url + endpoint);
+  const res = await fetch(url + endpoint, {
+    credentials: 'include'
+  });
   if (!res.ok) {
     throw new Error(`Error fetching expenses: ${res.status}`);
   }
@@ -160,7 +312,9 @@ export async function fetchExpenses(filters?: ExpenseFilters): Promise<Expense[]
 }
 
 export async function fetchExpense(id: string): Promise<Expense> {
-  const res = await fetch(url + `/api/budget/expenses/${id}`);
+  const res = await fetch(url + `/api/budget/expenses/${id}`, {
+    credentials: 'include'
+  });
   if (!res.ok) {
     throw new Error(`Error fetching expense: ${res.status}`);
   }
@@ -173,6 +327,7 @@ export async function createExpense(data: CreateExpenseRequest): Promise<Expense
     headers: {
       'Content-Type': 'application/json'
     },
+    credentials: 'include',
     body: JSON.stringify(data)
   });
   if (!res.ok) {
@@ -187,6 +342,7 @@ export async function updateExpense(id: string, data: UpdateExpenseRequest): Pro
     headers: {
       'Content-Type': 'application/json'
     },
+    credentials: 'include',
     body: JSON.stringify(data)
   });
   if (!res.ok) {
@@ -197,7 +353,8 @@ export async function updateExpense(id: string, data: UpdateExpenseRequest): Pro
 
 export async function deleteExpense(id: string): Promise<void> {
   const res = await fetch(url + `/api/budget/expenses/${id}`, {
-    method: 'DELETE'
+    method: 'DELETE',
+    credentials: 'include'
   });
   if (!res.ok) {
     throw new Error(`Error deleting expense: ${res.status}`);
@@ -208,7 +365,9 @@ export async function deleteExpense(id: string): Promise<void> {
 
 export async function fetchSummaryStats(period?: string): Promise<SummaryStats> {
   const params = period ? `?period=${period}` : '';
-  const res = await fetch(url + `/api/budget/stats/summary${params}`);
+  const res = await fetch(url + `/api/budget/stats/summary${params}`, {
+    credentials: 'include'
+  });
   if (!res.ok) {
     throw new Error(`Error fetching summary stats: ${res.status}`);
   }
@@ -225,7 +384,9 @@ export async function fetchCategoryBreakdown(startDate?: string, endDate?: strin
     ? `/api/budget/stats/category-breakdown?${queryString}`
     : '/api/budget/stats/category-breakdown';
 
-  const res = await fetch(url + endpoint);
+  const res = await fetch(url + endpoint, {
+    credentials: 'include'
+  });
   if (!res.ok) {
     throw new Error(`Error fetching category breakdown: ${res.status}`);
   }
@@ -242,7 +403,9 @@ export async function fetchTrends(
   if (startDate) params.append('start_date', startDate);
   if (endDate) params.append('end_date', endDate);
 
-  const res = await fetch(url + `/api/budget/stats/trends?${params.toString()}`);
+  const res = await fetch(url + `/api/budget/stats/trends?${params.toString()}`, {
+    credentials: 'include'
+  });
   if (!res.ok) {
     throw new Error(`Error fetching trends: ${res.status}`);
   }
