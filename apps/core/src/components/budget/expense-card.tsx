@@ -1,8 +1,19 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Trash2, Edit } from "lucide-react";
 import type { Expense } from "@/types/api";
 import { format } from "date-fns";
@@ -16,6 +27,8 @@ interface ExpenseCardProps {
 }
 
 export function ExpenseCard({ expense, onEdit, onDelete, disabled, showToast }: ExpenseCardProps) {
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
   const handleEditClick = () => {
     if (disabled && showToast) {
       showToast("Guest user is read-only. Create an account to save changes", "warning");
@@ -29,11 +42,12 @@ export function ExpenseCard({ expense, onEdit, onDelete, disabled, showToast }: 
       showToast("Guest user is read-only. Create an account to save changes", "warning");
       return;
     }
-    if (onDelete) {
-      if (confirm("Are you sure you want to delete this expense?")) {
-        onDelete(expense.id);
-      }
-    }
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    onDelete?.(expense.id);
+    setDeleteDialogOpen(false);
   };
 
   return (
@@ -116,6 +130,23 @@ export function ExpenseCard({ expense, onEdit, onDelete, disabled, showToast }: 
           </div>
         </div>
       </CardContent>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Expense</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this expense? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }

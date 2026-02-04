@@ -8,12 +8,12 @@ import { EditExpenseDialog } from "@/components/budget/expense-edit-dialog";
 import { Button } from "@/components/ui/button";
 import { Plus, Filter, ArrowLeft, EyeOff } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Link } from "next/link";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { ExpenseFilters, Expense } from "@/types/api";
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/components/ui/toast";
+import Link from "next/link";
 
 export default function ExpensesPage() {
   const [filters, setFilters] = useState<ExpenseFilters>({});
@@ -32,13 +32,11 @@ export default function ExpensesPage() {
   );
 
   const handleDelete = async (id: string) => {
-    if (confirm("Are you sure you want to delete this expense?")) {
-      try {
-        await deleteExpense.mutateAsync(id);
-      } catch (error) {
-        if (error instanceof GuestBlockedError) {
-          showToast(error.message, "warning");
-        }
+    try {
+      await deleteExpense.mutateAsync(id);
+    } catch (error) {
+      if (error instanceof GuestBlockedError) {
+        showToast(error.message, "warning");
       }
     }
   };

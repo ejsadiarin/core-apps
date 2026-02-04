@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   fetchServices,
   fetchService,
@@ -8,26 +8,26 @@ import {
   triggerHealthCheck,
   fetchServiceHistory,
   fetchServiceStats,
-  fetchAllServicesStats,
-} from "@/lib/api";
+  fetchAllServicesStats
+} from '@/lib/api';
 import type {
   Service,
   CreateServiceRequest,
   UpdateServiceRequest,
   ServiceHealthHistory,
-  ServiceStats,
-} from "@/types/api";
+  ServiceStats
+} from '@/types/api';
 
 // Query keys for cache management
 export const serviceKeys = {
-  all: ["services"] as const,
-  lists: () => [...serviceKeys.all, "list"] as const,
+  all: ['services'] as const,
+  lists: () => [...serviceKeys.all, 'list'] as const,
   list: () => [...serviceKeys.lists()] as const,
-  details: () => [...serviceKeys.all, "detail"] as const,
+  details: () => [...serviceKeys.all, 'detail'] as const,
   detail: (id: string) => [...serviceKeys.details(), id] as const,
-  history: (id: string) => [...serviceKeys.all, "history", id] as const,
-  stats: (id: string) => [...serviceKeys.all, "stats", id] as const,
-  allStats: () => [...serviceKeys.all, "stats", "all"] as const,
+  history: (id: string) => [...serviceKeys.all, 'history', id] as const,
+  stats: (id: string) => [...serviceKeys.all, 'stats', id] as const,
+  allStats: () => [...serviceKeys.all, 'stats', 'all'] as const
 };
 
 /**
@@ -39,7 +39,7 @@ export function useServices() {
     queryKey: serviceKeys.list(),
     queryFn: fetchServices,
     refetchInterval: 30000, // 30 seconds
-    staleTime: 10000, // Consider data stale after 10 seconds
+    staleTime: 10000 // Consider data stale after 10 seconds
   });
 }
 
@@ -48,9 +48,9 @@ export function useServices() {
  */
 export function useService(id: string | null) {
   return useQuery<Service>({
-    queryKey: serviceKeys.detail(id ?? ""),
+    queryKey: serviceKeys.detail(id ?? ''),
     queryFn: () => fetchService(id!),
-    enabled: !!id, // Only fetch when id is provided
+    enabled: !!id // Only fetch when id is provided
   });
 }
 
@@ -60,10 +60,10 @@ export function useService(id: string | null) {
  */
 export function useServiceHistory(id: string | null, enabled: boolean = true) {
   return useQuery<ServiceHealthHistory[]>({
-    queryKey: serviceKeys.history(id ?? ""),
+    queryKey: serviceKeys.history(id ?? ''),
     queryFn: () => fetchServiceHistory(id!),
     enabled: !!id && enabled,
-    staleTime: 30000, // History doesn't change that often
+    staleTime: 30000 // History doesn't change that often
   });
 }
 
@@ -73,10 +73,10 @@ export function useServiceHistory(id: string | null, enabled: boolean = true) {
  */
 export function useServiceStats(id: string | null, enabled: boolean = true) {
   return useQuery<ServiceStats>({
-    queryKey: serviceKeys.stats(id ?? ""),
+    queryKey: serviceKeys.stats(id ?? ''),
     queryFn: () => fetchServiceStats(id!),
     enabled: !!id && enabled,
-    staleTime: 60000, // Stats can be cached for longer
+    staleTime: 60000 // Stats can be cached for longer
   });
 }
 
@@ -88,7 +88,7 @@ export function useAllServicesStats() {
     queryKey: serviceKeys.allStats(),
     queryFn: fetchAllServicesStats,
     refetchInterval: 60000, // 1 minute
-    staleTime: 30000,
+    staleTime: 30000
   });
 }
 
@@ -103,7 +103,7 @@ export function useCreateService() {
     onSuccess: () => {
       // Invalidate services list to trigger refetch
       queryClient.invalidateQueries({ queryKey: serviceKeys.lists() });
-    },
+    }
   });
 }
 
@@ -114,15 +114,14 @@ export function useUpdateService() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateServiceRequest }) =>
-      updateService(id, data),
+    mutationFn: ({ id, data }: { id: string; data: UpdateServiceRequest }) => updateService(id, data),
     onSuccess: (_, variables) => {
       // Invalidate both the list and the specific service
       queryClient.invalidateQueries({ queryKey: serviceKeys.lists() });
       queryClient.invalidateQueries({
-        queryKey: serviceKeys.detail(variables.id),
+        queryKey: serviceKeys.detail(variables.id)
       });
-    },
+    }
   });
 }
 
@@ -137,7 +136,7 @@ export function useDeleteService() {
     onSuccess: () => {
       // Invalidate services list
       queryClient.invalidateQueries({ queryKey: serviceKeys.lists() });
-    },
+    }
   });
 }
 
@@ -155,6 +154,6 @@ export function useTriggerHealthCheck() {
       queryClient.invalidateQueries({ queryKey: serviceKeys.detail(id) });
       queryClient.invalidateQueries({ queryKey: serviceKeys.history(id) });
       queryClient.invalidateQueries({ queryKey: serviceKeys.stats(id) });
-    },
+    }
   });
 }
