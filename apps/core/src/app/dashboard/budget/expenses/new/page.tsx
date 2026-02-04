@@ -3,7 +3,8 @@
 import { motion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { ExpenseForm } from "@/components/budget/expense-form";
-import { useCreateExpense } from "@/hooks/use-budget";
+import { useCreateExpense, GuestBlockedError } from "@/hooks/use-budget";
+import { useToast } from "@/components/ui/toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,10 +14,17 @@ import type { CreateExpenseRequest, UpdateExpenseRequest } from "@/types/api";
 export default function NewExpensePage() {
   const router = useRouter();
   const createExpense = useCreateExpense();
+  const { showToast } = useToast();
 
   const handleSubmit = async (data: CreateExpenseRequest | UpdateExpenseRequest) => {
-    await createExpense.mutateAsync(data as CreateExpenseRequest);
-    router.push("/dashboard/budget");
+    try {
+      await createExpense.mutateAsync(data as CreateExpenseRequest);
+      router.push("/dashboard/budget");
+    } catch (error) {
+      if (error instanceof GuestBlockedError) {
+        showToast(error.message, "warning");
+      }
+    }
   };
 
   return (

@@ -2,7 +2,7 @@
 
 import { motion } from "motion/react";
 import { useState } from "react";
-import { useExpenses, useCategories, useDeleteExpense, useUpdateExpense } from "@/hooks/use-budget";
+import { useExpenses, useCategories, useDeleteExpense, useUpdateExpense, GuestBlockedError } from "@/hooks/use-budget";
 import { ExpenseCard } from "@/components/budget/expense-card";
 import { EditExpenseDialog } from "@/components/budget/expense-edit-dialog";
 import { Button } from "@/components/ui/button";
@@ -33,18 +33,23 @@ export default function ExpensesPage() {
 
   const handleDelete = async (id: string) => {
     if (confirm("Are you sure you want to delete this expense?")) {
-      await deleteExpense.mutateAsync(id);
+      try {
+        await deleteExpense.mutateAsync(id);
+      } catch (error) {
+        if (error instanceof GuestBlockedError) {
+          showToast(error.message, "warning");
+        }
+      }
     }
   };
 
   const handleUpdate = async (data: any) => {
-    await updateExpense.mutateAsync({ id: editingExpense!.id, data });
-  };
-
-  const handleAddExpenseClick = () => {
-    if (isGuest) {
-      showToast("Guest user is read-only. Create an account to save changes", "warning");
-      return;
+    try {
+      await updateExpense.mutateAsync({ id: editingExpense!.id, data });
+    } catch (error) {
+      if (error instanceof GuestBlockedError) {
+        showToast(error.message, "warning");
+      }
     }
   };
 
@@ -78,7 +83,7 @@ export default function ExpensesPage() {
               : "View and manage all your expenses"}
           </p>
         </div>
-        <Link href="/dashboard/budget/expenses/new" onClick={handleAddExpenseClick}>
+        <Link href="/dashboard/budget/expenses/new">
           <Button>
             <Plus className="mr-2 h-4 w-4" />
             Add Expense

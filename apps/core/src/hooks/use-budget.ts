@@ -34,6 +34,14 @@ import type {
   CategoryBreakdown,
   TrendItem,
 } from "@/types/api";
+import { useAuth } from "@/contexts/auth-context";
+
+export class GuestBlockedError extends Error {
+  constructor(message = "Guest user is read-only. Create an account to save changes") {
+    super(message);
+    this.name = "GuestBlockedError";
+  }
+}
 
 // query keys for cache management
 export const budgetKeys = {
@@ -79,9 +87,15 @@ export function useCategory(id: string | null) {
 
 export function useCreateCategory() {
   const queryClient = useQueryClient();
+  const { isGuest } = useAuth();
 
   return useMutation({
-    mutationFn: (data: CreateCategoryRequest) => createCategory(data),
+    mutationFn: (data: CreateCategoryRequest) => {
+      if (isGuest) {
+        throw new GuestBlockedError();
+      }
+      return createCategory(data);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: budgetKeys.categories() });
     },
@@ -90,10 +104,15 @@ export function useCreateCategory() {
 
 export function useUpdateCategory() {
   const queryClient = useQueryClient();
+  const { isGuest } = useAuth();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateCategoryRequest }) =>
-      updateCategory(id, data),
+    mutationFn: ({ id, data }: { id: string; data: UpdateCategoryRequest }) => {
+      if (isGuest) {
+        throw new GuestBlockedError();
+      }
+      return updateCategory(id, data);
+    },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: budgetKeys.categories() });
       queryClient.invalidateQueries({ queryKey: budgetKeys.categoryDetail(variables.id) });
@@ -103,9 +122,15 @@ export function useUpdateCategory() {
 
 export function useDeleteCategory() {
   const queryClient = useQueryClient();
+  const { isGuest } = useAuth();
 
   return useMutation({
-    mutationFn: (id: string) => deleteCategory(id),
+    mutationFn: (id: string) => {
+      if (isGuest) {
+        throw new GuestBlockedError();
+      }
+      return deleteCategory(id);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: budgetKeys.categories() });
     },
@@ -132,9 +157,15 @@ export function useTag(id: string | null) {
 
 export function useCreateTag() {
   const queryClient = useQueryClient();
+  const { isGuest } = useAuth();
 
   return useMutation({
-    mutationFn: (data: CreateTagRequest) => createTag(data),
+    mutationFn: (data: CreateTagRequest) => {
+      if (isGuest) {
+        throw new GuestBlockedError();
+      }
+      return createTag(data);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: budgetKeys.tags() });
     },
@@ -142,6 +173,39 @@ export function useCreateTag() {
 }
 
 export function useUpdateTag() {
+  const queryClient = useQueryClient();
+  const { isGuest } = useAuth();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateTagRequest }) => {
+      if (isGuest) {
+        throw new GuestBlockedError();
+      }
+      return updateTag(id, data);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: budgetKeys.tags() });
+      queryClient.invalidateQueries({ queryKey: budgetKeys.tagDetail(variables.id) });
+    },
+  });
+}
+
+export function useDeleteTag() {
+  const queryClient = useQueryClient();
+  const { isGuest } = useAuth();
+
+  return useMutation({
+    mutationFn: (id: string) => {
+      if (isGuest) {
+        throw new GuestBlockedError();
+      }
+      return deleteTag(id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: budgetKeys.tags() });
+    },
+  });
+}
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -185,9 +249,15 @@ export function useExpense(id: string | null) {
 
 export function useCreateExpense() {
   const queryClient = useQueryClient();
+  const { isGuest } = useAuth();
 
   return useMutation({
-    mutationFn: (data: CreateExpenseRequest) => createExpense(data),
+    mutationFn: (data: CreateExpenseRequest) => {
+      if (isGuest) {
+        throw new GuestBlockedError();
+      }
+      return createExpense(data);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: budgetKeys.expenses() });
       queryClient.invalidateQueries({ queryKey: budgetKeys.stats() });
@@ -197,10 +267,15 @@ export function useCreateExpense() {
 
 export function useUpdateExpense() {
   const queryClient = useQueryClient();
+  const { isGuest } = useAuth();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateExpenseRequest }) =>
-      updateExpense(id, data),
+    mutationFn: ({ id, data }: { id: string; data: UpdateExpenseRequest }) => {
+      if (isGuest) {
+        throw new GuestBlockedError();
+      }
+      return updateExpense(id, data);
+    },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: budgetKeys.expenses() });
       queryClient.invalidateQueries({ queryKey: budgetKeys.expenseDetail(variables.id) });
@@ -211,9 +286,15 @@ export function useUpdateExpense() {
 
 export function useDeleteExpense() {
   const queryClient = useQueryClient();
+  const { isGuest } = useAuth();
 
   return useMutation({
-    mutationFn: (id: string) => deleteExpense(id),
+    mutationFn: (id: string) => {
+      if (isGuest) {
+        throw new GuestBlockedError();
+      }
+      return deleteExpense(id);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: budgetKeys.expenses() });
       queryClient.invalidateQueries({ queryKey: budgetKeys.stats() });
@@ -250,3 +331,5 @@ export function useTrends(
     staleTime: 60000,
   });
 }
+
+export { GuestBlockedError };

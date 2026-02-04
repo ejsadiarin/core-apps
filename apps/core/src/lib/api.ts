@@ -261,6 +261,9 @@ export async function createTag(data: CreateTagRequest): Promise<Tag> {
     body: JSON.stringify(data)
   });
   if (!res.ok) {
+    if (res.status === 403) {
+      throw new Error(`Error creating tag: ${res.status}`);
+    }
     throw new Error(`Error creating tag: ${res.status}`);
   }
   return res.json();
