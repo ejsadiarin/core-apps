@@ -79,15 +79,15 @@ export function ExpenseDetailDialog({
           </DialogHeader>
 
           <div className="space-y-4 mt-4">
-            <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0 flex-1">
-                <h3 className="text-lg font-semibold break-words" title={expense.description}>
+            <div className="flex items-start gap-4">
+              <div className="min-w-0 flex-1 overflow-hidden">
+                <h3 className="text-lg font-semibold break-words overflow-wrap-anywhere" title={expense.description}>
                   {expense.description}
                 </h3>
                 {expense.category && (
                   <Badge
                     variant="outline"
-                    className="mt-1 inline-block max-w-full"
+                    className="mt-1 inline-block"
                     style={{
                       backgroundColor: expense.category.color
                         ? `${expense.category.color}20`
@@ -98,7 +98,7 @@ export function ExpenseDetailDialog({
                     title={expense.category.name}
                   >
                     {expense.category.icon && <span className="mr-1">{expense.category.icon}</span>}
-                    <span className="truncate">{expense.category.name}</span>
+                    <span className="truncate max-w-[150px] inline-block">{expense.category.name}</span>
                   </Badge>
                 )}
               </div>
@@ -146,7 +146,7 @@ export function ExpenseDetailDialog({
                   )}
                   {tagsExpanded && expense.tags.length > 3 && (
                     <Badge
-                      variant="ghost"
+                      variant="default"
                       className="text-xs cursor-pointer hover:bg-accent"
                       onClick={() => setTagsExpanded(false)}
                     >
