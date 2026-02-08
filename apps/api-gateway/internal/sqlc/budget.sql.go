@@ -58,6 +58,37 @@ func (q *Queries) CountExpenses(ctx context.Context, arg CountExpensesParams) (i
 	return count, err
 }
 
+const countSearchExpenses = `-- name: CountSearchExpenses :one
+SELECT COUNT(*) FROM budget_expenses e
+WHERE
+    e.user_id = $1
+    AND e.description ILIKE '%' || $2 || '%'
+    AND ($3::uuid IS NULL OR e.category_id = $3)
+    AND ($4::date IS NULL OR e.expense_date >= $4::date)
+    AND ($5::date IS NULL OR e.expense_date <= $5::date)
+`
+
+type CountSearchExpensesParams struct {
+	UserID     uuid.UUID   `json:"user_id"`
+	Column2    pgtype.Text `json:"column_2"`
+	CategoryID pgtype.UUID `json:"category_id"`
+	StartDate  pgtype.Date `json:"start_date"`
+	EndDate    pgtype.Date `json:"end_date"`
+}
+
+func (q *Queries) CountSearchExpenses(ctx context.Context, arg CountSearchExpensesParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countSearchExpenses,
+		arg.UserID,
+		arg.Column2,
+		arg.CategoryID,
+		arg.StartDate,
+		arg.EndDate,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createCategory = `-- name: CreateCategory :one
 
 INSERT INTO budget_categories (
@@ -1018,6 +1049,88 @@ type RemoveExpenseTagParams struct {
 func (q *Queries) RemoveExpenseTag(ctx context.Context, arg RemoveExpenseTagParams) error {
 	_, err := q.db.Exec(ctx, removeExpenseTag, arg.ExpenseID, arg.TagID)
 	return err
+}
+
+const searchExpenses = `-- name: SearchExpenses :many
+SELECT e.id, e.description, e.amount, e.currency, e.category_id, e.expense_date, e.created_at, e.updated_at, e.notes, e.user_id, c.name as category_name, c.color as category_color, c.icon as category_icon
+FROM budget_expenses e
+LEFT JOIN budget_categories c ON e.category_id = c.id
+WHERE
+    e.user_id = $1
+    AND e.description ILIKE '%' || $2 || '%'
+    AND ($5::uuid IS NULL OR e.category_id = $5)
+    AND ($6::date IS NULL OR e.expense_date >= $6::date)
+    AND ($7::date IS NULL OR e.expense_date <= $7::date)
+ORDER BY e.expense_date DESC, e.created_at DESC
+LIMIT $3 OFFSET $4
+`
+
+type SearchExpensesParams struct {
+	UserID     uuid.UUID   `json:"user_id"`
+	Column2    pgtype.Text `json:"column_2"`
+	Limit      int32       `json:"limit"`
+	Offset     int32       `json:"offset"`
+	CategoryID pgtype.UUID `json:"category_id"`
+	StartDate  pgtype.Date `json:"start_date"`
+	EndDate    pgtype.Date `json:"end_date"`
+}
+
+type SearchExpensesRow struct {
+	ID            uuid.UUID        `json:"id"`
+	Description   string           `json:"description"`
+	Amount        pgtype.Numeric   `json:"amount"`
+	Currency      pgtype.Text      `json:"currency"`
+	CategoryID    pgtype.UUID      `json:"category_id"`
+	ExpenseDate   pgtype.Date      `json:"expense_date"`
+	CreatedAt     pgtype.Timestamp `json:"created_at"`
+	UpdatedAt     pgtype.Timestamp `json:"updated_at"`
+	Notes         pgtype.Text      `json:"notes"`
+	UserID        uuid.UUID        `json:"user_id"`
+	CategoryName  pgtype.Text      `json:"category_name"`
+	CategoryColor pgtype.Text      `json:"category_color"`
+	CategoryIcon  pgtype.Text      `json:"category_icon"`
+}
+
+func (q *Queries) SearchExpenses(ctx context.Context, arg SearchExpensesParams) ([]SearchExpensesRow, error) {
+	rows, err := q.db.Query(ctx, searchExpenses,
+		arg.UserID,
+		arg.Column2,
+		arg.Limit,
+		arg.Offset,
+		arg.CategoryID,
+		arg.StartDate,
+		arg.EndDate,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SearchExpensesRow{}
+	for rows.Next() {
+		var i SearchExpensesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Description,
+			&i.Amount,
+			&i.Currency,
+			&i.CategoryID,
+			&i.ExpenseDate,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Notes,
+			&i.UserID,
+			&i.CategoryName,
+			&i.CategoryColor,
+			&i.CategoryIcon,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const updateCategory = `-- name: UpdateCategory :one

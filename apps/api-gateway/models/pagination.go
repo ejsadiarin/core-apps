@@ -10,8 +10,8 @@ const (
 
 // PaginationParams represents pagination parameters for listings
 type PaginationParams struct {
-	Page  int `json:"page" form:"page" validate:"omitempty,min=1"`
-	Limit int `json:"limit" form:"limit" validate:"omitempty,min=1,max=100"`
+	Page  int `json:"page" query:"page" validate:"omitempty,min=1"`
+	Limit int `json:"limit" query:"limit" validate:"omitempty,min=1,max=100"`
 }
 
 // OffsetPagination represents page-based pagination metadata

@@ -237,6 +237,7 @@ func main() {
 			expenses := budget.Group("/expenses")
 			expenses.POST("", budgetHandler.CreateExpense)
 			expenses.GET("", budgetHandler.ListExpenses)
+			expenses.GET("/search", budgetHandler.SearchExpenses)
 			expenses.GET("/:id", budgetHandler.GetExpense)
 			expenses.PUT("/:id", budgetHandler.UpdateExpense)
 			expenses.DELETE("/:id", budgetHandler.DeleteExpense)

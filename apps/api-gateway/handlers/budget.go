@@ -744,6 +744,142 @@ func (h *BudgetHandler) DeleteExpense(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+// SearchExpenses godoc
+// @Summary Search expenses by description
+// @Tags budget
+// @Produce json
+// @Param q query string true "Search query"
+// @Param page query int false "Page number (default 1)"
+// @Param limit query int false "Page size (default 5, max 100)"
+// @Param category_id query string false "Filter by category ID"
+// @Param start_date query string false "Filter from date (YYYY-MM-DD)"
+// @Param end_date query string false "Filter to date (YYYY-MM-DD)"
+// @Success 200 {object} models.PaginatedResponse[models.ExpenseResponse]
+// @Router /api/budget/expenses/search [get]
+func (h *BudgetHandler) SearchExpenses(c echo.Context) error {
+	userID, err := h.getUserID(c)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to get user context"})
+	}
+
+	// bind and validate search params
+	var searchParams models.ExpenseSearchParams
+	if err := c.Bind(&searchParams); err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid search parameters"})
+	}
+	if err := c.Validate(&searchParams); err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Search query is required (1-255 characters)"})
+	}
+
+	// bind pagination params
+	var paginationParams models.PaginationParams
+	if err := c.Bind(&paginationParams); err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid pagination parameters"})
+	}
+
+	// set defaults
+	if paginationParams.Page == 0 {
+		paginationParams.Page = 1
+	}
+	if paginationParams.Limit == 0 {
+		paginationParams.Limit = models.DefaultExpenseLimit
+	}
+
+	// validate pagination params
+	if err := c.Validate(&paginationParams); err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid pagination parameters", Details: err})
+	}
+
+	// calculate offset from page
+	offset := (paginationParams.Page - 1) * paginationParams.Limit
+
+	// get total count for search
+	countArg := sqlc.CountSearchExpensesParams{
+		UserID:     userID,
+		Column2:    pgtype.Text{String: searchParams.Query, Valid: true},
+		CategoryID: uuidPtrToNullUUID(searchParams.CategoryID),
+		StartDate:  stringPtrToDate(searchParams.StartDate),
+		EndDate:    stringPtrToDate(searchParams.EndDate),
+	}
+	total, err := h.queries.CountSearchExpenses(c.Request().Context(), countArg)
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to count search expenses")
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to search expenses"})
+	}
+
+	// fetch paginated search results
+	arg := sqlc.SearchExpensesParams{
+		UserID:     userID,
+		Column2:    pgtype.Text{String: searchParams.Query, Valid: true},
+		Limit:      int32(paginationParams.Limit),
+		Offset:     int32(offset),
+		CategoryID: uuidPtrToNullUUID(searchParams.CategoryID),
+		StartDate:  stringPtrToDate(searchParams.StartDate),
+		EndDate:    stringPtrToDate(searchParams.EndDate),
+	}
+
+	rows, err := h.queries.SearchExpenses(c.Request().Context(), arg)
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to search expenses")
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to search expenses"})
+	}
+
+	// build response
+	res := make([]models.ExpenseResponse, len(rows))
+	for i, row := range rows {
+		var cat *models.CategoryResponse
+		if row.CategoryID.Valid {
+			cat = &models.CategoryResponse{
+				ID:    row.CategoryID.Bytes,
+				Name:  row.CategoryName.String,
+				Color: textToStringPtr(row.CategoryColor),
+				Icon:  textToStringPtr(row.CategoryIcon),
+			}
+		}
+
+		tags, _ := h.queries.GetExpenseTags(c.Request().Context(), row.ID)
+		tagResps := make([]models.TagResponse, len(tags))
+		for j, t := range tags {
+			tagResps[j] = models.TagResponse{
+				ID:    t.ID,
+				Name:  t.Name,
+				Color: textToStringPtr(t.Color),
+			}
+		}
+
+		res[i] = models.ExpenseResponse{
+			ID:          row.ID,
+			Description: row.Description,
+			Amount:      numericToFloat64(row.Amount),
+			Currency:    getCurrency(row.Currency),
+			Category:    cat,
+			ExpenseDate: dateToString(row.ExpenseDate),
+			Notes:       textToStringPtr(row.Notes),
+			Tags:        tagResps,
+			CreatedAt:   row.CreatedAt.Time.Format(time.RFC3339),
+			UpdatedAt:   row.UpdatedAt.Time.Format(time.RFC3339),
+		}
+	}
+
+	// calculate pagination metadata
+	totalPages := int(total) / paginationParams.Limit
+	if int(total)%paginationParams.Limit != 0 {
+		totalPages++
+	}
+	hasMore := paginationParams.Page < totalPages
+
+	return c.JSON(http.StatusOK, models.PaginatedResponse[models.ExpenseResponse]{
+		Data: res,
+		Pagination: models.OffsetPagination{
+			Total:      total,
+			Page:       paginationParams.Page,
+			Limit:      paginationParams.Limit,
+			TotalPages: totalPages,
+			HasMore:    hasMore,
+		},
+	})
+}
+
 // Stats
 
 // GetSummary godoc

@@ -58,6 +58,15 @@ type ExpenseFilters struct {
 	CategoryID *uuid.UUID `query:"category_id" validate:"omitempty"`
 }
 
+// Search
+
+type ExpenseSearchParams struct {
+	Query      string     `query:"q" validate:"required,min=1,max=255"`
+	StartDate  *string    `query:"start_date" validate:"omitempty,datetime=2006-01-02"`
+	EndDate    *string    `query:"end_date" validate:"omitempty,datetime=2006-01-02"`
+	CategoryID *uuid.UUID `query:"category_id" validate:"omitempty"`
+}
+
 // Incomes
 
 type CreateIncomeRequest struct {

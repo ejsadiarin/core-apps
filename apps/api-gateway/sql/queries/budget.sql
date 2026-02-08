@@ -119,6 +119,28 @@ WHERE
     AND (sqlc.narg('start_date')::date IS NULL OR e.expense_date >= sqlc.narg('start_date')::date)
     AND (sqlc.narg('end_date')::date IS NULL OR e.expense_date <= sqlc.narg('end_date')::date);
 
+-- name: SearchExpenses :many
+SELECT e.*, c.name as category_name, c.color as category_color, c.icon as category_icon
+FROM budget_expenses e
+LEFT JOIN budget_categories c ON e.category_id = c.id
+WHERE
+    e.user_id = $1
+    AND e.description ILIKE '%' || $2 || '%'
+    AND (sqlc.narg('category_id')::uuid IS NULL OR e.category_id = sqlc.narg('category_id'))
+    AND (sqlc.narg('start_date')::date IS NULL OR e.expense_date >= sqlc.narg('start_date')::date)
+    AND (sqlc.narg('end_date')::date IS NULL OR e.expense_date <= sqlc.narg('end_date')::date)
+ORDER BY e.expense_date DESC, e.created_at DESC
+LIMIT $3 OFFSET $4;
+
+-- name: CountSearchExpenses :one
+SELECT COUNT(*) FROM budget_expenses e
+WHERE
+    e.user_id = $1
+    AND e.description ILIKE '%' || $2 || '%'
+    AND (sqlc.narg('category_id')::uuid IS NULL OR e.category_id = sqlc.narg('category_id'))
+    AND (sqlc.narg('start_date')::date IS NULL OR e.expense_date >= sqlc.narg('start_date')::date)
+    AND (sqlc.narg('end_date')::date IS NULL OR e.expense_date <= sqlc.narg('end_date')::date);
+
 -- name: ListAllExpenses :many
 SELECT e.*, c.name as category_name, c.color as category_color, c.icon as category_icon, u.email as user_email
 FROM budget_expenses e
