@@ -569,6 +569,143 @@ func (h *BudgetHandler) ListExpenses(c echo.Context) error {
 	return c.JSON(http.StatusOK, res)
 }
 
+// ListExpensesPaginated godoc
+// @Summary List expenses with cursor-based pagination
+// @Tags budget
+// @Param cursor query string false "Pagination cursor"
+// @Param limit query int false "Page size (default 20, max 100)"
+// @Param category_id query string false "Filter by category ID"
+// @Param start_date query string false "Filter from date (YYYY-MM-DD)"
+// @Param end_date query string false "Filter to date (YYYY-MM-DD)"
+// @Success 200 {object} models.PaginatedResponse[models.ExpenseResponse]
+// @Router /api/budget/expenses/paginated [get]
+func (h *BudgetHandler) ListExpensesPaginated(c echo.Context) error {
+	userID, err := h.getUserID(c)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to get user context"})
+	}
+
+	// Bind pagination params
+	var paginationParams models.ExpensePaginationParams
+	if err := c.Bind(&paginationParams); err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid pagination parameters"})
+	}
+
+	// Set default limit if not provided
+	if paginationParams.Limit == 0 {
+		paginationParams.Limit = models.DefaultExpenseLimit
+	}
+
+	// Validate pagination params
+	if err := c.Validate(&paginationParams); err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid pagination parameters", Details: err})
+	}
+
+	// Bind filters
+	var filters models.ExpenseFilters
+	if err := c.Bind(&filters); err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid filters"})
+	}
+
+	// Decode cursor if provided
+	var cursorDate pgtype.Date
+	var cursorID pgtype.UUID
+	if paginationParams.Cursor != "" {
+		cursor, err := models.DecodeCursor(paginationParams.Cursor)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid cursor format"})
+		}
+		cursorDate = pgtype.Date{Time: cursor.Date, Valid: true}
+		cursorID = pgtype.UUID{Bytes: cursor.ID, Valid: true}
+	}
+
+	// Fetch LIMIT+1 records to determine hasMore
+	arg := sqlc.ListExpensesPaginatedParams{
+		UserID:     userID,
+		CursorDate: cursorDate,
+		CursorID:   cursorID,
+		CategoryID: uuidPtrToNullUUID(filters.CategoryID),
+		StartDate:  stringPtrToDate(filters.StartDate),
+		EndDate:    stringPtrToDate(filters.EndDate),
+		Limit:      int32(paginationParams.Limit + 1),
+	}
+
+	rows, err := h.queries.ListExpensesPaginated(c.Request().Context(), arg)
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to list paginated expenses")
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to list expenses"})
+	}
+
+	// Determine hasMore and trim if necessary
+	hasMore := len(rows) > paginationParams.Limit
+	if hasMore {
+		rows = rows[:paginationParams.Limit]
+	}
+
+	// Build response
+	res := make([]models.ExpenseResponse, len(rows))
+	for i, row := range rows {
+		var cat *models.CategoryResponse
+		if row.CategoryID.Valid {
+			cat = &models.CategoryResponse{
+				ID:    row.CategoryID.Bytes,
+				Name:  row.CategoryName.String,
+				Color: textToStringPtr(row.CategoryColor),
+				Icon:  textToStringPtr(row.CategoryIcon),
+			}
+		}
+
+		tags, _ := h.queries.GetExpenseTags(c.Request().Context(), row.ID)
+		tagResps := make([]models.TagResponse, len(tags))
+		for j, t := range tags {
+			tagResps[j] = models.TagResponse{
+				ID:    t.ID,
+				Name:  t.Name,
+				Color: textToStringPtr(t.Color),
+			}
+		}
+
+		res[i] = models.ExpenseResponse{
+			ID:          row.ID,
+			Description: row.Description,
+			Amount:      numericToFloat64(row.Amount),
+			Currency:    getCurrency(row.Currency),
+			Category:    cat,
+			ExpenseDate: dateToString(row.ExpenseDate),
+			Notes:       textToStringPtr(row.Notes),
+			Tags:        tagResps,
+			CreatedAt:   row.CreatedAt.Time.Format(time.RFC3339),
+			UpdatedAt:   row.UpdatedAt.Time.Format(time.RFC3339),
+		}
+	}
+
+	// Build pagination metadata
+	var nextCursor *string
+	if hasMore && len(res) > 0 {
+		lastExpense := res[len(res)-1]
+		expenseDate, _ := time.Parse("2006-01-02", lastExpense.ExpenseDate)
+		cursor := models.ExpenseCursor{
+			Date: expenseDate,
+			ID:   lastExpense.ID,
+		}
+		encoded, err := models.EncodeCursor(cursor)
+		if err == nil {
+			nextCursor = &encoded
+		}
+	}
+
+	pagination := models.CursorPagination{
+		HasMore:    hasMore,
+		NextCursor: nextCursor,
+		Limit:      paginationParams.Limit,
+	}
+
+	return c.JSON(http.StatusOK, models.PaginatedResponse[models.ExpenseResponse]{
+		Data:       res,
+		Pagination: pagination,
+	})
+}
+
 // GetExpense godoc
 // @Summary Get expense details
 // @Tags budget
@@ -1052,6 +1189,114 @@ func (h *BudgetHandler) ListIncomes(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, res)
+}
+
+// ListIncomesPaginated godoc
+// @Summary List incomes with offset-based pagination
+// @Tags budget
+// @Param offset query int false "Offset for pagination"
+// @Param page query int false "Page number (1-indexed)"
+// @Param limit query int false "Page size (default 10, max 100)"
+// @Param recurring_type query string false "Filter by recurring type"
+// @Param start_date query string false "Filter from date (YYYY-MM-DD)"
+// @Param end_date query string false "Filter to date (YYYY-MM-DD)"
+// @Success 200 {object} models.PaginatedResponse[models.IncomeResponse]
+// @Router /api/budget/incomes/paginated [get]
+func (h *BudgetHandler) ListIncomesPaginated(c echo.Context) error {
+	userID, err := h.getUserID(c)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to get user context"})
+	}
+
+	// Bind pagination params
+	var paginationParams models.IncomePaginationParams
+	if err := c.Bind(&paginationParams); err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid pagination parameters"})
+	}
+
+	// Set default limit if not provided
+	if paginationParams.Limit == 0 {
+		paginationParams.Limit = models.DefaultIncomeLimit
+	}
+
+	// Calculate offset from page number if provided
+	if paginationParams.Page > 0 {
+		paginationParams.Offset = (paginationParams.Page - 1) * paginationParams.Limit
+	}
+
+	// Validate pagination params
+	if err := c.Validate(&paginationParams); err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid pagination parameters", Details: err})
+	}
+
+	// Bind filters
+	var filters models.IncomeFilters
+	if err := c.Bind(&filters); err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid filters"})
+	}
+
+	// Get total count for pagination metadata
+	countArg := sqlc.CountIncomesParams{
+		UserID:        userID,
+		StartDate:     stringPtrToDate(filters.StartDate),
+		EndDate:       stringPtrToDate(filters.EndDate),
+		RecurringType: stringPtrToText(filters.RecurringType),
+	}
+
+	total, err := h.queries.CountIncomes(c.Request().Context(), countArg)
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to count incomes")
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to count incomes"})
+	}
+
+	// Fetch paginated incomes
+	arg := sqlc.ListIncomesPaginatedParams{
+		UserID:        userID,
+		StartDate:     stringPtrToDate(filters.StartDate),
+		EndDate:       stringPtrToDate(filters.EndDate),
+		RecurringType: stringPtrToText(filters.RecurringType),
+		Limit:         int32(paginationParams.Limit),
+		Offset:        int32(paginationParams.Offset),
+	}
+
+	rows, err := h.queries.ListIncomesPaginated(c.Request().Context(), arg)
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to list paginated incomes")
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to list incomes"})
+	}
+
+	// Build response
+	res := make([]models.IncomeResponse, len(rows))
+	for i, row := range rows {
+		res[i] = models.IncomeResponse{
+			ID:            row.ID,
+			Amount:        numericToFloat64(row.Amount),
+			Currency:      getCurrency(row.Currency),
+			Date:          dateToString(row.Date),
+			Description:   textToStringPtr(row.Description),
+			RecurringType: textToStringPtr(row.RecurringType),
+			StartDate:     dateToNullableStringPtr(row.StartDate),
+			EndDate:       dateToNullableStringPtr(row.EndDate),
+			CreatedAt:     row.CreatedAt.Time.Format(time.RFC3339),
+			UpdatedAt:     row.UpdatedAt.Time.Format(time.RFC3339),
+		}
+	}
+
+	// Calculate pagination metadata
+	currentPage := (paginationParams.Offset / paginationParams.Limit) + 1
+	hasMore := int64(paginationParams.Offset+len(res)) < total
+
+	pagination := models.OffsetPagination{
+		Total:   total,
+		Page:    currentPage,
+		Limit:   paginationParams.Limit,
+		HasMore: hasMore,
+	}
+
+	return c.JSON(http.StatusOK, models.PaginatedResponse[models.IncomeResponse]{
+		Data:       res,
+		Pagination: pagination,
+	})
 }
 
 // GetIncome godoc
