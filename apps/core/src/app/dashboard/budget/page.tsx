@@ -220,7 +220,7 @@ export default function BudgetDashboard() {
           {budgetRemainingData && (
             <div className={`text-sm font-semibold ${
               budgetRemainingData.budget_remaining_status === 'red' ? 'text-red-500' :
-              budgetRemainingData.budget_remaining_status === 'green' ? 'text-green-900' :
+              budgetRemainingData.budget_remaining_status === 'green' ? 'text-green-600' :
               'text-gray-600'
             }`}>
               Budget Remaining: PHP {budgetRemainingData.budget_remaining.toFixed(2)}
@@ -256,7 +256,12 @@ export default function BudgetDashboard() {
                 <CardTitle>Recent Incomes</CardTitle>
                 <CardDescription>Your latest income entries</CardDescription>
               </div>
-              <Wallet className="h-5 w-5 text-muted-foreground" />
+              <Link href="/dashboard/budget/incomes">
+                <Button variant="ghost" size="sm">
+                  View All
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
             </div>
           </CardHeader>
           <CardContent>
@@ -469,6 +474,12 @@ export default function BudgetDashboard() {
               <Button variant="outline" className="w-full justify-start">
                 <Receipt className="mr-2 h-4 w-4" />
                 View All Expenses
+              </Button>
+            </Link>
+            <Link href="/dashboard/budget/incomes" className="block" onClick={handleActionClick}>
+              <Button variant="outline" className="w-full justify-start">
+                <Wallet className="mr-2 h-4 w-4" />
+                View All Incomes
               </Button>
             </Link>
             <Link href="/dashboard/budget/settings" className="block" onClick={handleActionClick}>

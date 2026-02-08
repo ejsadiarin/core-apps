@@ -1,47 +1,88 @@
 "use client";
 
 import { motion } from "motion/react";
-import { useState } from "react";
-import { useExpenses, useCategories, useDeleteExpense, useUpdateExpense, GuestBlockedError } from "@/hooks/use-budget";
+import { useState, useEffect, useMemo } from "react";
+import { useExpenses, useSearchExpenses, useCategories, useDeleteExpense, useUpdateExpense, useCreateExpense, GuestBlockedError } from "@/hooks/use-budget";
 import { ExpenseCard } from "@/components/budget/expense-card";
 import { EditExpenseDialog } from "@/components/budget/expense-edit-dialog";
 import { ExpenseDetailDialog } from "@/components/budget/expense-detail-dialog";
+import { ExpenseFormDialog } from "@/components/budget/expense-form-dialog";
 import { Pagination } from "@/components/ui/pagination";
 import { Button } from "@/components/ui/button";
-import { Plus, Filter, ArrowLeft, EyeOff } from "lucide-react";
+import { Plus, Filter, ArrowLeft, EyeOff, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { ExpenseFilters, Expense } from "@/types/api";
+import type { ExpenseFilters, Expense, UpdateExpenseRequest, CreateExpenseRequest } from "@/types/api";
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/components/ui/toast";
 import Link from "next/link";
+
+// debounce hook for search input
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
 
 export default function ExpensesPage() {
   const [filters, setFilters] = useState<ExpenseFilters>({});
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
-  const [limit] = useState(10);
+  const [limit] = useState(5);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [viewingExpense, setViewingExpense] = useState<Expense | null>(null);
+  const [showExpenseDialog, setShowExpenseDialog] = useState(false);
 
-  const { 
-    data, 
-    isLoading,
-  } = useExpenses(filters, page, limit);
+  // debounce search to avoid excessive API calls
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
+  // determine if we should use search mode
+  const isSearchMode = debouncedSearchTerm.length > 0;
+
+  // regular list query (used when not searching)
+  const listQuery = useExpenses(filters, page, limit);
+
+  // search query (used when searching)
+  const searchQuery = useSearchExpenses(
+    debouncedSearchTerm,
+    {
+      category_id: filters.category_id,
+      start_date: filters.start_date,
+      end_date: filters.end_date,
+    },
+    page,
+    limit
+  );
+
   const { data: categories } = useCategories();
   const deleteExpense = useDeleteExpense();
   const updateExpense = useUpdateExpense();
+  const createExpense = useCreateExpense();
   const { isGuest } = useAuth();
   const { showToast } = useToast();
 
-  const expenses = data?.data ?? [];
-  const pagination = data?.pagination;
+  // use appropriate data source based on search mode
+  const activeQuery = isSearchMode ? searchQuery : listQuery;
+  const expenses = activeQuery.data?.data ?? [];
+  const pagination = activeQuery.data?.pagination;
+  const isLoading = activeQuery.isLoading;
 
-  // apply client-side search filter
-  const filteredExpenses = expenses.filter((expense) =>
-    expense.description.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // reset to page 1 when search term changes
+  useEffect(() => {
+    if (debouncedSearchTerm !== searchTerm) return;
+    setPage(1);
+  }, [debouncedSearchTerm]);
 
   const handlePageChange = (newPage: number) => {
     setPage(newPage);
@@ -69,7 +110,7 @@ export default function ExpensesPage() {
     }
   };
 
-  const handleUpdate = async (data: any) => {
+  const handleUpdate = async (data: UpdateExpenseRequest) => {
     try {
       await updateExpense.mutateAsync({ id: editingExpense!.id, data });
       showToast("Expense updated successfully", "success");
@@ -84,6 +125,20 @@ export default function ExpensesPage() {
 
   const handleView = (expense: Expense) => {
     setViewingExpense(expense);
+  };
+
+  const handleCreateExpense = async (data: CreateExpenseRequest | UpdateExpenseRequest) => {
+    try {
+      await createExpense.mutateAsync(data as CreateExpenseRequest);
+      showToast("Expense created successfully", "success");
+      setShowExpenseDialog(false);
+    } catch (error) {
+      if (error instanceof GuestBlockedError) {
+        showToast(error.message, "warning");
+      } else {
+        showToast("Failed to create expense", "error");
+      }
+    }
   };
 
   return (
@@ -116,12 +171,10 @@ export default function ExpensesPage() {
               : "View and manage all your expenses"}
           </p>
         </div>
-        <Link href="/dashboard/budget/expenses/new">
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Expense
-          </Button>
-        </Link>
+        <Button onClick={() => setShowExpenseDialog(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add Expense
+        </Button>
       </motion.div>
 
       {/* Filters */}
@@ -131,13 +184,16 @@ export default function ExpensesPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.1 }}
       >
-        <div className="flex flex-col sm:flex-row gap-4">
-          <Input
-            placeholder="Search expenses..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="sm:max-w-xs"
-          />
+        <div className="flex flex-col sm:flex-row items-end gap-4">
+          <div className="relative sm:max-w-xs w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search all expenses..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
+          </div>
           
           <Select
             value={filters.category_id || "all"}
@@ -183,7 +239,7 @@ export default function ExpensesPage() {
               </div>
               <div className="flex flex-col gap-1">
                 <label htmlFor="end-date" className="text-xs text-muted-foreground">
-                  To
+                  To (optional)
                 </label>
                 <Input
                   id="end-date"
@@ -219,7 +275,7 @@ export default function ExpensesPage() {
             </p>
             <div className="order-1 sm:order-2">
               <Pagination
-                currentPage={pagination.page}
+                currentPage={page}
                 totalPages={pagination.totalPages}
                 onPageChange={handlePageChange}
                 disabled={isLoading}
@@ -242,9 +298,9 @@ export default function ExpensesPage() {
               <div key={i} className="h-32 bg-muted animate-pulse rounded-lg" />
             ))}
           </div>
-        ) : filteredExpenses && filteredExpenses.length > 0 ? (
+        ) : expenses && expenses.length > 0 ? (
           <>
-            {filteredExpenses.map((expense) => (
+            {expenses.map((expense) => (
               <ExpenseCard
                 key={expense.id}
                 expense={expense}
@@ -259,7 +315,7 @@ export default function ExpensesPage() {
             {pagination && pagination.totalPages > 1 && (
               <div className="mt-8 border-t pt-6 flex justify-center">
                 <Pagination
-                  currentPage={pagination.page}
+                  currentPage={page}
                   totalPages={pagination.totalPages}
                   onPageChange={handlePageChange}
                   disabled={isLoading}
@@ -287,6 +343,7 @@ export default function ExpensesPage() {
         )}
       </motion.div>
 
+
       {/* Edit Dialog */}
       <EditExpenseDialog
         expense={editingExpense}
@@ -312,6 +369,14 @@ export default function ExpensesPage() {
         onDelete={handleDelete}
         showToast={showToast}
         isGuest={isGuest}
+      />
+
+      {/* Create Expense Dialog */}
+      <ExpenseFormDialog
+        open={showExpenseDialog}
+        onOpenChange={setShowExpenseDialog}
+        onSubmit={handleCreateExpense}
+        isLoading={createExpense.isPending}
       />
     </div>
   );
