@@ -15,6 +15,7 @@ import {
   createExpense,
   updateExpense,
   deleteExpense,
+  searchExpenses,
   fetchIncomes,
   fetchIncome,
   createIncome,
@@ -25,6 +26,7 @@ import {
   fetchCategoryBreakdown,
   fetchTrends
 } from '@/lib/api';
+import type { ExpenseSearchParams } from '@/lib/api';
 import type {
   Category,
   Tag,
@@ -68,6 +70,8 @@ export const budgetKeys = {
 
   expenses: () => [...budgetKeys.all, 'expenses'] as const,
   expensesList: (filters?: ExpenseFilters) => [...budgetKeys.expenses(), 'list', filters] as const,
+  expensesSearch: (query: string, filters?: Omit<ExpenseSearchParams, 'q'>) => 
+    [...budgetKeys.expenses(), 'search', query, filters] as const,
   expenseDetail: (id: string) => [...budgetKeys.expenses(), 'detail', id] as const,
 
   incomes: () => [...budgetKeys.all, 'incomes'] as const,
@@ -346,6 +350,21 @@ export function useDeleteExpense() {
         console.error("Failed to delete expense:", error);
       }
     }
+  });
+}
+
+export function useSearchExpenses(
+  query: string,
+  filters?: { category_id?: string; start_date?: string; end_date?: string },
+  page: number = 1,
+  limit: number = 5
+) {
+  return useQuery<PaginatedResponse<Expense>>({
+    queryKey: budgetKeys.expensesSearch(query, { ...filters, page, limit }),
+    queryFn: () => searchExpenses({ q: query, ...filters, page, limit }),
+    enabled: query.length > 0,
+    staleTime: 60000,
+    refetchOnMount: true
   });
 }
 

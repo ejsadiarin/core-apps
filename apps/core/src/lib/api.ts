@@ -371,6 +371,35 @@ export async function deleteExpense(id: string): Promise<void> {
   }
 }
 
+export interface ExpenseSearchParams {
+  q: string;
+  page?: number;
+  limit?: number;
+  category_id?: string;
+  start_date?: string;
+  end_date?: string;
+}
+
+export async function searchExpenses(
+  params: ExpenseSearchParams
+): Promise<PaginatedResponse<Expense>> {
+  const searchParams = new URLSearchParams();
+  searchParams.append('q', params.q);
+  if (params.page) searchParams.append('page', params.page.toString());
+  if (params.limit) searchParams.append('limit', params.limit.toString());
+  if (params.start_date) searchParams.append('start_date', params.start_date);
+  if (params.end_date) searchParams.append('end_date', params.end_date);
+  if (params.category_id) searchParams.append('category_id', params.category_id);
+
+  const res = await fetch(url + `/api/budget/expenses/search?${searchParams.toString()}`, {
+    credentials: 'include'
+  });
+  if (!res.ok) {
+    throw new Error(`Error searching expenses: ${res.status}`);
+  }
+  return res.json();
+}
+
 // Statistics
 
 export async function fetchSummaryStats(period?: string): Promise<SummaryStats> {
