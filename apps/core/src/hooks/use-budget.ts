@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   fetchCategories,
   fetchCategory,
@@ -15,13 +15,11 @@ import {
   createExpense,
   updateExpense,
   deleteExpense,
-  fetchExpensesPaginated,
   fetchIncomes,
   fetchIncome,
   createIncome,
   updateIncome,
   deleteIncome,
-  fetchIncomesPaginated,
   fetchBudgetRemaining,
   fetchSummaryStats,
   fetchCategoryBreakdown,
@@ -45,8 +43,7 @@ import type {
   SummaryStats,
   CategoryBreakdown,
   TrendItem,
-  CursorPagination,
-  OffsetPagination
+  PaginatedResponse
 } from '@/types/api';
 import { useAuth } from '@/contexts/auth-context';
 
@@ -262,30 +259,12 @@ export function useDeleteTag() {
 
 // Expenses
 
-export function useExpenses(filters?: ExpenseFilters) {
-  return useQuery<Expense[]>({
-    queryKey: budgetKeys.expensesList(filters),
-    queryFn: () => fetchExpenses(filters),
+export function useExpenses(filters?: ExpenseFilters, page: number = 1, limit: number = 5) {
+  return useQuery<PaginatedResponse<Expense>>({
+    queryKey: [...budgetKeys.expensesList(filters), page, limit],
+    queryFn: () => fetchExpenses({ ...filters, page, limit }),
     staleTime: 60000,
     refetchOnMount: true
-  });
-}
-
-export function useExpensesPaginated(filters?: ExpenseFilters, limit: number = 20) {
-  return useInfiniteQuery({
-    queryKey: [...budgetKeys.expensesList(filters), 'paginated'],
-    queryFn: ({ pageParam }) => 
-      fetchExpensesPaginated({ 
-        cursor: pageParam, 
-        limit,
-        ...filters 
-      }),
-    getNextPageParam: (lastPage) => {
-      const pagination = lastPage.pagination as CursorPagination;
-      return pagination.hasMore ? pagination.nextCursor : undefined;
-    },
-    initialPageParam: undefined as string | undefined,
-    staleTime: 60000
   });
 }
 
@@ -372,33 +351,16 @@ export function useDeleteExpense() {
 
 // Incomes
 
-export function useIncomes(startDate?: string, endDate?: string, recurringType?: 'daily') {
-  return useQuery<Income[]>({
-    queryKey: budgetKeys.incomesList(startDate, endDate, recurringType),
-    queryFn: () => fetchIncomes(startDate, endDate, recurringType),
+export function useIncomes(
+  filters?: { start_date?: string; end_date?: string; recurring_type?: string },
+  page: number = 1,
+  limit: number = 5
+) {
+  return useQuery<PaginatedResponse<Income>>({
+    queryKey: [...budgetKeys.incomes(), 'list', filters, page, limit],
+    queryFn: () => fetchIncomes({ ...filters, page, limit }),
     staleTime: 60000,
     refetchOnMount: true
-  });
-}
-
-export function useIncomesPaginated(
-  filters?: { start_date?: string; end_date?: string; recurring_type?: string },
-  limit: number = 10
-) {
-  return useInfiniteQuery({
-    queryKey: [...budgetKeys.incomes(), 'paginated', filters],
-    queryFn: ({ pageParam = 1 }) => 
-      fetchIncomesPaginated({ 
-        page: pageParam as number,
-        limit,
-        ...filters 
-      }),
-    getNextPageParam: (lastPage) => {
-      const pagination = lastPage.pagination as OffsetPagination;
-      return pagination.hasMore ? pagination.page + 1 : undefined;
-    },
-    initialPageParam: 1,
-    staleTime: 60000
   });
 }
 

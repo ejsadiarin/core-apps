@@ -40,8 +40,8 @@ export default function BudgetDashboard() {
   const [period] = useState<string>("month");
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const { data: summaryStats, isLoading: statsLoading } = useSummaryStats(period);
-  const { data: recentExpenses, isLoading: expensesLoading } = useExpenses();
-  const { data: recentIncomes, isLoading: incomesLoading } = useIncomes();
+  const { data: expensesData, isLoading: expensesLoading } = useExpenses(undefined, 1, 5);
+  const { data: incomesData, isLoading: incomesLoading } = useIncomes(undefined, 1, 5);
   const { data: budgetRemainingData } = useBudgetRemaining(selectedDate);
   const { isGuest } = useAuth();
   const { showToast } = useToast();
@@ -68,8 +68,8 @@ export default function BudgetDashboard() {
   const updateIncome = useUpdateIncome();
   const deleteIncome = useDeleteIncome();
 
-  const displayExpenses = recentExpenses?.slice(0, 5) || [];
-  const displayIncomes = recentIncomes?.slice(0, 5) || [];
+  const displayExpenses = expensesData?.data || [];
+  const displayIncomes = incomesData?.data || [];
 
   const handleActionClick = () => {
     if (isGuest) {

@@ -27,8 +27,7 @@ import type {
   UpdateIncomeRequest,
   BudgetRemainingResponse,
   PaginatedResponse,
-  ExpensePaginationParams,
-  IncomePaginationParams
+  PaginationParams
 } from '@/types/api';
 
 const url = 'http://localhost:8080';
@@ -303,39 +302,21 @@ export async function deleteTag(id: string): Promise<void> {
 
 // Expenses
 
-export async function fetchExpenses(filters?: ExpenseFilters): Promise<Expense[]> {
-  const params = new URLSearchParams();
-  if (filters?.start_date) params.append('start_date', filters.start_date);
-  if (filters?.end_date) params.append('end_date', filters.end_date);
-  if (filters?.category_id) params.append('category_id', filters.category_id);
-
-  const queryString = params.toString();
-  const endpoint = queryString ? `/api/budget/expenses?${queryString}` : '/api/budget/expenses';
-
-  const res = await fetch(url + endpoint, {
-    credentials: 'include'
-  });
-  if (!res.ok) {
-    throw new Error(`Error fetching expenses: ${res.status}`);
-  }
-  return res.json();
-}
-
-export async function fetchExpensesPaginated(
-  params: ExpensePaginationParams & ExpenseFilters
+export async function fetchExpenses(
+  params: PaginationParams & ExpenseFilters
 ): Promise<PaginatedResponse<Expense>> {
   const searchParams = new URLSearchParams();
-  if (params.cursor) searchParams.append('cursor', params.cursor);
+  if (params.page) searchParams.append('page', params.page.toString());
   if (params.limit) searchParams.append('limit', params.limit.toString());
   if (params.start_date) searchParams.append('start_date', params.start_date);
   if (params.end_date) searchParams.append('end_date', params.end_date);
   if (params.category_id) searchParams.append('category_id', params.category_id);
 
-  const res = await fetch(url + `/api/budget/expenses/paginated?${searchParams.toString()}`, {
+  const res = await fetch(url + `/api/budget/expenses?${searchParams.toString()}`, {
     credentials: 'include'
   });
   if (!res.ok) {
-    throw new Error(`Error fetching paginated expenses: ${res.status}`);
+    throw new Error(`Error fetching expenses: ${res.status}`);
   }
   return res.json();
 }
@@ -537,40 +518,25 @@ export async function fetchAllServicesStats(): Promise<{
 
 // Incomes
 
-export async function fetchIncomes(startDate?: string, endDate?: string, recurringType?: 'daily'): Promise<Income[]> {
-  const params = new URLSearchParams();
-  if (startDate) params.append('start_date', startDate);
-  if (endDate) params.append('end_date', endDate);
-  if (recurringType) params.append('recurring_type', recurringType);
-
-  const queryString = params.toString();
-  const endpoint = queryString ? `/api/budget/incomes?${queryString}` : '/api/budget/incomes';
-
-  const res = await fetch(url + endpoint, {
-    credentials: 'include'
-  });
-  if (!res.ok) {
-    throw new Error(`Error fetching incomes: ${res.status}`);
+export async function fetchIncomes(
+  params: PaginationParams & { 
+    start_date?: string; 
+    end_date?: string; 
+    recurring_type?: string;
   }
-  return res.json();
-}
-
-export async function fetchIncomesPaginated(
-  params: IncomePaginationParams & { start_date?: string; end_date?: string; recurring_type?: string }
 ): Promise<PaginatedResponse<Income>> {
   const searchParams = new URLSearchParams();
-  if (params.offset !== undefined) searchParams.append('offset', params.offset.toString());
   if (params.page) searchParams.append('page', params.page.toString());
   if (params.limit) searchParams.append('limit', params.limit.toString());
   if (params.start_date) searchParams.append('start_date', params.start_date);
   if (params.end_date) searchParams.append('end_date', params.end_date);
   if (params.recurring_type) searchParams.append('recurring_type', params.recurring_type);
 
-  const res = await fetch(url + `/api/budget/incomes/paginated?${searchParams.toString()}`, {
+  const res = await fetch(url + `/api/budget/incomes?${searchParams.toString()}`, {
     credentials: 'include'
   });
   if (!res.ok) {
-    throw new Error(`Error fetching paginated incomes: ${res.status}`);
+    throw new Error(`Error fetching incomes: ${res.status}`);
   }
   return res.json();
 }

@@ -16,6 +16,7 @@ type Querier interface {
 	AddExpenseTag(ctx context.Context, arg AddExpenseTagParams) error
 	CountActiveSessions(ctx context.Context) (int64, error)
 	CountAdmins(ctx context.Context) (int64, error)
+	CountExpenses(ctx context.Context, arg CountExpensesParams) (int64, error)
 	CountIncomes(ctx context.Context, arg CountIncomesParams) (int64, error)
 	// Categories
 	CreateCategory(ctx context.Context, arg CreateCategoryParams) (BudgetCategory, error)
@@ -82,9 +83,7 @@ type Querier interface {
 	ListAllTags(ctx context.Context) ([]ListAllTagsRow, error)
 	ListCategories(ctx context.Context, userID uuid.UUID) ([]BudgetCategory, error)
 	ListExpenses(ctx context.Context, arg ListExpensesParams) ([]ListExpensesRow, error)
-	ListExpensesPaginated(ctx context.Context, arg ListExpensesPaginatedParams) ([]ListExpensesPaginatedRow, error)
 	ListIncomes(ctx context.Context, arg ListIncomesParams) ([]BudgetIncome, error)
-	ListIncomesPaginated(ctx context.Context, arg ListIncomesPaginatedParams) ([]BudgetIncome, error)
 	ListServices(ctx context.Context) ([]ListServicesRow, error)
 	ListTags(ctx context.Context, userID uuid.UUID) ([]BudgetTag, error)
 	ListUsers(ctx context.Context) ([]User, error)

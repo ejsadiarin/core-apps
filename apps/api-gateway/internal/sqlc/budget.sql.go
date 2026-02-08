@@ -30,6 +30,34 @@ func (q *Queries) AddExpenseTag(ctx context.Context, arg AddExpenseTagParams) er
 	return err
 }
 
+const countExpenses = `-- name: CountExpenses :one
+SELECT COUNT(*) FROM budget_expenses e
+WHERE
+    e.user_id = $1
+    AND ($2::uuid IS NULL OR e.category_id = $2)
+    AND ($3::date IS NULL OR e.expense_date >= $3::date)
+    AND ($4::date IS NULL OR e.expense_date <= $4::date)
+`
+
+type CountExpensesParams struct {
+	UserID     uuid.UUID   `json:"user_id"`
+	CategoryID pgtype.UUID `json:"category_id"`
+	StartDate  pgtype.Date `json:"start_date"`
+	EndDate    pgtype.Date `json:"end_date"`
+}
+
+func (q *Queries) CountExpenses(ctx context.Context, arg CountExpensesParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countExpenses,
+		arg.UserID,
+		arg.CategoryID,
+		arg.StartDate,
+		arg.EndDate,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createCategory = `-- name: CreateCategory :one
 
 INSERT INTO budget_categories (
@@ -862,14 +890,17 @@ FROM budget_expenses e
 LEFT JOIN budget_categories c ON e.category_id = c.id
 WHERE
     e.user_id = $1
-    AND ($2::uuid IS NULL OR e.category_id = $2)
-    AND ($3::date IS NULL OR e.expense_date >= $3::date)
-    AND ($4::date IS NULL OR e.expense_date <= $4::date)
+    AND ($4::uuid IS NULL OR e.category_id = $4)
+    AND ($5::date IS NULL OR e.expense_date >= $5::date)
+    AND ($6::date IS NULL OR e.expense_date <= $6::date)
 ORDER BY e.expense_date DESC, e.created_at DESC
+LIMIT $2 OFFSET $3
 `
 
 type ListExpensesParams struct {
 	UserID     uuid.UUID   `json:"user_id"`
+	Limit      int32       `json:"limit"`
+	Offset     int32       `json:"offset"`
 	CategoryID pgtype.UUID `json:"category_id"`
 	StartDate  pgtype.Date `json:"start_date"`
 	EndDate    pgtype.Date `json:"end_date"`
@@ -894,6 +925,8 @@ type ListExpensesRow struct {
 func (q *Queries) ListExpenses(ctx context.Context, arg ListExpensesParams) ([]ListExpensesRow, error) {
 	rows, err := q.db.Query(ctx, listExpenses,
 		arg.UserID,
+		arg.Limit,
+		arg.Offset,
 		arg.CategoryID,
 		arg.StartDate,
 		arg.EndDate,
@@ -905,90 +938,6 @@ func (q *Queries) ListExpenses(ctx context.Context, arg ListExpensesParams) ([]L
 	items := []ListExpensesRow{}
 	for rows.Next() {
 		var i ListExpensesRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Description,
-			&i.Amount,
-			&i.Currency,
-			&i.CategoryID,
-			&i.ExpenseDate,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.Notes,
-			&i.UserID,
-			&i.CategoryName,
-			&i.CategoryColor,
-			&i.CategoryIcon,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listExpensesPaginated = `-- name: ListExpensesPaginated :many
-SELECT e.id, e.description, e.amount, e.currency, e.category_id, e.expense_date, e.created_at, e.updated_at, e.notes, e.user_id, c.name as category_name, c.color as category_color, c.icon as category_icon
-FROM budget_expenses e
-LEFT JOIN budget_categories c ON e.category_id = c.id
-WHERE
-    e.user_id = $1
-    AND ($3::date IS NULL OR 
-         (e.expense_date < $3::date OR 
-          (e.expense_date = $3::date AND e.id > $4::uuid)))
-    AND ($5::uuid IS NULL OR e.category_id = $5)
-    AND ($6::date IS NULL OR e.expense_date >= $6::date)
-    AND ($7::date IS NULL OR e.expense_date <= $7::date)
-ORDER BY e.expense_date DESC, e.id ASC
-LIMIT $2
-`
-
-type ListExpensesPaginatedParams struct {
-	UserID     uuid.UUID   `json:"user_id"`
-	Limit      int32       `json:"limit"`
-	CursorDate pgtype.Date `json:"cursor_date"`
-	CursorID   pgtype.UUID `json:"cursor_id"`
-	CategoryID pgtype.UUID `json:"category_id"`
-	StartDate  pgtype.Date `json:"start_date"`
-	EndDate    pgtype.Date `json:"end_date"`
-}
-
-type ListExpensesPaginatedRow struct {
-	ID            uuid.UUID        `json:"id"`
-	Description   string           `json:"description"`
-	Amount        pgtype.Numeric   `json:"amount"`
-	Currency      pgtype.Text      `json:"currency"`
-	CategoryID    pgtype.UUID      `json:"category_id"`
-	ExpenseDate   pgtype.Date      `json:"expense_date"`
-	CreatedAt     pgtype.Timestamp `json:"created_at"`
-	UpdatedAt     pgtype.Timestamp `json:"updated_at"`
-	Notes         pgtype.Text      `json:"notes"`
-	UserID        uuid.UUID        `json:"user_id"`
-	CategoryName  pgtype.Text      `json:"category_name"`
-	CategoryColor pgtype.Text      `json:"category_color"`
-	CategoryIcon  pgtype.Text      `json:"category_icon"`
-}
-
-func (q *Queries) ListExpensesPaginated(ctx context.Context, arg ListExpensesPaginatedParams) ([]ListExpensesPaginatedRow, error) {
-	rows, err := q.db.Query(ctx, listExpensesPaginated,
-		arg.UserID,
-		arg.Limit,
-		arg.CursorDate,
-		arg.CursorID,
-		arg.CategoryID,
-		arg.StartDate,
-		arg.EndDate,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ListExpensesPaginatedRow{}
-	for rows.Next() {
-		var i ListExpensesPaginatedRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Description,

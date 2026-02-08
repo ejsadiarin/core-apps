@@ -2,11 +2,11 @@
 
 import { motion } from "motion/react";
 import { useState } from "react";
-import { useExpensesPaginated, useCategories, useDeleteExpense, useUpdateExpense, GuestBlockedError } from "@/hooks/use-budget";
+import { useExpenses, useCategories, useDeleteExpense, useUpdateExpense, GuestBlockedError } from "@/hooks/use-budget";
 import { ExpenseCard } from "@/components/budget/expense-card";
 import { EditExpenseDialog } from "@/components/budget/expense-edit-dialog";
 import { ExpenseDetailDialog } from "@/components/budget/expense-detail-dialog";
-import { LoadMoreButton } from "@/components/budget/load-more-button";
+import { Pagination } from "@/components/ui/pagination";
 import { Button } from "@/components/ui/button";
 import { Plus, Filter, ArrowLeft, EyeOff } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -20,29 +20,33 @@ import Link from "next/link";
 export default function ExpensesPage() {
   const [filters, setFilters] = useState<ExpenseFilters>({});
   const [searchTerm, setSearchTerm] = useState("");
+  const [page, setPage] = useState(1);
+  const [limit] = useState(10);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [viewingExpense, setViewingExpense] = useState<Expense | null>(null);
 
   const { 
     data, 
-    isLoading, 
-    fetchNextPage, 
-    hasNextPage, 
-    isFetchingNextPage 
-  } = useExpensesPaginated(filters);
+    isLoading,
+  } = useExpenses(filters, page, limit);
   const { data: categories } = useCategories();
   const deleteExpense = useDeleteExpense();
   const updateExpense = useUpdateExpense();
   const { isGuest } = useAuth();
   const { showToast } = useToast();
 
-  // flatten pages from infinite query
-  const expenses = data?.pages.flatMap(p => p.data) ?? [];
+  const expenses = data?.data ?? [];
+  const pagination = data?.pagination;
 
   // apply client-side search filter
   const filteredExpenses = expenses.filter((expense) =>
     expense.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const handleDelete = async (id: string) => {
     try {
@@ -196,22 +200,19 @@ export default function ExpensesPage() {
               />
             ))}
             
-            {/* Load More Button */}
-            {hasNextPage && (
-              <div className="mt-6 flex justify-center">
-                <LoadMoreButton 
-                  onClick={() => fetchNextPage()} 
-                  isLoading={isFetchingNextPage}
-                  disabled={!hasNextPage || isFetchingNextPage}
+            {/* Pagination Controls */}
+            {pagination && pagination.totalPages > 1 && (
+              <div className="mt-8 space-y-4">
+                <Pagination
+                  currentPage={pagination.page}
+                  totalPages={pagination.totalPages}
+                  onPageChange={handlePageChange}
+                  disabled={isLoading}
                 />
+                <p className="text-center text-sm text-muted-foreground">
+                  Page {pagination.page} of {pagination.totalPages} ({pagination.total} total expenses)
+                </p>
               </div>
-            )}
-            
-            {/* End of List Message */}
-            {!hasNextPage && (
-              <p className="text-center text-sm text-muted-foreground mt-6">
-                No more expenses to load
-              </p>
             )}
           </>
         ) : (
