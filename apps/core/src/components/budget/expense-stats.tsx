@@ -36,7 +36,7 @@ export function ExpenseStats({ stats, isLoading }: ExpenseStatsProps) {
   const budgetRemaining = stats.budget_remaining ?? 0;
   const budgetStatus = stats.budget_remaining_status ?? "neutral";
   const statusColors = {
-    green: "text-green-900",
+    green: "text-green-600",
     red: "text-red-500",
     neutral: "text-gray-600",
   };

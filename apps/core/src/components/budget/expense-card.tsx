@@ -121,8 +121,8 @@ export function ExpenseCard({ expense, onView, onEdit, onDelete, disabled, showT
             </div>
 
             <div className="flex flex-col items-end gap-2">
-              <div className="text-xl font-bold">
-                {expense.currency} {expense.amount.toFixed(2)}
+              <div className="text-xl font-bold text-red-500">
+                -{expense.currency} {expense.amount.toFixed(2)}
               </div>
               <div className="flex gap-1">
                 <Button
