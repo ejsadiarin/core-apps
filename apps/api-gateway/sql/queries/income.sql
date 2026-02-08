@@ -25,6 +25,24 @@ WHERE
     AND (sqlc.narg('end_date')::date IS NULL OR date <= sqlc.narg('end_date')::date)
 ORDER BY date DESC, created_at DESC;
 
+-- name: ListIncomesPaginated :many
+SELECT * FROM budget_incomes
+WHERE
+    user_id = $1
+    AND (sqlc.narg('recurring_type')::text IS NULL OR recurring_type = sqlc.narg('recurring_type')::text)
+    AND (sqlc.narg('start_date')::date IS NULL OR date >= sqlc.narg('start_date')::date)
+    AND (sqlc.narg('end_date')::date IS NULL OR date <= sqlc.narg('end_date')::date)
+ORDER BY created_at DESC
+LIMIT $2 OFFSET $3;
+
+-- name: CountIncomes :one
+SELECT COUNT(*) FROM budget_incomes
+WHERE
+    user_id = $1
+    AND (sqlc.narg('recurring_type')::text IS NULL OR recurring_type = sqlc.narg('recurring_type')::text)
+    AND (sqlc.narg('start_date')::date IS NULL OR date >= sqlc.narg('start_date')::date)
+    AND (sqlc.narg('end_date')::date IS NULL OR date <= sqlc.narg('end_date')::date);
+
 -- name: ListAllIncomes :many
 SELECT i.*, u.email as user_email
 FROM budget_incomes i

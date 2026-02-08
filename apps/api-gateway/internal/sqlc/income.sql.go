@@ -12,6 +12,34 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countIncomes = `-- name: CountIncomes :one
+SELECT COUNT(*) FROM budget_incomes
+WHERE
+    user_id = $1
+    AND ($2::text IS NULL OR recurring_type = $2::text)
+    AND ($3::date IS NULL OR date >= $3::date)
+    AND ($4::date IS NULL OR date <= $4::date)
+`
+
+type CountIncomesParams struct {
+	UserID        uuid.UUID   `json:"user_id"`
+	RecurringType pgtype.Text `json:"recurring_type"`
+	StartDate     pgtype.Date `json:"start_date"`
+	EndDate       pgtype.Date `json:"end_date"`
+}
+
+func (q *Queries) CountIncomes(ctx context.Context, arg CountIncomesParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countIncomes,
+		arg.UserID,
+		arg.RecurringType,
+		arg.StartDate,
+		arg.EndDate,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createIncome = `-- name: CreateIncome :one
 
 INSERT INTO budget_incomes (
@@ -401,6 +429,65 @@ type ListIncomesParams struct {
 func (q *Queries) ListIncomes(ctx context.Context, arg ListIncomesParams) ([]BudgetIncome, error) {
 	rows, err := q.db.Query(ctx, listIncomes,
 		arg.UserID,
+		arg.RecurringType,
+		arg.StartDate,
+		arg.EndDate,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []BudgetIncome{}
+	for rows.Next() {
+		var i BudgetIncome
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Amount,
+			&i.Currency,
+			&i.Date,
+			&i.Description,
+			&i.RecurringType,
+			&i.StartDate,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.EndDate,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listIncomesPaginated = `-- name: ListIncomesPaginated :many
+SELECT id, user_id, amount, currency, date, description, recurring_type, start_date, created_at, updated_at, end_date FROM budget_incomes
+WHERE
+    user_id = $1
+    AND ($4::text IS NULL OR recurring_type = $4::text)
+    AND ($5::date IS NULL OR date >= $5::date)
+    AND ($6::date IS NULL OR date <= $6::date)
+ORDER BY created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type ListIncomesPaginatedParams struct {
+	UserID        uuid.UUID   `json:"user_id"`
+	Limit         int32       `json:"limit"`
+	Offset        int32       `json:"offset"`
+	RecurringType pgtype.Text `json:"recurring_type"`
+	StartDate     pgtype.Date `json:"start_date"`
+	EndDate       pgtype.Date `json:"end_date"`
+}
+
+func (q *Queries) ListIncomesPaginated(ctx context.Context, arg ListIncomesPaginatedParams) ([]BudgetIncome, error) {
+	rows, err := q.db.Query(ctx, listIncomesPaginated,
+		arg.UserID,
+		arg.Limit,
+		arg.Offset,
 		arg.RecurringType,
 		arg.StartDate,
 		arg.EndDate,
