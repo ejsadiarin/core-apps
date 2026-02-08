@@ -161,6 +161,37 @@ export interface ExpenseFilters {
     category_id?: string;
 }
 
+// Pagination Types
+
+export interface CursorPagination {
+    hasMore: boolean;
+    nextCursor: string | null;
+    limit: number;
+}
+
+export interface OffsetPagination {
+    total: number;
+    page: number;
+    limit: number;
+    hasMore: boolean;
+}
+
+export interface PaginatedResponse<T> {
+    data: T[];
+    pagination: CursorPagination | OffsetPagination;
+}
+
+export interface ExpensePaginationParams {
+    cursor?: string;
+    limit?: number;
+}
+
+export interface IncomePaginationParams {
+    offset?: number;
+    page?: number;
+    limit?: number;
+}
+
 export interface Income {
     id: string;
     amount: number;
