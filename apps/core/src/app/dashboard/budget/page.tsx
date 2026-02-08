@@ -4,6 +4,7 @@ import { motion } from "motion/react";
 import { useState } from "react";
 import { ExpenseStats } from "@/components/budget/expense-stats";
 import { IncomeForm } from "@/components/budget/income-form";
+import { ExpenseFormDialog } from "@/components/budget/expense-form-dialog";
 import {
   useSummaryStats,
   useExpenses,
@@ -13,6 +14,7 @@ import {
   useDeleteIncome,
   useUpdateExpense,
   useDeleteExpense,
+  useCreateExpense,
   useBudgetRemaining,
 } from "@/hooks/use-budget";
 import { GuestBlockedError } from "@/hooks/use-budget";
@@ -43,11 +45,13 @@ export default function BudgetDashboard() {
 
   const [viewingExpense, setViewingExpense] = useState<Expense | null>(null);
   const [showIncomeForm, setShowIncomeForm] = useState(false);
+  const [showExpenseDialog, setShowExpenseDialog] = useState(false);
   const [editingIncome, setEditingIncome] = useState<Income | null>(null);
 
   const updateExpense = useUpdateExpense();
   const deleteExpense = useDeleteExpense();
   const createIncome = useCreateIncome();
+  const createExpense = useCreateExpense();
   const updateIncome = useUpdateIncome();
   const deleteIncome = useDeleteIncome();
 
@@ -132,6 +136,20 @@ export default function BudgetDashboard() {
     }
   };
 
+  const handleCreateExpense = async (data: CreateExpenseRequest) => {
+    try {
+      await createExpense.mutateAsync(data);
+      showToast("Expense created successfully", "success");
+      setShowExpenseDialog(false);
+    } catch (error) {
+      if (error instanceof GuestBlockedError) {
+        showToast(error.message, "warning");
+      } else {
+        showToast("Failed to create expense", "error");
+      }
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Header */}
@@ -161,12 +179,10 @@ export default function BudgetDashboard() {
             <Plus className="mr-2 h-4 w-4" />
             Add Income
           </Button>
-          <Link href="/dashboard/budget/expenses/new" onClick={handleActionClick}>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Expense
-            </Button>
-          </Link>
+          <Button onClick={() => { handleActionClick(); if (!isGuest) setShowExpenseDialog(true); }}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Expense
+          </Button>
         </div>
       </motion.div>
 
@@ -330,12 +346,15 @@ export default function BudgetDashboard() {
                 ) : (
                   <>
                     <p>No expenses yet</p>
-                    <Link href="/dashboard/budget/expenses/new">
-                      <Button variant="outline" size="sm" className="mt-4">
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add your first expense
-                      </Button>
-                    </Link>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="mt-4"
+                      onClick={() => { handleActionClick(); if (!isGuest) setShowExpenseDialog(true); }}
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add your first expense
+                    </Button>
                   </>
                 )}
               </div>
@@ -425,12 +444,14 @@ export default function BudgetDashboard() {
               <Plus className="mr-2 h-4 w-4" />
               Add New Income
             </Button>
-            <Link href="/dashboard/budget/expenses/new" className="block" onClick={handleActionClick}>
-              <Button variant="outline" className="w-full justify-start">
-                <Plus className="mr-2 h-4 w-4" />
-                Add New Expense
-              </Button>
-            </Link>
+            <Button
+              variant="outline"
+              className="w-full justify-start"
+              onClick={() => { handleActionClick(); if (!isGuest) setShowExpenseDialog(true); }}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add New Expense
+            </Button>
             <Link href="/dashboard/budget/expenses" className="block" onClick={handleActionClick}>
               <Button variant="outline" className="w-full justify-start">
                 <Receipt className="mr-2 h-4 w-4" />
@@ -511,6 +532,14 @@ export default function BudgetDashboard() {
         onDelete={handleDeleteExpense}
         showToast={showToast}
         isGuest={isGuest}
+      />
+
+      {/* Expense Form Dialog */}
+      <ExpenseFormDialog
+        open={showExpenseDialog}
+        onOpenChange={setShowExpenseDialog}
+        onSubmit={handleCreateExpense}
+        isLoading={createExpense.isPending}
       />
     </div>
   );
