@@ -3,6 +3,7 @@
 import { motion } from "motion/react";
 import { Terminal, Settings, Bell, User, LogOut, Shield } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/auth-context";
@@ -18,10 +19,12 @@ import {
 export function NavigationHeader() {
   const router = useRouter();
   const pathname = usePathname();
+  const queryClient = useQueryClient();
   const { user, logout, isGuest, isAdmin } = useAuth();
 
   const handleLogout = async () => {
     await logout();
+    queryClient.clear(); // Clear React Query cache to prevent data leakage between users
     router.push("/login");
   };
 

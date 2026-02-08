@@ -52,6 +52,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const logout = async (): Promise<void> => {
         await api.logout();
         setUser(null);
+        // Note: React Query cache should be cleared by the component calling logout
+        // using queryClient.clear() after successful logout
     };
 
     const demoLogin = async (): Promise<void> => {

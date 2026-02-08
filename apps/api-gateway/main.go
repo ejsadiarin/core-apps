@@ -241,6 +241,17 @@ func main() {
 			expenses.PUT("/:id", budgetHandler.UpdateExpense)
 			expenses.DELETE("/:id", budgetHandler.DeleteExpense)
 
+			// Incomes
+			incomes := budget.Group("/incomes")
+			incomes.POST("", budgetHandler.CreateIncome)
+			incomes.GET("", budgetHandler.ListIncomes)
+			incomes.GET("/:id", budgetHandler.GetIncome)
+			incomes.PUT("/:id", budgetHandler.UpdateIncome)
+			incomes.DELETE("/:id", budgetHandler.DeleteIncome)
+
+			// Budget Remaining
+			budget.GET("/remaining", budgetHandler.GetBudgetRemaining)
+
 			// Stats
 			stats := budget.Group("/stats")
 			stats.GET("/summary", budgetHandler.GetSummary)

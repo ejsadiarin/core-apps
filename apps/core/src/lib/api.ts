@@ -21,7 +21,11 @@ import type {
   LoginRequest,
   RegisterRequest,
   CreateUserRequest,
-  UpdateUserRequest
+  UpdateUserRequest,
+  Income,
+  CreateIncomeRequest,
+  UpdateIncomeRequest,
+  BudgetRemainingResponse
 } from '@/types/api';
 
 const url = 'http://localhost:8080';
@@ -505,6 +509,87 @@ export async function fetchAllServicesStats(): Promise<{
   const res = await fetch(url + '/api/services/stats/all');
   if (!res.ok) {
     throw new Error(`Error fetching services stats: ${res.status}`);
+  }
+  return res.json();
+}
+
+// Incomes
+
+export async function fetchIncomes(startDate?: string, endDate?: string, recurringType?: 'daily'): Promise<Income[]> {
+  const params = new URLSearchParams();
+  if (startDate) params.append('start_date', startDate);
+  if (endDate) params.append('end_date', endDate);
+  if (recurringType) params.append('recurring_type', recurringType);
+
+  const queryString = params.toString();
+  const endpoint = queryString ? `/api/budget/incomes?${queryString}` : '/api/budget/incomes';
+
+  const res = await fetch(url + endpoint, {
+    credentials: 'include'
+  });
+  if (!res.ok) {
+    throw new Error(`Error fetching incomes: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function fetchIncome(id: string): Promise<Income> {
+  const res = await fetch(url + `/api/budget/incomes/${id}`, {
+    credentials: 'include'
+  });
+  if (!res.ok) {
+    throw new Error(`Error fetching income: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function createIncome(data: CreateIncomeRequest): Promise<Income> {
+  const res = await fetch(url + '/api/budget/incomes', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    credentials: 'include',
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    throw new Error(`Error creating income: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function updateIncome(id: string, data: UpdateIncomeRequest): Promise<Income> {
+  const res = await fetch(url + `/api/budget/incomes/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    credentials: 'include',
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    throw new Error(`Error updating income: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function deleteIncome(id: string): Promise<void> {
+  const res = await fetch(url + `/api/budget/incomes/${id}`, {
+    method: 'DELETE',
+    credentials: 'include'
+  });
+  if (!res.ok) {
+    throw new Error(`Error deleting income: ${res.status}`);
+  }
+}
+
+export async function fetchBudgetRemaining(date?: string): Promise<BudgetRemainingResponse> {
+  const params = date ? `?date=${date}` : '';
+  const res = await fetch(url + `/api/budget/remaining${params}`, {
+    credentials: 'include'
+  });
+  if (!res.ok) {
+    throw new Error(`Error fetching budget remaining: ${res.status}`);
   }
   return res.json();
 }

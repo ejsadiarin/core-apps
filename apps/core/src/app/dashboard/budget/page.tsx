@@ -189,12 +189,10 @@ export default function BudgetDashboard() {
             />
           </div>
           {budgetRemainingData && (
-            <div className={`px-4 py-2 rounded-lg border text-sm font-semibold ${
-              budgetRemainingData.budget_remaining_status === 'red' 
-                ? 'bg-red-50 text-red-900 border-red-200' :
-              budgetRemainingData.budget_remaining_status === 'green' 
-                ? 'bg-green-50 text-green-900 border-green-200' :
-              'text-gray-600 bg-white border-border'
+            <div className={`text-sm font-semibold ${
+              budgetRemainingData.budget_remaining_status === 'red' ? 'text-red-500' :
+              budgetRemainingData.budget_remaining_status === 'green' ? 'text-green-900' :
+              'text-gray-600'
             }`}>
               Budget Remaining: {formatAmount(budgetRemainingData.budget_remaining, budgetRemainingData.currency || 'PHP')}
               {budgetRemainingData.budget_remaining_status === 'red' && ' ⚠️ Over Budget'}

@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, TrendingUp, Receipt, Calendar } from "lucide-react";
+import { DollarSign, TrendingUp, Receipt, Wallet } from "lucide-react";
 import type { SummaryStats } from "@/types/api";
 
 interface ExpenseStatsProps {
@@ -33,6 +33,19 @@ export function ExpenseStats({ stats, isLoading }: ExpenseStatsProps) {
     return null;
   }
 
+  const budgetRemaining = stats.budget_remaining ?? 0;
+  const budgetStatus = stats.budget_remaining_status ?? "neutral";
+  const statusColors = {
+    green: "text-green-900",
+    red: "text-red-500",
+    neutral: "text-gray-600",
+  };
+  // const bgColors = {
+  //   green: "bg-green-50 border-green-200",
+  //   red: "bg-red-50 border-red-200",
+  //   neutral: "",
+  // };
+
   const statCards = [
     {
       title: "Total Spent",
@@ -58,11 +71,11 @@ export function ExpenseStats({ stats, isLoading }: ExpenseStatsProps) {
       iconColor: "text-purple-500",
     },
     {
-      title: "Period",
-      value: stats.period,
-      description: "current view",
-      icon: Calendar,
-      iconColor: "text-orange-500",
+      title: "Budget Remaining",
+      value: `₱${budgetRemaining.toFixed(2)}`,
+      description: budgetStatus === "green" ? "on track" : budgetStatus === "red" ? "over budget" : "break even",
+      icon: Wallet,
+      iconColor: statusColors[budgetStatus as keyof typeof statusColors],
     },
   ];
 
@@ -70,6 +83,8 @@ export function ExpenseStats({ stats, isLoading }: ExpenseStatsProps) {
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       {statCards.map((stat, index) => {
         const Icon = stat.icon;
+        const isBudgetCard = stat.title === "Budget Remaining";
+        const valueColor = isBudgetCard ? stat.iconColor : "";
         return (
           <Card key={index}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -77,8 +92,10 @@ export function ExpenseStats({ stats, isLoading }: ExpenseStatsProps) {
               <Icon className={`h-4 w-4 ${stat.iconColor}`} />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
-              <p className="text-xs text-muted-foreground">{stat.description}</p>
+              <div className={`text-2xl font-bold ${valueColor}`}>{stat.value}</div>
+              <p className={`text-xs ${isBudgetCard ? stat.iconColor : "text-muted-foreground"}`}>
+                {stat.description}
+              </p>
             </CardContent>
           </Card>
         );

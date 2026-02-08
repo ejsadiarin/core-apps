@@ -58,6 +58,34 @@ type ExpenseFilters struct {
 	CategoryID *uuid.UUID `query:"category_id" validate:"omitempty"`
 }
 
+// Incomes
+
+type CreateIncomeRequest struct {
+	Amount        float64 `json:"amount" validate:"required"` // Will be converted to pgtype.Numeric
+	Currency      *string `json:"currency,omitempty" validate:"omitempty,len=3"`
+	Date          string  `json:"date" validate:"required,datetime=2006-01-02"` // YYYY-MM-DD
+	Description   *string `json:"description,omitempty"`
+	RecurringType *string `json:"recurring_type,omitempty" validate:"omitempty,oneof=daily weekly monthly"`       // "daily", "weekly", "monthly", or null
+	StartDate     *string `json:"start_date,omitempty" validate:"omitempty,datetime=2006-01-02"`                  // Required if recurring_type is set
+	EndDate       *string `json:"end_date,omitempty" validate:"omitempty,datetime=2006-01-02,gtefield=StartDate"` // Optional end date for recurring income
+}
+
+type UpdateIncomeRequest struct {
+	Amount        *float64 `json:"amount,omitempty"`
+	Currency      *string  `json:"currency,omitempty" validate:"omitempty,len=3"`
+	Date          *string  `json:"date,omitempty" validate:"omitempty,datetime=2006-01-02"`
+	Description   *string  `json:"description,omitempty"`
+	RecurringType *string  `json:"recurring_type,omitempty" validate:"omitempty,oneof=daily weekly monthly"`
+	StartDate     *string  `json:"start_date,omitempty" validate:"omitempty,datetime=2006-01-02"`
+	EndDate       *string  `json:"end_date,omitempty" validate:"omitempty,datetime=2006-01-02"`
+}
+
+type IncomeFilters struct {
+	StartDate     *string `query:"start_date" validate:"omitempty,datetime=2006-01-02"`
+	EndDate       *string `query:"end_date" validate:"omitempty,datetime=2006-01-02"`
+	RecurringType *string `query:"recurring_type" validate:"omitempty,oneof=daily weekly monthly"`
+}
+
 // Responses
 
 type CategoryResponse struct {
@@ -86,10 +114,30 @@ type ExpenseResponse struct {
 	UpdatedAt   string            `json:"updated_at"`
 }
 
+type IncomeResponse struct {
+	ID            uuid.UUID `json:"id"`
+	Amount        float64   `json:"amount"`
+	Currency      string    `json:"currency"`
+	Date          string    `json:"date"`
+	Description   *string   `json:"description,omitempty"`
+	RecurringType *string   `json:"recurring_type,omitempty"` // "daily", "weekly", "monthly", or null
+	StartDate     *string   `json:"start_date,omitempty"`
+	EndDate       *string   `json:"end_date,omitempty"` // Optional end date for recurring income
+	CreatedAt     string    `json:"created_at"`
+	UpdatedAt     string    `json:"updated_at"`
+}
+
+type BudgetRemainingResponse struct {
+	BudgetRemaining       float64 `json:"budget_remaining"`
+	BudgetRemainingStatus string  `json:"budget_remaining_status"` // "green", "red", "neutral"
+}
+
 type SummaryStatsResponse struct {
-	TotalSpent       float64 `json:"total_spent"`
-	TransactionCount int64   `json:"transaction_count"`
-	Period           string  `json:"period"` // "total", "month", etc
+	TotalSpent            float64  `json:"total_spent"`
+	TransactionCount      int64    `json:"transaction_count"`
+	Period                string   `json:"period"` // "total", "month", etc
+	BudgetRemaining       *float64 `json:"budget_remaining,omitempty"`
+	BudgetRemainingStatus string   `json:"budget_remaining_status,omitempty"` // "green", "red", "neutral"
 }
 
 type CategoryBreakdownItem struct {

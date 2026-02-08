@@ -36,6 +36,20 @@ type BudgetExpenseTag struct {
 	TagID     uuid.UUID `json:"tag_id"`
 }
 
+type BudgetIncome struct {
+	ID            uuid.UUID        `json:"id"`
+	UserID        uuid.UUID        `json:"user_id"`
+	Amount        pgtype.Numeric   `json:"amount"`
+	Currency      pgtype.Text      `json:"currency"`
+	Date          pgtype.Date      `json:"date"`
+	Description   pgtype.Text      `json:"description"`
+	RecurringType pgtype.Text      `json:"recurring_type"`
+	StartDate     pgtype.Date      `json:"start_date"`
+	CreatedAt     pgtype.Timestamp `json:"created_at"`
+	UpdatedAt     pgtype.Timestamp `json:"updated_at"`
+	EndDate       pgtype.Date      `json:"end_date"`
+}
+
 type BudgetTag struct {
 	ID        uuid.UUID        `json:"id"`
 	Name      string           `json:"name"`

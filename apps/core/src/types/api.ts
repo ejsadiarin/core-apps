@@ -161,10 +161,50 @@ export interface ExpenseFilters {
     category_id?: string;
 }
 
+export interface Income {
+    id: string;
+    amount: number;
+    currency: string;
+    date: string;
+    description?: string;
+    recurring_type?: "daily" | "weekly" | "monthly" | null;
+    start_date?: string;
+    end_date?: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface CreateIncomeRequest {
+    amount: number;
+    currency?: string;
+    date: string;
+    description?: string;
+    recurring_type?: "daily" | "weekly" | "monthly" | null;
+    start_date?: string;
+    end_date?: string;
+}
+
+export interface UpdateIncomeRequest {
+    amount?: number;
+    currency?: string;
+    date?: string;
+    description?: string;
+    recurring_type?: "daily" | "weekly" | "monthly" | null;
+    start_date?: string;
+    end_date?: string;
+}
+
+export interface BudgetRemainingResponse {
+    budget_remaining: number;
+    budget_remaining_status: "green" | "red" | "neutral";
+}
+
 export interface SummaryStats {
     total_spent: number;
     transaction_count: number;
     period: string;
+    budget_remaining?: number;
+    budget_remaining_status?: "green" | "red" | "neutral";
 }
 
 export interface CategoryBreakdown {

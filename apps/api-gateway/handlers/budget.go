@@ -707,10 +707,95 @@ func (h *BudgetHandler) GetSummary(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to get summary"})
 	}
 
+	// Calculate budget remaining (up to end date or today if not specified)
+	targetDate := time.Now()
+	if endDate.Valid {
+		targetDate = endDate.Time
+	}
+	targetDateStr := targetDate.Format("2006-01-02")
+
+	oneTimeIncome, err := h.queries.GetOneTimeIncomeToDate(c.Request().Context(), sqlc.GetOneTimeIncomeToDateParams{
+		UserID: userID,
+		Date:   stringToDate(targetDateStr),
+	})
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to get one-time income for budget calculation")
+	}
+
+	recurringRules, err := h.queries.GetRecurringIncomeRules(c.Request().Context(), sqlc.GetRecurringIncomeRulesParams{
+		UserID:    userID,
+		StartDate: stringToDate(targetDateStr),
+	})
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to get recurring income rules for budget calculation")
+	}
+
+	recurringIncome := 0.0
+	for _, rule := range recurringRules {
+		startDate := rule.StartDate.Time
+
+		// determine effective end date (either rule.end_date or target date, whichever is earlier)
+		effectiveEndDate := targetDate
+		if rule.EndDate.Valid && rule.EndDate.Time.Before(targetDate) {
+			effectiveEndDate = rule.EndDate.Time
+		}
+
+		// only calculate if start date is on or before effective end date
+		if startDate.Before(effectiveEndDate) || startDate.Equal(effectiveEndDate) {
+			var periods float64
+
+			switch rule.RecurringType.String {
+			case "daily":
+				// calculate number of days from start to effective end (inclusive)
+				diff := effectiveEndDate.Sub(startDate)
+				days := int(diff.Hours()/24) + 1
+				periods = float64(days)
+
+			case "weekly":
+				// calculate number of weeks from start to effective end (inclusive)
+				diff := effectiveEndDate.Sub(startDate)
+				weeks := int(diff.Hours()/(24*7)) + 1
+				periods = float64(weeks)
+
+			case "monthly":
+				// calculate number of months from start to effective end (inclusive)
+				yearDiff := effectiveEndDate.Year() - startDate.Year()
+				monthDiff := int(effectiveEndDate.Month()) - int(startDate.Month())
+				months := yearDiff*12 + monthDiff + 1
+				periods = float64(months)
+			}
+
+			recurringIncome += numericToFloat64(rule.Amount) * periods
+		}
+	}
+
+	totalIncome := interfaceToFloat64(oneTimeIncome) + recurringIncome
+
+	totalExpenses, err := h.queries.GetTotalExpensesToDate(c.Request().Context(), sqlc.GetTotalExpensesToDateParams{
+		UserID:      userID,
+		ExpenseDate: stringToDate(targetDateStr),
+	})
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to get total expenses for budget calculation")
+	}
+
+	budgetRemaining := totalIncome - interfaceToFloat64(totalExpenses)
+
+	var status string
+	if budgetRemaining > 0 {
+		status = "green"
+	} else if budgetRemaining < 0 {
+		status = "red"
+	} else {
+		status = "neutral"
+	}
+
 	return c.JSON(http.StatusOK, models.SummaryStatsResponse{
-		TotalSpent:       interfaceToFloat64(summary.TotalAmount),
-		TransactionCount: summary.TransactionCount,
-		Period:           "custom",
+		TotalSpent:            interfaceToFloat64(summary.TotalAmount),
+		TransactionCount:      summary.TransactionCount,
+		Period:                "custom",
+		BudgetRemaining:       &budgetRemaining,
+		BudgetRemainingStatus: status,
 	})
 }
 
@@ -852,4 +937,387 @@ func (h *BudgetHandler) getExpenseResponse(c echo.Context, id uuid.UUID, userID 
 		CreatedAt:   exp.CreatedAt.Time.Format(time.RFC3339),
 		UpdatedAt:   exp.UpdatedAt.Time.Format(time.RFC3339),
 	})
+}
+
+// Incomes
+
+// CreateIncome godoc
+// @Summary Create a new income
+// @Tags budget
+// @Accept json
+// @Produce json
+// @Param income body models.CreateIncomeRequest true "Income to create"
+// @Success 201 {object} models.IncomeResponse
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 403 {object} models.ErrorResponse
+// @Router /api/budget/incomes [post]
+func (h *BudgetHandler) CreateIncome(c echo.Context) error {
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return c.JSON(http.StatusForbidden, models.ErrorResponse{Error: "Guest users cannot create incomes"})
+	}
+
+	req, err := validator.BindAndValidate[models.CreateIncomeRequest](c)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: err.Error()})
+	}
+
+	// validate end_date >= start_date if both are provided
+	if req.EndDate != nil && req.StartDate != nil {
+		endDate, err1 := time.Parse("2006-01-02", *req.EndDate)
+		startDate, err2 := time.Parse("2006-01-02", *req.StartDate)
+		if err1 == nil && err2 == nil && endDate.Before(startDate) {
+			return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "end_date must be on or after start_date"})
+		}
+	}
+
+	arg := sqlc.CreateIncomeParams{
+		Amount:        float64ToNumeric(req.Amount),
+		Currency:      stringPtrToText(req.Currency),
+		Date:          stringToDate(req.Date),
+		Description:   stringPtrToText(req.Description),
+		RecurringType: stringPtrToText(req.RecurringType),
+		StartDate:     stringPtrToDate(req.StartDate),
+		EndDate:       stringPtrToDate(req.EndDate),
+		UserID:        userID,
+	}
+
+	inc, err := h.queries.CreateIncome(c.Request().Context(), arg)
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to create income")
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to create income"})
+	}
+
+	return c.JSON(http.StatusCreated, models.IncomeResponse{
+		ID:            inc.ID,
+		Amount:        numericToFloat64(inc.Amount),
+		Currency:      getCurrency(inc.Currency),
+		Date:          dateToString(inc.Date),
+		Description:   textToStringPtr(inc.Description),
+		RecurringType: textToStringPtr(inc.RecurringType),
+		StartDate:     dateToNullableStringPtr(inc.StartDate),
+		EndDate:       dateToNullableStringPtr(inc.EndDate),
+		CreatedAt:     inc.CreatedAt.Time.Format(time.RFC3339),
+		UpdatedAt:     inc.UpdatedAt.Time.Format(time.RFC3339),
+	})
+}
+
+// ListIncomes godoc
+// @Summary List incomes with filters
+// @Tags budget
+// @Produce json
+// @Param start_date query string false "Start date (YYYY-MM-DD)"
+// @Param end_date query string false "End date (YYYY-MM-DD)"
+// @Param recurring_type query string false "Recurring type (daily)"
+// @Success 200 {array} models.IncomeResponse
+// @Router /api/budget/incomes [get]
+func (h *BudgetHandler) ListIncomes(c echo.Context) error {
+	userID, err := h.getUserID(c)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to get user context"})
+	}
+
+	var filters models.IncomeFilters
+	if err := c.Bind(&filters); err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid filters"})
+	}
+
+	arg := sqlc.ListIncomesParams{
+		UserID:        userID,
+		StartDate:     stringPtrToDate(filters.StartDate),
+		EndDate:       stringPtrToDate(filters.EndDate),
+		RecurringType: stringPtrToText(filters.RecurringType),
+	}
+
+	rows, err := h.queries.ListIncomes(c.Request().Context(), arg)
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to list incomes")
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to list incomes"})
+	}
+
+	res := make([]models.IncomeResponse, len(rows))
+	for i, row := range rows {
+		res[i] = models.IncomeResponse{
+			ID:            row.ID,
+			Amount:        numericToFloat64(row.Amount),
+			Currency:      getCurrency(row.Currency),
+			Date:          dateToString(row.Date),
+			Description:   textToStringPtr(row.Description),
+			RecurringType: textToStringPtr(row.RecurringType),
+			StartDate:     dateToNullableStringPtr(row.StartDate),
+			EndDate:       dateToNullableStringPtr(row.EndDate),
+			CreatedAt:     row.CreatedAt.Time.Format(time.RFC3339),
+			UpdatedAt:     row.UpdatedAt.Time.Format(time.RFC3339),
+		}
+	}
+
+	return c.JSON(http.StatusOK, res)
+}
+
+// GetIncome godoc
+// @Summary Get a single income
+// @Tags budget
+// @Produce json
+// @Param id path string true "Income ID"
+// @Success 200 {object} models.IncomeResponse
+// @Router /api/budget/incomes/{id} [get]
+func (h *BudgetHandler) GetIncome(c echo.Context) error {
+	userID, err := h.getUserID(c)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to get user context"})
+	}
+
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid ID format"})
+	}
+
+	inc, err := h.queries.GetIncome(c.Request().Context(), sqlc.GetIncomeParams{
+		ID:     id,
+		UserID: userID,
+	})
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to get income")
+		return c.JSON(http.StatusNotFound, models.ErrorResponse{Error: "Income not found"})
+	}
+
+	return c.JSON(http.StatusOK, models.IncomeResponse{
+		ID:            inc.ID,
+		Amount:        numericToFloat64(inc.Amount),
+		Currency:      getCurrency(inc.Currency),
+		Date:          dateToString(inc.Date),
+		Description:   textToStringPtr(inc.Description),
+		RecurringType: textToStringPtr(inc.RecurringType),
+		StartDate:     dateToNullableStringPtr(inc.StartDate),
+		EndDate:       dateToNullableStringPtr(inc.EndDate),
+		CreatedAt:     inc.CreatedAt.Time.Format(time.RFC3339),
+		UpdatedAt:     inc.UpdatedAt.Time.Format(time.RFC3339),
+	})
+}
+
+// UpdateIncome godoc
+// @Summary Update an income
+// @Tags budget
+// @Accept json
+// @Produce json
+// @Param id path string true "Income ID"
+// @Param income body models.UpdateIncomeRequest true "Income updates"
+// @Success 200 {object} models.IncomeResponse
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 403 {object} models.ErrorResponse
+// @Router /api/budget/incomes/{id} [put]
+func (h *BudgetHandler) UpdateIncome(c echo.Context) error {
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return c.JSON(http.StatusForbidden, models.ErrorResponse{Error: "Guest users cannot modify incomes"})
+	}
+
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid ID format"})
+	}
+
+	req, err := validator.BindAndValidate[models.UpdateIncomeRequest](c)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: err.Error()})
+	}
+
+	// validate end_date >= start_date if both are provided
+	if req.EndDate != nil && req.StartDate != nil {
+		endDate, err1 := time.Parse("2006-01-02", *req.EndDate)
+		startDate, err2 := time.Parse("2006-01-02", *req.StartDate)
+		if err1 == nil && err2 == nil && endDate.Before(startDate) {
+			return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "end_date must be on or after start_date"})
+		}
+	}
+
+	arg := sqlc.UpdateIncomeParams{
+		ID:            id,
+		UserID:        userID,
+		Amount:        float64PtrToNumeric(req.Amount),
+		Currency:      stringPtrToText(req.Currency),
+		Date:          stringPtrToDate(req.Date),
+		Description:   stringPtrToText(req.Description),
+		RecurringType: stringPtrToText(req.RecurringType),
+		StartDate:     stringPtrToDate(req.StartDate),
+		EndDate:       stringPtrToDate(req.EndDate),
+	}
+
+	inc, err := h.queries.UpdateIncome(c.Request().Context(), arg)
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to update income")
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to update income"})
+	}
+
+	return c.JSON(http.StatusOK, models.IncomeResponse{
+		ID:            inc.ID,
+		Amount:        numericToFloat64(inc.Amount),
+		Currency:      getCurrency(inc.Currency),
+		Date:          dateToString(inc.Date),
+		Description:   textToStringPtr(inc.Description),
+		RecurringType: textToStringPtr(inc.RecurringType),
+		StartDate:     dateToNullableStringPtr(inc.StartDate),
+		EndDate:       dateToNullableStringPtr(inc.EndDate),
+		CreatedAt:     inc.CreatedAt.Time.Format(time.RFC3339),
+		UpdatedAt:     inc.UpdatedAt.Time.Format(time.RFC3339),
+	})
+}
+
+// DeleteIncome godoc
+// @Summary Delete an income
+// @Tags budget
+// @Param id path string true "Income ID"
+// @Success 204 "No Content"
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 403 {object} models.ErrorResponse
+// @Router /api/budget/incomes/{id} [delete]
+func (h *BudgetHandler) DeleteIncome(c echo.Context) error {
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return c.JSON(http.StatusForbidden, models.ErrorResponse{Error: "Guest users cannot delete incomes"})
+	}
+
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid ID format"})
+	}
+
+	err = h.queries.DeleteIncome(c.Request().Context(), sqlc.DeleteIncomeParams{
+		ID:     id,
+		UserID: userID,
+	})
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to delete income")
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to delete income"})
+	}
+
+	return c.NoContent(http.StatusNoContent)
+}
+
+// GetBudgetRemaining godoc
+// @Summary Get budget remaining
+// @Tags budget
+// @Produce json
+// @Param date query string false "Date (YYYY-MM-DD), defaults to today"
+// @Success 200 {object} models.BudgetRemainingResponse
+// @Router /api/budget/remaining [get]
+func (h *BudgetHandler) GetBudgetRemaining(c echo.Context) error {
+	userID, err := h.getUserID(c)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to get user context"})
+	}
+
+	dateStr := c.QueryParam("date")
+	var targetDate time.Time
+	if dateStr == "" {
+		targetDate = time.Now()
+	} else {
+		targetDate, err = time.Parse("2006-01-02", dateStr)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid date format, use YYYY-MM-DD"})
+		}
+	}
+
+	targetDateStr := targetDate.Format("2006-01-02")
+
+	oneTimeIncome, err := h.queries.GetOneTimeIncomeToDate(c.Request().Context(), sqlc.GetOneTimeIncomeToDateParams{
+		UserID: userID,
+		Date:   stringToDate(targetDateStr),
+	})
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to get one-time income")
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to calculate budget remaining"})
+	}
+
+	recurringRules, err := h.queries.GetRecurringIncomeRules(c.Request().Context(), sqlc.GetRecurringIncomeRulesParams{
+		UserID:    userID,
+		StartDate: stringToDate(targetDateStr),
+	})
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to get recurring income rules")
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to calculate budget remaining"})
+	}
+
+	recurringIncome := 0.0
+	for _, rule := range recurringRules {
+		startDate := rule.StartDate.Time
+
+		// determine effective end date (either rule.end_date or target date, whichever is earlier)
+		effectiveEndDate := targetDate
+		if rule.EndDate.Valid && rule.EndDate.Time.Before(targetDate) {
+			effectiveEndDate = rule.EndDate.Time
+		}
+
+		// only calculate if start date is on or before effective end date
+		if startDate.Before(effectiveEndDate) || startDate.Equal(effectiveEndDate) {
+			var periods float64
+
+			switch rule.RecurringType.String {
+			case "daily":
+				// calculate number of days from start to effective end (inclusive)
+				diff := effectiveEndDate.Sub(startDate)
+				days := int(diff.Hours()/24) + 1
+				periods = float64(days)
+
+			case "weekly":
+				// calculate number of weeks from start to effective end (inclusive)
+				diff := effectiveEndDate.Sub(startDate)
+				weeks := int(diff.Hours()/(24*7)) + 1
+				periods = float64(weeks)
+
+			case "monthly":
+				// calculate number of months from start to effective end (inclusive)
+				yearDiff := effectiveEndDate.Year() - startDate.Year()
+				monthDiff := int(effectiveEndDate.Month()) - int(startDate.Month())
+				months := yearDiff*12 + monthDiff + 1
+				periods = float64(months)
+			}
+
+			recurringIncome += numericToFloat64(rule.Amount) * periods
+		}
+	}
+
+	totalIncome := interfaceToFloat64(oneTimeIncome) + recurringIncome
+
+	totalExpenses, err := h.queries.GetTotalExpensesToDate(c.Request().Context(), sqlc.GetTotalExpensesToDateParams{
+		UserID:      userID,
+		ExpenseDate: stringToDate(targetDateStr),
+	})
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to get total expenses")
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to calculate budget remaining"})
+	}
+
+	budgetRemaining := totalIncome - interfaceToFloat64(totalExpenses)
+
+	var status string
+	if budgetRemaining > 0 {
+		status = "green"
+	} else if budgetRemaining < 0 {
+		status = "red"
+	} else {
+		status = "neutral"
+	}
+
+	return c.JSON(http.StatusOK, models.BudgetRemainingResponse{
+		BudgetRemaining:       budgetRemaining,
+		BudgetRemainingStatus: status,
+	})
+}
+
+func dateToNullableStringPtr(d pgtype.Date) *string {
+	if !d.Valid {
+		return nil
+	}
+	s := d.Time.Format("2006-01-02")
+	return &s
+}
+
+func float64PtrToNumeric(f *float64) pgtype.Numeric {
+	if f == nil {
+		return pgtype.Numeric{Valid: false}
+	}
+	n := pgtype.Numeric{}
+	n.Scan(fmt.Sprintf("%f", *f))
+	return n
 }
