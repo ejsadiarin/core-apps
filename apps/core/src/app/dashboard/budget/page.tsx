@@ -1,7 +1,8 @@
 "use client";
 
 import { motion } from "motion/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ExpenseStats } from "@/components/budget/expense-stats";
 import { IncomeForm } from "@/components/budget/income-form";
 import { ExpenseFormDialog } from "@/components/budget/expense-form-dialog";
@@ -34,6 +35,8 @@ import { formatAmount } from "@/lib/utils";
 import type { Expense, Income, CreateIncomeRequest, UpdateIncomeRequest } from "@/types/api";
 
 export default function BudgetDashboard() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [period] = useState<string>("month");
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const { data: summaryStats, isLoading: statsLoading } = useSummaryStats(period);
@@ -47,6 +50,16 @@ export default function BudgetDashboard() {
   const [showIncomeForm, setShowIncomeForm] = useState(false);
   const [showExpenseDialog, setShowExpenseDialog] = useState(false);
   const [editingIncome, setEditingIncome] = useState<Income | null>(null);
+
+  // check for query param to open expense dialog (deep linking support)
+  useEffect(() => {
+    const openExpense = searchParams.get("openExpense");
+    if (openExpense === "true") {
+      setShowExpenseDialog(true);
+      // remove query param from URL
+      router.replace("/dashboard/budget", { scroll: false });
+    }
+  }, [searchParams, router]);
 
   const updateExpense = useUpdateExpense();
   const deleteExpense = useDeleteExpense();
