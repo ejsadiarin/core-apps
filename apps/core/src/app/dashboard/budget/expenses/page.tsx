@@ -48,6 +48,14 @@ export default function ExpensesPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleClearFilters = () => {
+    setFilters({});
+    setSearchTerm("");
+    setPage(1);
+  };
+
+  const hasActiveFilters = !!(filters.category_id || filters.start_date || filters.end_date || searchTerm);
+
   const handleDelete = async (id: string) => {
     try {
       await deleteExpense.mutateAsync(id);
@@ -118,60 +126,107 @@ export default function ExpensesPage() {
 
       {/* Filters */}
       <motion.div
-        className="mb-6 flex flex-col sm:flex-row gap-4"
+        className="mb-6 space-y-4"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.1 }}
       >
-        <Input
-          placeholder="Search expenses..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="sm:max-w-xs"
-        />
-        
-        <Select
-          value={filters.category_id || "all"}
-          onValueChange={(value) =>
-            setFilters((prev) => ({
-              ...prev,
-              category_id: value === "all" ? undefined : value,
-            }))
-          }
-        >
-          <SelectTrigger className="sm:max-w-xs">
-            <Filter className="mr-2 h-4 w-4" />
-            <SelectValue placeholder="All Categories" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
-            {categories?.map((category) => (
-              <SelectItem key={category.id} value={category.id}>
-                {category.icon && <span className="mr-2">{category.icon}</span>}
-                {category.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <Input
+            placeholder="Search expenses..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="sm:max-w-xs"
+          />
+          
+          <Select
+            value={filters.category_id || "all"}
+            onValueChange={(value) => {
+              setFilters((prev) => ({
+                ...prev,
+                category_id: value === "all" ? undefined : value,
+              }));
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="sm:max-w-xs">
+              <Filter className="mr-2 h-4 w-4" />
+              <SelectValue placeholder="All Categories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {categories?.map((category) => (
+                <SelectItem key={category.id} value={category.id}>
+                  {category.icon && <span className="mr-2">{category.icon}</span>}
+                  {category.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-        <div className="flex gap-2">
-          <Input
-            type="date"
-            value={filters.start_date || ""}
-            onChange={(e) =>
-              setFilters((prev) => ({ ...prev, start_date: e.target.value }))
-            }
-            className="sm:max-w-[150px]"
-          />
-          <Input
-            type="date"
-            value={filters.end_date || ""}
-            onChange={(e) =>
-              setFilters((prev) => ({ ...prev, end_date: e.target.value }))
-            }
-            className="sm:max-w-[150px]"
-          />
+          <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
+              <div className="flex flex-col gap-1">
+                <label htmlFor="start-date" className="text-xs text-muted-foreground">
+                  From
+                </label>
+                <Input
+                  id="start-date"
+                  type="date"
+                  value={filters.start_date || ""}
+                  onChange={(e) => {
+                    setFilters((prev) => ({ ...prev, start_date: e.target.value }));
+                    setPage(1);
+                  }}
+                  className="w-[150px]"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label htmlFor="end-date" className="text-xs text-muted-foreground">
+                  To
+                </label>
+                <Input
+                  id="end-date"
+                  type="date"
+                  value={filters.end_date || ""}
+                  onChange={(e) => {
+                    setFilters((prev) => ({ ...prev, end_date: e.target.value }));
+                    setPage(1);
+                  }}
+                  className="w-[150px]"
+                />
+              </div>
+            </div>
+          </div>
+
+          {hasActiveFilters && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleClearFilters}
+              className="self-end"
+            >
+              Clear Filters
+            </Button>
+          )}
         </div>
+
+        {/* Pagination Info and Controls at Top */}
+        {pagination && pagination.totalPages > 1 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-b py-4">
+            <p className="text-sm text-muted-foreground order-2 sm:order-1">
+              Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} expenses
+            </p>
+            <div className="order-1 sm:order-2">
+              <Pagination
+                currentPage={pagination.page}
+                totalPages={pagination.totalPages}
+                onPageChange={handlePageChange}
+                disabled={isLoading}
+              />
+            </div>
+          </div>
+        )}
       </motion.div>
 
       {/* Expense List */}
@@ -200,18 +255,15 @@ export default function ExpensesPage() {
               />
             ))}
             
-            {/* Pagination Controls */}
+            {/* Pagination Controls at Bottom */}
             {pagination && pagination.totalPages > 1 && (
-              <div className="mt-8 space-y-4">
+              <div className="mt-8 border-t pt-6 flex justify-center">
                 <Pagination
                   currentPage={pagination.page}
                   totalPages={pagination.totalPages}
                   onPageChange={handlePageChange}
                   disabled={isLoading}
                 />
-                <p className="text-center text-sm text-muted-foreground">
-                  Page {pagination.page} of {pagination.totalPages} ({pagination.total} total expenses)
-                </p>
               </div>
             )}
           </>

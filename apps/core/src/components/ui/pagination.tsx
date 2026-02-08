@@ -48,13 +48,38 @@ export function Pagination({ currentPage, totalPages, onPageChange, disabled = f
 
   const pageNumbers = getPageNumbers();
 
+  const handlePrevious = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (currentPage > 1 && !disabled) {
+      onPageChange(currentPage - 1);
+    }
+  };
+
+  const handleNext = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (currentPage < totalPages && !disabled) {
+      onPageChange(currentPage + 1);
+    }
+  };
+
+  const handlePageClick = (page: number) => (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!disabled && page !== currentPage) {
+      onPageChange(page);
+    }
+  };
+
   return (
     <div className="flex items-center justify-center gap-1">
       <Button
         variant="outline"
         size="sm"
-        onClick={() => onPageChange(currentPage - 1)}
+        onClick={handlePrevious}
         disabled={currentPage === 1 || disabled}
+        type="button"
       >
         <ChevronLeft className="h-4 w-4" />
         <span className="sr-only">Previous page</span>
@@ -75,8 +100,9 @@ export function Pagination({ currentPage, totalPages, onPageChange, disabled = f
             key={pageNum}
             variant={currentPage === pageNum ? "default" : "outline"}
             size="sm"
-            onClick={() => onPageChange(pageNum)}
+            onClick={handlePageClick(pageNum)}
             disabled={disabled}
+            type="button"
             className="min-w-[40px]"
           >
             {pageNum}
@@ -87,8 +113,9 @@ export function Pagination({ currentPage, totalPages, onPageChange, disabled = f
       <Button
         variant="outline"
         size="sm"
-        onClick={() => onPageChange(currentPage + 1)}
+        onClick={handleNext}
         disabled={currentPage === totalPages || disabled}
+        type="button"
       >
         <ChevronRight className="h-4 w-4" />
         <span className="sr-only">Next page</span>
