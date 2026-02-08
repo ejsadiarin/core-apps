@@ -32,7 +32,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/components/ui/toast";
 import { ExpenseDetailDialog } from "@/components/budget/expense-detail-dialog";
 import { formatAmount } from "@/lib/utils";
-import type { Expense, Income, CreateIncomeRequest, UpdateIncomeRequest } from "@/types/api";
+import type { Expense, Income, CreateIncomeRequest, UpdateIncomeRequest, CreateExpenseRequest, UpdateExpenseRequest } from "@/types/api";
 
 export default function BudgetDashboard() {
   const router = useRouter();
@@ -106,9 +106,9 @@ export default function BudgetDashboard() {
     }
   };
 
-  const handleCreateIncome = async (data: CreateIncomeRequest) => {
+  const handleCreateIncome = async (data: CreateIncomeRequest | UpdateIncomeRequest) => {
     try {
-      await createIncome.mutateAsync(data);
+      await createIncome.mutateAsync(data as CreateIncomeRequest);
       showToast("Income created successfully", "success");
       setShowIncomeForm(false);
     } catch (error) {
@@ -149,9 +149,9 @@ export default function BudgetDashboard() {
     }
   };
 
-  const handleCreateExpense = async (data: CreateExpenseRequest) => {
+  const handleCreateExpense = async (data: CreateExpenseRequest | UpdateExpenseRequest) => {
     try {
-      await createExpense.mutateAsync(data);
+      await createExpense.mutateAsync(data as CreateExpenseRequest);
       showToast("Expense created successfully", "success");
       setShowExpenseDialog(false);
     } catch (error) {
@@ -223,7 +223,7 @@ export default function BudgetDashboard() {
               budgetRemainingData.budget_remaining_status === 'green' ? 'text-green-900' :
               'text-gray-600'
             }`}>
-              Budget Remaining: {formatAmount(budgetRemainingData.budget_remaining, budgetRemainingData.currency || 'PHP')}
+              Budget Remaining: PHP {budgetRemainingData.budget_remaining.toFixed(2)}
               {budgetRemainingData.budget_remaining_status === 'red' && ' ⚠️ Over Budget'}
               {budgetRemainingData.budget_remaining_status === 'green' && ' ✓ On Track'}
             </div>

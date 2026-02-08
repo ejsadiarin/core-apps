@@ -2,10 +2,11 @@
 
 import { motion } from "motion/react";
 import { useState } from "react";
-import { useExpenses, useCategories, useDeleteExpense, useUpdateExpense, GuestBlockedError } from "@/hooks/use-budget";
+import { useExpensesPaginated, useCategories, useDeleteExpense, useUpdateExpense, GuestBlockedError } from "@/hooks/use-budget";
 import { ExpenseCard } from "@/components/budget/expense-card";
 import { EditExpenseDialog } from "@/components/budget/expense-edit-dialog";
 import { ExpenseDetailDialog } from "@/components/budget/expense-detail-dialog";
+import { LoadMoreButton } from "@/components/budget/load-more-button";
 import { Button } from "@/components/ui/button";
 import { Plus, Filter, ArrowLeft, EyeOff } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -22,14 +23,24 @@ export default function ExpensesPage() {
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [viewingExpense, setViewingExpense] = useState<Expense | null>(null);
 
-  const { data: expenses, isLoading } = useExpenses(filters);
+  const { 
+    data, 
+    isLoading, 
+    fetchNextPage, 
+    hasNextPage, 
+    isFetchingNextPage 
+  } = useExpensesPaginated(filters);
   const { data: categories } = useCategories();
   const deleteExpense = useDeleteExpense();
   const updateExpense = useUpdateExpense();
   const { isGuest } = useAuth();
   const { showToast } = useToast();
 
-  const filteredExpenses = expenses?.filter((expense) =>
+  // flatten pages from infinite query
+  const expenses = data?.pages.flatMap(p => p.data) ?? [];
+
+  // apply client-side search filter
+  const filteredExpenses = expenses.filter((expense) =>
     expense.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -173,16 +184,36 @@ export default function ExpensesPage() {
             ))}
           </div>
         ) : filteredExpenses && filteredExpenses.length > 0 ? (
-          filteredExpenses.map((expense) => (
-            <ExpenseCard
-              key={expense.id}
-              expense={expense}
-              onView={handleView}
-              onEdit={(exp) => setEditingExpense(exp)}
-              onDelete={handleDelete}
-              showToast={showToast}
-            />
-          ))
+          <>
+            {filteredExpenses.map((expense) => (
+              <ExpenseCard
+                key={expense.id}
+                expense={expense}
+                onView={handleView}
+                onEdit={(exp) => setEditingExpense(exp)}
+                onDelete={handleDelete}
+                showToast={showToast}
+              />
+            ))}
+            
+            {/* Load More Button */}
+            {hasNextPage && (
+              <div className="mt-6 flex justify-center">
+                <LoadMoreButton 
+                  onClick={() => fetchNextPage()} 
+                  isLoading={isFetchingNextPage}
+                  disabled={!hasNextPage || isFetchingNextPage}
+                />
+              </div>
+            )}
+            
+            {/* End of List Message */}
+            {!hasNextPage && (
+              <p className="text-center text-sm text-muted-foreground mt-6">
+                No more expenses to load
+              </p>
+            )}
+          </>
         ) : (
           <div className="text-center py-12 text-muted-foreground">
             <div className="space-y-2">
