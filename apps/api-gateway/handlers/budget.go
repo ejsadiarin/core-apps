@@ -1242,7 +1242,10 @@ func (h *BudgetHandler) GetBudgetRemaining(c echo.Context) error {
 	for _, rule := range recurringRules {
 		startDate := rule.StartDate.Time
 
-		// determine effective end date (either rule.end_date or target date, whichever is earlier)
+		// determine effective end date for calculation:
+		// - if rule has end_date and it's before target date, use rule.end_date
+		// - otherwise use target date (budget calculation date)
+		// this ensures we don't count income beyond its end_date
 		effectiveEndDate := targetDate
 		if rule.EndDate.Valid && rule.EndDate.Time.Before(targetDate) {
 			effectiveEndDate = rule.EndDate.Time
@@ -1255,24 +1258,30 @@ func (h *BudgetHandler) GetBudgetRemaining(c echo.Context) error {
 			switch rule.RecurringType.String {
 			case "daily":
 				// calculate number of days from start to effective end (inclusive)
+				// example: Jan 1 to Jan 5 = 5 days (not 4)
 				diff := effectiveEndDate.Sub(startDate)
 				days := int(diff.Hours()/24) + 1
 				periods = float64(days)
 
 			case "weekly":
 				// calculate number of weeks from start to effective end (inclusive)
+				// formula: weeks = floor(days / 7) + 1
+				// example: day 0-6 = week 1, day 7-13 = week 2
 				diff := effectiveEndDate.Sub(startDate)
 				weeks := int(diff.Hours()/(24*7)) + 1
 				periods = float64(weeks)
 
 			case "monthly":
 				// calculate number of months from start to effective end (inclusive)
+				// formula: months = (year_diff * 12) + month_diff + 1
+				// example: Jan 2024 to Mar 2024 = 3 months
 				yearDiff := effectiveEndDate.Year() - startDate.Year()
 				monthDiff := int(effectiveEndDate.Month()) - int(startDate.Month())
 				months := yearDiff*12 + monthDiff + 1
 				periods = float64(months)
 			}
 
+			// accumulate total recurring income: amount * number of periods
 			recurringIncome += numericToFloat64(rule.Amount) * periods
 		}
 	}
