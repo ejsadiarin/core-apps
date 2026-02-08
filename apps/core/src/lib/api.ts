@@ -25,7 +25,10 @@ import type {
   Income,
   CreateIncomeRequest,
   UpdateIncomeRequest,
-  BudgetRemainingResponse
+  BudgetRemainingResponse,
+  PaginatedResponse,
+  ExpensePaginationParams,
+  IncomePaginationParams
 } from '@/types/api';
 
 const url = 'http://localhost:8080';
@@ -318,6 +321,25 @@ export async function fetchExpenses(filters?: ExpenseFilters): Promise<Expense[]
   return res.json();
 }
 
+export async function fetchExpensesPaginated(
+  params: ExpensePaginationParams & ExpenseFilters
+): Promise<PaginatedResponse<Expense>> {
+  const searchParams = new URLSearchParams();
+  if (params.cursor) searchParams.append('cursor', params.cursor);
+  if (params.limit) searchParams.append('limit', params.limit.toString());
+  if (params.start_date) searchParams.append('start_date', params.start_date);
+  if (params.end_date) searchParams.append('end_date', params.end_date);
+  if (params.category_id) searchParams.append('category_id', params.category_id);
+
+  const res = await fetch(url + `/api/budget/expenses/paginated?${searchParams.toString()}`, {
+    credentials: 'include'
+  });
+  if (!res.ok) {
+    throw new Error(`Error fetching paginated expenses: ${res.status}`);
+  }
+  return res.json();
+}
+
 export async function fetchExpense(id: string): Promise<Expense> {
   const res = await fetch(url + `/api/budget/expenses/${id}`, {
     credentials: 'include'
@@ -529,6 +551,26 @@ export async function fetchIncomes(startDate?: string, endDate?: string, recurri
   });
   if (!res.ok) {
     throw new Error(`Error fetching incomes: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function fetchIncomesPaginated(
+  params: IncomePaginationParams & { start_date?: string; end_date?: string; recurring_type?: string }
+): Promise<PaginatedResponse<Income>> {
+  const searchParams = new URLSearchParams();
+  if (params.offset !== undefined) searchParams.append('offset', params.offset.toString());
+  if (params.page) searchParams.append('page', params.page.toString());
+  if (params.limit) searchParams.append('limit', params.limit.toString());
+  if (params.start_date) searchParams.append('start_date', params.start_date);
+  if (params.end_date) searchParams.append('end_date', params.end_date);
+  if (params.recurring_type) searchParams.append('recurring_type', params.recurring_type);
+
+  const res = await fetch(url + `/api/budget/incomes/paginated?${searchParams.toString()}`, {
+    credentials: 'include'
+  });
+  if (!res.ok) {
+    throw new Error(`Error fetching paginated incomes: ${res.status}`);
   }
   return res.json();
 }
