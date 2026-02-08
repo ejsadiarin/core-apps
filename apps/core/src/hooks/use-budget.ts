@@ -15,6 +15,12 @@ import {
   createExpense,
   updateExpense,
   deleteExpense,
+  fetchIncomes,
+  fetchIncome,
+  createIncome,
+  updateIncome,
+  deleteIncome,
+  fetchBudgetRemaining,
   fetchSummaryStats,
   fetchCategoryBreakdown,
   fetchTrends
@@ -30,6 +36,10 @@ import type {
   CreateExpenseRequest,
   UpdateExpenseRequest,
   ExpenseFilters,
+  Income,
+  CreateIncomeRequest,
+  UpdateIncomeRequest,
+  BudgetRemainingResponse,
   SummaryStats,
   CategoryBreakdown,
   TrendItem
@@ -58,6 +68,13 @@ export const budgetKeys = {
   expenses: () => [...budgetKeys.all, 'expenses'] as const,
   expensesList: (filters?: ExpenseFilters) => [...budgetKeys.expenses(), 'list', filters] as const,
   expenseDetail: (id: string) => [...budgetKeys.expenses(), 'detail', id] as const,
+
+  incomes: () => [...budgetKeys.all, 'incomes'] as const,
+  incomesList: (startDate?: string, endDate?: string, recurringType?: 'daily') => 
+    [...budgetKeys.incomes(), 'list', { startDate, endDate, recurringType }] as const,
+  incomeDetail: (id: string) => [...budgetKeys.incomes(), 'detail', id] as const,
+
+  budgetRemaining: (date?: string) => [...budgetKeys.all, 'budgetRemaining', date] as const,
 
   stats: () => [...budgetKeys.all, 'stats'] as const,
   summary: (period?: string) => [...budgetKeys.stats(), 'summary', period] as const,
@@ -271,6 +288,7 @@ export function useCreateExpense() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: budgetKeys.expenses() });
+      queryClient.invalidateQueries({ queryKey: budgetKeys.budgetRemaining() });
       queryClient.invalidateQueries({ queryKey: budgetKeys.stats() });
     },
     onError: (error: Error) => {
@@ -295,6 +313,7 @@ export function useUpdateExpense() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: budgetKeys.expenses() });
       queryClient.invalidateQueries({ queryKey: budgetKeys.expenseDetail(variables.id) });
+      queryClient.invalidateQueries({ queryKey: budgetKeys.budgetRemaining() });
       queryClient.invalidateQueries({ queryKey: budgetKeys.stats() });
     },
     onError: (error: Error) => {
@@ -318,6 +337,7 @@ export function useDeleteExpense() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: budgetKeys.expenses() });
+      queryClient.invalidateQueries({ queryKey: budgetKeys.budgetRemaining() });
       queryClient.invalidateQueries({ queryKey: budgetKeys.stats() });
     },
     onError: (error: Error) => {
@@ -325,6 +345,106 @@ export function useDeleteExpense() {
         console.error("Failed to delete expense:", error);
       }
     }
+  });
+}
+
+// Incomes
+
+export function useIncomes(startDate?: string, endDate?: string, recurringType?: 'daily') {
+  return useQuery<Income[]>({
+    queryKey: budgetKeys.incomesList(startDate, endDate, recurringType),
+    queryFn: () => fetchIncomes(startDate, endDate, recurringType),
+    staleTime: 60000,
+    refetchOnMount: true
+  });
+}
+
+export function useIncome(id: string | null) {
+  return useQuery<Income>({
+    queryKey: budgetKeys.incomeDetail(id ?? ''),
+    queryFn: () => fetchIncome(id!),
+    enabled: !!id
+  });
+}
+
+export function useCreateIncome() {
+  const queryClient = useQueryClient();
+  const { isGuest } = useAuth();
+
+  return useMutation({
+    mutationFn: (data: CreateIncomeRequest) => {
+      if (isGuest) {
+        throw new GuestBlockedError();
+      }
+      return createIncome(data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: budgetKeys.incomes() });
+      queryClient.invalidateQueries({ queryKey: budgetKeys.budgetRemaining() });
+      queryClient.invalidateQueries({ queryKey: budgetKeys.stats() });
+    },
+    onError: (error: Error) => {
+      if (!(error instanceof GuestBlockedError)) {
+        console.error("Failed to create income:", error);
+      }
+    }
+  });
+}
+
+export function useUpdateIncome() {
+  const queryClient = useQueryClient();
+  const { isGuest } = useAuth();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateIncomeRequest }) => {
+      if (isGuest) {
+        throw new GuestBlockedError();
+      }
+      return updateIncome(id, data);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: budgetKeys.incomes() });
+      queryClient.invalidateQueries({ queryKey: budgetKeys.incomeDetail(variables.id) });
+      queryClient.invalidateQueries({ queryKey: budgetKeys.budgetRemaining() });
+      queryClient.invalidateQueries({ queryKey: budgetKeys.stats() });
+    },
+    onError: (error: Error) => {
+      if (!(error instanceof GuestBlockedError)) {
+        console.error("Failed to update income:", error);
+      }
+    }
+  });
+}
+
+export function useDeleteIncome() {
+  const queryClient = useQueryClient();
+  const { isGuest } = useAuth();
+
+  return useMutation({
+    mutationFn: (id: string) => {
+      if (isGuest) {
+        throw new GuestBlockedError();
+      }
+      return deleteIncome(id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: budgetKeys.incomes() });
+      queryClient.invalidateQueries({ queryKey: budgetKeys.budgetRemaining() });
+      queryClient.invalidateQueries({ queryKey: budgetKeys.stats() });
+    },
+    onError: (error: Error) => {
+      if (!(error instanceof GuestBlockedError)) {
+        console.error("Failed to delete income:", error);
+      }
+    }
+  });
+}
+
+export function useBudgetRemaining(date?: string) {
+  return useQuery<BudgetRemainingResponse>({
+    queryKey: budgetKeys.budgetRemaining(date),
+    queryFn: () => fetchBudgetRemaining(date),
+    staleTime: 0
   });
 }
 
