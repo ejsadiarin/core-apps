@@ -37,13 +37,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.UserResponse"
+                            "$ref": "#/definitions/internal_domain_auth.UserResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     }
                 }
@@ -69,7 +69,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.LoginRequest"
+                            "$ref": "#/definitions/internal_domain_auth.LoginRequest"
                         }
                     }
                 ],
@@ -77,13 +77,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.UserResponse"
+                            "$ref": "#/definitions/internal_domain_auth.UserResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     }
                 }
@@ -126,13 +126,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.UserResponse"
+                            "$ref": "#/definitions/internal_domain_auth.UserResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     }
                 }
@@ -158,7 +158,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.RegisterRequest"
+                            "$ref": "#/definitions/internal_domain_auth.RegisterRequest"
                         }
                     }
                 ],
@@ -166,19 +166,19 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.UserResponse"
+                            "$ref": "#/definitions/internal_domain_auth.UserResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     }
                 }
@@ -199,7 +199,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/core-gateway_models.CategoryResponse"
+                                "$ref": "#/definitions/internal_domain_budget.CategoryResponse"
                             }
                         }
                     }
@@ -223,7 +223,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.CreateCategoryRequest"
+                            "$ref": "#/definitions/internal_domain_budget.CreateCategoryRequest"
                         }
                     }
                 ],
@@ -231,25 +231,25 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.CategoryResponse"
+                            "$ref": "#/definitions/internal_domain_budget.CategoryResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     }
                 }
@@ -281,7 +281,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.UpdateCategoryRequest"
+                            "$ref": "#/definitions/internal_domain_budget.UpdateCategoryRequest"
                         }
                     }
                 ],
@@ -289,19 +289,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.CategoryResponse"
+                            "$ref": "#/definitions/internal_domain_budget.CategoryResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     }
                 }
@@ -327,13 +327,13 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     }
                 }
@@ -341,30 +341,39 @@ const docTemplate = `{
         },
         "/api/budget/expenses": {
             "get": {
-                "produces": [
-                    "application/json"
-                ],
                 "tags": [
                     "budget"
                 ],
-                "summary": "List expenses with filters",
+                "summary": "List expenses with pagination",
                 "parameters": [
                     {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size (default 5, max 100)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
                         "type": "string",
-                        "description": "Start date (YYYY-MM-DD)",
+                        "description": "Filter by category ID",
+                        "name": "category_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter from date (YYYY-MM-DD)",
                         "name": "start_date",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "End date (YYYY-MM-DD)",
+                        "description": "Filter to date (YYYY-MM-DD)",
                         "name": "end_date",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Category ID",
-                        "name": "category_id",
                         "in": "query"
                     }
                 ],
@@ -372,10 +381,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/core-gateway_models.ExpenseResponse"
-                            }
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.PaginatedResponse-internal_domain_budget_ExpenseResponse"
                         }
                     }
                 }
@@ -398,7 +404,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.CreateExpenseRequest"
+                            "$ref": "#/definitions/internal_domain_budget.CreateExpenseRequest"
                         }
                     }
                 ],
@@ -406,19 +412,77 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ExpenseResponse"
+                            "$ref": "#/definitions/internal_domain_budget.ExpenseResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/budget/expenses/search": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budget"
+                ],
+                "summary": "Search expenses by description",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search query",
+                        "name": "q",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size (default 5, max 100)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by category ID",
+                        "name": "category_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter from date (YYYY-MM-DD)",
+                        "name": "start_date",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter to date (YYYY-MM-DD)",
+                        "name": "end_date",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.PaginatedResponse-internal_domain_budget_ExpenseResponse"
                         }
                     }
                 }
@@ -443,7 +507,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ExpenseResponse"
+                            "$ref": "#/definitions/internal_domain_budget.ExpenseResponse"
                         }
                     }
                 }
@@ -473,7 +537,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.UpdateExpenseRequest"
+                            "$ref": "#/definitions/internal_domain_budget.UpdateExpenseRequest"
                         }
                     }
                 ],
@@ -481,19 +545,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ExpenseResponse"
+                            "$ref": "#/definitions/internal_domain_budget.ExpenseResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     }
                 }
@@ -519,13 +583,241 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/budget/incomes": {
+            "get": {
+                "tags": [
+                    "budget"
+                ],
+                "summary": "List incomes with pagination",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size (default 5, max 100)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by recurring type",
+                        "name": "recurring_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter from date (YYYY-MM-DD)",
+                        "name": "start_date",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter to date (YYYY-MM-DD)",
+                        "name": "end_date",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.PaginatedResponse-internal_domain_budget_IncomeResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budget"
+                ],
+                "summary": "Create a new income",
+                "parameters": [
+                    {
+                        "description": "Income to create",
+                        "name": "income",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_domain_budget.CreateIncomeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/internal_domain_budget.IncomeResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/budget/incomes/{id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budget"
+                ],
+                "summary": "Get a single income",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Income ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_domain_budget.IncomeResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budget"
+                ],
+                "summary": "Update an income",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Income ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Income updates",
+                        "name": "income",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_domain_budget.UpdateIncomeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_domain_budget.IncomeResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "budget"
+                ],
+                "summary": "Delete an income",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Income ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/budget/remaining": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budget"
+                ],
+                "summary": "Get budget remaining",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Date (YYYY-MM-DD), defaults to today",
+                        "name": "date",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_domain_budget.BudgetRemainingResponse"
                         }
                     }
                 }
@@ -560,7 +852,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/core-gateway_models.CategoryBreakdownItem"
+                                "$ref": "#/definitions/internal_domain_budget.CategoryBreakdownItem"
                             }
                         }
                     }
@@ -575,17 +867,17 @@ const docTemplate = `{
                 "tags": [
                     "budget"
                 ],
-                "summary": "Get spending summary",
+                "summary": "Get spending summary with budget remaining",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Start date",
+                        "description": "Start date (YYYY-MM-DD)",
                         "name": "start_date",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "End date",
+                        "description": "End date (YYYY-MM-DD)",
                         "name": "end_date",
                         "in": "query"
                     }
@@ -594,7 +886,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.SummaryStatsResponse"
+                            "$ref": "#/definitions/internal_domain_budget.SummaryStatsResponse"
                         }
                     }
                 }
@@ -629,7 +921,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/core-gateway_models.TrendItem"
+                                "$ref": "#/definitions/internal_domain_budget.TrendItem"
                             }
                         }
                     }
@@ -651,7 +943,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/core-gateway_models.TagResponse"
+                                "$ref": "#/definitions/internal_domain_budget.TagResponse"
                             }
                         }
                     }
@@ -675,7 +967,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.CreateTagRequest"
+                            "$ref": "#/definitions/internal_domain_budget.CreateTagRequest"
                         }
                     }
                 ],
@@ -683,19 +975,19 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.TagResponse"
+                            "$ref": "#/definitions/internal_domain_budget.TagResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     }
                 }
@@ -727,7 +1019,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.UpdateTagRequest"
+                            "$ref": "#/definitions/internal_domain_budget.UpdateTagRequest"
                         }
                     }
                 ],
@@ -735,19 +1027,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.TagResponse"
+                            "$ref": "#/definitions/internal_domain_budget.TagResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     }
                 }
@@ -773,13 +1065,13 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     }
                 }
@@ -802,7 +1094,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/apps_api-gateway.ServiceStatus"
+                                "$ref": "#/definitions/internal_app.serviceStatus"
                             }
                         }
                     }
@@ -827,7 +1119,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.CreateServiceRequest"
+                            "$ref": "#/definitions/internal_domain_services.CreateServiceRequest"
                         }
                     }
                 ],
@@ -835,19 +1127,19 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_internal_sqlc.Service"
+                            "$ref": "#/definitions/core-gateway_internal_repository_sqlc.Service"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     }
                 }
@@ -869,14 +1161,14 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/core-gateway_internal_sqlc.ListServicesRow"
+                                "$ref": "#/definitions/core-gateway_internal_repository_sqlc.ListServicesRow"
                             }
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     }
                 }
@@ -903,7 +1195,7 @@ const docTemplate = `{
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     }
                 }
@@ -932,25 +1224,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_internal_sqlc.Service"
+                            "$ref": "#/definitions/core-gateway_internal_repository_sqlc.Service"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     }
                 }
@@ -981,7 +1273,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.UpdateServiceRequest"
+                            "$ref": "#/definitions/internal_domain_services.UpdateServiceRequest"
                         }
                     }
                 ],
@@ -989,25 +1281,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_internal_sqlc.Service"
+                            "$ref": "#/definitions/core-gateway_internal_repository_sqlc.Service"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     }
                 }
@@ -1034,19 +1326,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     }
                 }
@@ -1084,20 +1376,20 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/core-gateway_internal_sqlc.ServiceHealthHistory"
+                                "$ref": "#/definitions/core-gateway_internal_repository_sqlc.ServiceHealthHistory"
                             }
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     }
                 }
@@ -1133,13 +1425,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     }
                 }
@@ -1159,7 +1451,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/apps_api-gateway.SystemStats"
+                            "$ref": "#/definitions/internal_app.systemStats"
                         }
                     }
                 }
@@ -1181,20 +1473,20 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/core-gateway_models.UserResponse"
+                                "$ref": "#/definitions/internal_domain_user.UserResponse"
                             }
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     }
                 }
@@ -1218,7 +1510,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.CreateUserRequest"
+                            "$ref": "#/definitions/internal_domain_user.CreateUserRequest"
                         }
                     }
                 ],
@@ -1226,31 +1518,31 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.UserResponse"
+                            "$ref": "#/definitions/internal_domain_user.UserResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     }
                 }
@@ -1279,25 +1571,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.UserResponse"
+                            "$ref": "#/definitions/internal_domain_user.UserResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     }
                 }
@@ -1328,7 +1620,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.UpdateUserRequest"
+                            "$ref": "#/definitions/internal_domain_user.UpdateUserRequest"
                         }
                     }
                 ],
@@ -1336,31 +1628,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.UserResponse"
+                            "$ref": "#/definitions/internal_domain_user.UserResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     }
                 }
@@ -1387,25 +1679,25 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/core-gateway_models.ErrorResponse"
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
                     }
                 }
@@ -1436,52 +1728,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "apps_api-gateway.ServiceStatus": {
-            "type": "object",
-            "properties": {
-                "name": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "string"
-                },
-                "type": {
-                    "type": "string"
-                }
-            }
-        },
-        "apps_api-gateway.SystemStats": {
-            "type": "object",
-            "properties": {
-                "cpu": {
-                    "type": "integer"
-                },
-                "memory": {
-                    "type": "integer"
-                },
-                "network": {
-                    "type": "object",
-                    "properties": {
-                        "down": {
-                            "type": "string"
-                        },
-                        "up": {
-                            "type": "string"
-                        }
-                    }
-                },
-                "storage": {
-                    "type": "integer"
-                },
-                "temperature": {
-                    "type": "integer"
-                },
-                "uptime": {
-                    "type": "string"
-                }
-            }
-        },
-        "core-gateway_internal_sqlc.ListServicesRow": {
+        "core-gateway_internal_repository_sqlc.ListServicesRow": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -1537,7 +1784,7 @@ const docTemplate = `{
                 }
             }
         },
-        "core-gateway_internal_sqlc.Service": {
+        "core-gateway_internal_repository_sqlc.Service": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -1584,7 +1831,7 @@ const docTemplate = `{
                 }
             }
         },
-        "core-gateway_internal_sqlc.ServiceHealthHistory": {
+        "core-gateway_internal_repository_sqlc.ServiceHealthHistory": {
             "type": "object",
             "properties": {
                 "checked_at": {
@@ -1610,7 +1857,172 @@ const docTemplate = `{
                 }
             }
         },
-        "core-gateway_models.CategoryBreakdownItem": {
+        "core-gateway_internal_shared_models.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "details": {},
+                "error": {
+                    "type": "string"
+                }
+            }
+        },
+        "core-gateway_internal_shared_models.OffsetPagination": {
+            "type": "object",
+            "properties": {
+                "hasMore": {
+                    "type": "boolean"
+                },
+                "limit": {
+                    "type": "integer"
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "totalPages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "core-gateway_internal_shared_models.PaginatedResponse-internal_domain_budget_ExpenseResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_domain_budget.ExpenseResponse"
+                    }
+                },
+                "pagination": {
+                    "$ref": "#/definitions/core-gateway_internal_shared_models.OffsetPagination"
+                }
+            }
+        },
+        "core-gateway_internal_shared_models.PaginatedResponse-internal_domain_budget_IncomeResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_domain_budget.IncomeResponse"
+                    }
+                },
+                "pagination": {
+                    "$ref": "#/definitions/core-gateway_internal_shared_models.OffsetPagination"
+                }
+            }
+        },
+        "internal_app.serviceStatus": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_app.systemStats": {
+            "type": "object",
+            "properties": {
+                "cpu": {
+                    "type": "integer"
+                },
+                "memory": {
+                    "type": "integer"
+                },
+                "network": {
+                    "type": "object",
+                    "properties": {
+                        "down": {
+                            "type": "string"
+                        },
+                        "up": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "storage": {
+                    "type": "integer"
+                },
+                "temperature": {
+                    "type": "integer"
+                },
+                "uptime": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_domain_auth.LoginRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "remember_me": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "internal_domain_auth.RegisterRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string",
+                    "maxLength": 128,
+                    "minLength": 8
+                }
+            }
+        },
+        "internal_domain_auth.UserResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "role": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_domain_budget.BudgetRemainingResponse": {
+            "type": "object",
+            "properties": {
+                "budget_remaining": {
+                    "type": "number"
+                },
+                "budget_remaining_status": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_domain_budget.CategoryBreakdownItem": {
             "type": "object",
             "properties": {
                 "category_id": {
@@ -1633,7 +2045,7 @@ const docTemplate = `{
                 }
             }
         },
-        "core-gateway_models.CategoryResponse": {
+        "internal_domain_budget.CategoryResponse": {
             "type": "object",
             "properties": {
                 "color": {
@@ -1650,7 +2062,7 @@ const docTemplate = `{
                 }
             }
         },
-        "core-gateway_models.CreateCategoryRequest": {
+        "internal_domain_budget.CreateCategoryRequest": {
             "type": "object",
             "required": [
                 "name"
@@ -1670,7 +2082,7 @@ const docTemplate = `{
                 }
             }
         },
-        "core-gateway_models.CreateExpenseRequest": {
+        "internal_domain_budget.CreateExpenseRequest": {
             "type": "object",
             "required": [
                 "amount",
@@ -1679,7 +2091,6 @@ const docTemplate = `{
             ],
             "properties": {
                 "amount": {
-                    "description": "Will be converted to pgtype.Numeric",
                     "type": "number"
                 },
                 "category_id": {
@@ -1692,7 +2103,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "expense_date": {
-                    "description": "YYYY-MM-DD",
                     "type": "string"
                 },
                 "notes": {
@@ -1706,7 +2116,269 @@ const docTemplate = `{
                 }
             }
         },
-        "core-gateway_models.CreateServiceRequest": {
+        "internal_domain_budget.CreateIncomeRequest": {
+            "type": "object",
+            "required": [
+                "amount",
+                "date"
+            ],
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "date": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "end_date": {
+                    "type": "string"
+                },
+                "recurring_type": {
+                    "type": "string",
+                    "enum": [
+                        "daily",
+                        "weekly",
+                        "monthly"
+                    ]
+                },
+                "start_date": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_domain_budget.CreateTagRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "color": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 1
+                }
+            }
+        },
+        "internal_domain_budget.ExpenseResponse": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "category": {
+                    "$ref": "#/definitions/internal_domain_budget.CategoryResponse"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "expense_date": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_domain_budget.TagResponse"
+                    }
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_domain_budget.IncomeResponse": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "date": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "end_date": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "recurring_type": {
+                    "type": "string"
+                },
+                "start_date": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_domain_budget.SummaryStatsResponse": {
+            "type": "object",
+            "properties": {
+                "budget_remaining": {
+                    "type": "number"
+                },
+                "budget_remaining_status": {
+                    "type": "string"
+                },
+                "period": {
+                    "type": "string"
+                },
+                "total_spent": {
+                    "type": "number"
+                },
+                "transaction_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_domain_budget.TagResponse": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_domain_budget.TrendItem": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "date": {
+                    "type": "string"
+                },
+                "total_amount": {
+                    "type": "number"
+                }
+            }
+        },
+        "internal_domain_budget.UpdateCategoryRequest": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "type": "string"
+                },
+                "icon": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 1
+                }
+            }
+        },
+        "internal_domain_budget.UpdateExpenseRequest": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "category_id": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "expense_date": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "tag_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "internal_domain_budget.UpdateIncomeRequest": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "date": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "end_date": {
+                    "type": "string"
+                },
+                "recurring_type": {
+                    "type": "string",
+                    "enum": [
+                        "daily",
+                        "weekly",
+                        "monthly"
+                    ]
+                },
+                "start_date": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_domain_budget.UpdateTagRequest": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 1
+                }
+            }
+        },
+        "internal_domain_services.CreateServiceRequest": {
             "type": "object",
             "required": [
                 "name",
@@ -1756,223 +2428,7 @@ const docTemplate = `{
                 }
             }
         },
-        "core-gateway_models.CreateTagRequest": {
-            "type": "object",
-            "required": [
-                "name"
-            ],
-            "properties": {
-                "color": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string",
-                    "maxLength": 100,
-                    "minLength": 1
-                }
-            }
-        },
-        "core-gateway_models.CreateUserRequest": {
-            "type": "object",
-            "required": [
-                "email",
-                "password",
-                "role"
-            ],
-            "properties": {
-                "email": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string",
-                    "maxLength": 128,
-                    "minLength": 8
-                },
-                "role": {
-                    "type": "string",
-                    "enum": [
-                        "guest",
-                        "user",
-                        "admin"
-                    ]
-                }
-            }
-        },
-        "core-gateway_models.ErrorResponse": {
-            "type": "object",
-            "properties": {
-                "details": {},
-                "error": {
-                    "type": "string"
-                }
-            }
-        },
-        "core-gateway_models.ExpenseResponse": {
-            "type": "object",
-            "properties": {
-                "amount": {
-                    "type": "number"
-                },
-                "category": {
-                    "$ref": "#/definitions/core-gateway_models.CategoryResponse"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "currency": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "expense_date": {
-                    "description": "YYYY-MM-DD",
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "notes": {
-                    "type": "string"
-                },
-                "tags": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/core-gateway_models.TagResponse"
-                    }
-                },
-                "updated_at": {
-                    "type": "string"
-                }
-            }
-        },
-        "core-gateway_models.LoginRequest": {
-            "type": "object",
-            "required": [
-                "email",
-                "password"
-            ],
-            "properties": {
-                "email": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string"
-                },
-                "remember_me": {
-                    "type": "boolean"
-                }
-            }
-        },
-        "core-gateway_models.RegisterRequest": {
-            "type": "object",
-            "required": [
-                "email",
-                "password"
-            ],
-            "properties": {
-                "email": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string",
-                    "maxLength": 128,
-                    "minLength": 8
-                }
-            }
-        },
-        "core-gateway_models.SummaryStatsResponse": {
-            "type": "object",
-            "properties": {
-                "period": {
-                    "description": "\"total\", \"month\", etc",
-                    "type": "string"
-                },
-                "total_spent": {
-                    "type": "number"
-                },
-                "transaction_count": {
-                    "type": "integer"
-                }
-            }
-        },
-        "core-gateway_models.TagResponse": {
-            "type": "object",
-            "properties": {
-                "color": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                }
-            }
-        },
-        "core-gateway_models.TrendItem": {
-            "type": "object",
-            "properties": {
-                "count": {
-                    "type": "integer"
-                },
-                "date": {
-                    "description": "Day or Month",
-                    "type": "string"
-                },
-                "total_amount": {
-                    "type": "number"
-                }
-            }
-        },
-        "core-gateway_models.UpdateCategoryRequest": {
-            "type": "object",
-            "properties": {
-                "color": {
-                    "type": "string"
-                },
-                "icon": {
-                    "type": "string",
-                    "maxLength": 50
-                },
-                "name": {
-                    "type": "string",
-                    "maxLength": 100,
-                    "minLength": 1
-                }
-            }
-        },
-        "core-gateway_models.UpdateExpenseRequest": {
-            "type": "object",
-            "properties": {
-                "amount": {
-                    "type": "number"
-                },
-                "category_id": {
-                    "type": "string"
-                },
-                "currency": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "expense_date": {
-                    "type": "string"
-                },
-                "notes": {
-                    "type": "string"
-                },
-                "tag_ids": {
-                    "description": "Replaces existing tags if provided",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                }
-            }
-        },
-        "core-gateway_models.UpdateServiceRequest": {
+        "internal_domain_services.UpdateServiceRequest": {
             "type": "object",
             "properties": {
                 "description": {
@@ -2021,20 +2477,33 @@ const docTemplate = `{
                 }
             }
         },
-        "core-gateway_models.UpdateTagRequest": {
+        "internal_domain_user.CreateUserRequest": {
             "type": "object",
+            "required": [
+                "email",
+                "password",
+                "role"
+            ],
             "properties": {
-                "color": {
+                "email": {
                     "type": "string"
                 },
-                "name": {
+                "password": {
                     "type": "string",
-                    "maxLength": 100,
-                    "minLength": 1
+                    "maxLength": 128,
+                    "minLength": 8
+                },
+                "role": {
+                    "type": "string",
+                    "enum": [
+                        "guest",
+                        "user",
+                        "admin"
+                    ]
                 }
             }
         },
-        "core-gateway_models.UpdateUserRequest": {
+        "internal_domain_user.UpdateUserRequest": {
             "type": "object",
             "properties": {
                 "email": {
@@ -2055,7 +2524,7 @@ const docTemplate = `{
                 }
             }
         },
-        "core-gateway_models.UserResponse": {
+        "internal_domain_user.UserResponse": {
             "type": "object",
             "properties": {
                 "created_at": {

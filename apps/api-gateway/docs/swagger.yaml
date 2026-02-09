@@ -1,34 +1,5 @@
 definitions:
-  apps_api-gateway.ServiceStatus:
-    properties:
-      name:
-        type: string
-      status:
-        type: string
-      type:
-        type: string
-    type: object
-  apps_api-gateway.SystemStats:
-    properties:
-      cpu:
-        type: integer
-      memory:
-        type: integer
-      network:
-        properties:
-          down:
-            type: string
-          up:
-            type: string
-        type: object
-      storage:
-        type: integer
-      temperature:
-        type: integer
-      uptime:
-        type: string
-    type: object
-  core-gateway_internal_sqlc.ListServicesRow:
+  core-gateway_internal_repository_sqlc.ListServicesRow:
     properties:
       created_at:
         $ref: '#/definitions/pgtype.Timestamp'
@@ -65,7 +36,7 @@ definitions:
       url:
         type: string
     type: object
-  core-gateway_internal_sqlc.Service:
+  core-gateway_internal_repository_sqlc.Service:
     properties:
       created_at:
         $ref: '#/definitions/pgtype.Timestamp'
@@ -96,7 +67,7 @@ definitions:
       url:
         type: string
     type: object
-  core-gateway_internal_sqlc.ServiceHealthHistory:
+  core-gateway_internal_repository_sqlc.ServiceHealthHistory:
     properties:
       checked_at:
         $ref: '#/definitions/pgtype.Timestamp'
@@ -113,7 +84,115 @@ definitions:
       status_code:
         $ref: '#/definitions/pgtype.Int4'
     type: object
-  core-gateway_models.CategoryBreakdownItem:
+  core-gateway_internal_shared_models.ErrorResponse:
+    properties:
+      details: {}
+      error:
+        type: string
+    type: object
+  core-gateway_internal_shared_models.OffsetPagination:
+    properties:
+      hasMore:
+        type: boolean
+      limit:
+        type: integer
+      page:
+        type: integer
+      total:
+        type: integer
+      totalPages:
+        type: integer
+    type: object
+  core-gateway_internal_shared_models.PaginatedResponse-internal_domain_budget_ExpenseResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/internal_domain_budget.ExpenseResponse'
+        type: array
+      pagination:
+        $ref: '#/definitions/core-gateway_internal_shared_models.OffsetPagination'
+    type: object
+  core-gateway_internal_shared_models.PaginatedResponse-internal_domain_budget_IncomeResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/internal_domain_budget.IncomeResponse'
+        type: array
+      pagination:
+        $ref: '#/definitions/core-gateway_internal_shared_models.OffsetPagination'
+    type: object
+  internal_app.serviceStatus:
+    properties:
+      name:
+        type: string
+      status:
+        type: string
+      type:
+        type: string
+    type: object
+  internal_app.systemStats:
+    properties:
+      cpu:
+        type: integer
+      memory:
+        type: integer
+      network:
+        properties:
+          down:
+            type: string
+          up:
+            type: string
+        type: object
+      storage:
+        type: integer
+      temperature:
+        type: integer
+      uptime:
+        type: string
+    type: object
+  internal_domain_auth.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+      remember_me:
+        type: boolean
+    required:
+    - email
+    - password
+    type: object
+  internal_domain_auth.RegisterRequest:
+    properties:
+      email:
+        type: string
+      password:
+        maxLength: 128
+        minLength: 8
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  internal_domain_auth.UserResponse:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      role:
+        type: string
+    type: object
+  internal_domain_budget.BudgetRemainingResponse:
+    properties:
+      budget_remaining:
+        type: number
+      budget_remaining_status:
+        type: string
+    type: object
+  internal_domain_budget.CategoryBreakdownItem:
     properties:
       category_id:
         type: string
@@ -128,7 +207,7 @@ definitions:
       total_amount:
         type: number
     type: object
-  core-gateway_models.CategoryResponse:
+  internal_domain_budget.CategoryResponse:
     properties:
       color:
         type: string
@@ -139,7 +218,7 @@ definitions:
       name:
         type: string
     type: object
-  core-gateway_models.CreateCategoryRequest:
+  internal_domain_budget.CreateCategoryRequest:
     properties:
       color:
         type: string
@@ -153,10 +232,9 @@ definitions:
     required:
     - name
     type: object
-  core-gateway_models.CreateExpenseRequest:
+  internal_domain_budget.CreateExpenseRequest:
     properties:
       amount:
-        description: Will be converted to pgtype.Numeric
         type: number
       category_id:
         type: string
@@ -165,7 +243,6 @@ definitions:
       description:
         type: string
       expense_date:
-        description: YYYY-MM-DD
         type: string
       notes:
         type: string
@@ -178,7 +255,182 @@ definitions:
     - description
     - expense_date
     type: object
-  core-gateway_models.CreateServiceRequest:
+  internal_domain_budget.CreateIncomeRequest:
+    properties:
+      amount:
+        type: number
+      currency:
+        type: string
+      date:
+        type: string
+      description:
+        type: string
+      end_date:
+        type: string
+      recurring_type:
+        enum:
+        - daily
+        - weekly
+        - monthly
+        type: string
+      start_date:
+        type: string
+    required:
+    - amount
+    - date
+    type: object
+  internal_domain_budget.CreateTagRequest:
+    properties:
+      color:
+        type: string
+      name:
+        maxLength: 100
+        minLength: 1
+        type: string
+    required:
+    - name
+    type: object
+  internal_domain_budget.ExpenseResponse:
+    properties:
+      amount:
+        type: number
+      category:
+        $ref: '#/definitions/internal_domain_budget.CategoryResponse'
+      created_at:
+        type: string
+      currency:
+        type: string
+      description:
+        type: string
+      expense_date:
+        type: string
+      id:
+        type: string
+      notes:
+        type: string
+      tags:
+        items:
+          $ref: '#/definitions/internal_domain_budget.TagResponse'
+        type: array
+      updated_at:
+        type: string
+    type: object
+  internal_domain_budget.IncomeResponse:
+    properties:
+      amount:
+        type: number
+      created_at:
+        type: string
+      currency:
+        type: string
+      date:
+        type: string
+      description:
+        type: string
+      end_date:
+        type: string
+      id:
+        type: string
+      recurring_type:
+        type: string
+      start_date:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  internal_domain_budget.SummaryStatsResponse:
+    properties:
+      budget_remaining:
+        type: number
+      budget_remaining_status:
+        type: string
+      period:
+        type: string
+      total_spent:
+        type: number
+      transaction_count:
+        type: integer
+    type: object
+  internal_domain_budget.TagResponse:
+    properties:
+      color:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  internal_domain_budget.TrendItem:
+    properties:
+      count:
+        type: integer
+      date:
+        type: string
+      total_amount:
+        type: number
+    type: object
+  internal_domain_budget.UpdateCategoryRequest:
+    properties:
+      color:
+        type: string
+      icon:
+        maxLength: 50
+        type: string
+      name:
+        maxLength: 100
+        minLength: 1
+        type: string
+    type: object
+  internal_domain_budget.UpdateExpenseRequest:
+    properties:
+      amount:
+        type: number
+      category_id:
+        type: string
+      currency:
+        type: string
+      description:
+        type: string
+      expense_date:
+        type: string
+      notes:
+        type: string
+      tag_ids:
+        items:
+          type: string
+        type: array
+    type: object
+  internal_domain_budget.UpdateIncomeRequest:
+    properties:
+      amount:
+        type: number
+      currency:
+        type: string
+      date:
+        type: string
+      description:
+        type: string
+      end_date:
+        type: string
+      recurring_type:
+        enum:
+        - daily
+        - weekly
+        - monthly
+        type: string
+      start_date:
+        type: string
+    type: object
+  internal_domain_budget.UpdateTagRequest:
+    properties:
+      color:
+        type: string
+      name:
+        maxLength: 100
+        minLength: 1
+        type: string
+    type: object
+  internal_domain_services.CreateServiceRequest:
     properties:
       description:
         type: string
@@ -214,154 +466,7 @@ definitions:
     - name
     - url
     type: object
-  core-gateway_models.CreateTagRequest:
-    properties:
-      color:
-        type: string
-      name:
-        maxLength: 100
-        minLength: 1
-        type: string
-    required:
-    - name
-    type: object
-  core-gateway_models.CreateUserRequest:
-    properties:
-      email:
-        type: string
-      password:
-        maxLength: 128
-        minLength: 8
-        type: string
-      role:
-        enum:
-        - guest
-        - user
-        - admin
-        type: string
-    required:
-    - email
-    - password
-    - role
-    type: object
-  core-gateway_models.ErrorResponse:
-    properties:
-      details: {}
-      error:
-        type: string
-    type: object
-  core-gateway_models.ExpenseResponse:
-    properties:
-      amount:
-        type: number
-      category:
-        $ref: '#/definitions/core-gateway_models.CategoryResponse'
-      created_at:
-        type: string
-      currency:
-        type: string
-      description:
-        type: string
-      expense_date:
-        description: YYYY-MM-DD
-        type: string
-      id:
-        type: string
-      notes:
-        type: string
-      tags:
-        items:
-          $ref: '#/definitions/core-gateway_models.TagResponse'
-        type: array
-      updated_at:
-        type: string
-    type: object
-  core-gateway_models.LoginRequest:
-    properties:
-      email:
-        type: string
-      password:
-        type: string
-      remember_me:
-        type: boolean
-    required:
-    - email
-    - password
-    type: object
-  core-gateway_models.RegisterRequest:
-    properties:
-      email:
-        type: string
-      password:
-        maxLength: 128
-        minLength: 8
-        type: string
-    required:
-    - email
-    - password
-    type: object
-  core-gateway_models.SummaryStatsResponse:
-    properties:
-      period:
-        description: '"total", "month", etc'
-        type: string
-      total_spent:
-        type: number
-      transaction_count:
-        type: integer
-    type: object
-  core-gateway_models.TagResponse:
-    properties:
-      color:
-        type: string
-      id:
-        type: string
-      name:
-        type: string
-    type: object
-  core-gateway_models.TrendItem:
-    properties:
-      count:
-        type: integer
-      date:
-        description: Day or Month
-        type: string
-      total_amount:
-        type: number
-    type: object
-  core-gateway_models.UpdateCategoryRequest:
-    properties:
-      color:
-        type: string
-      icon:
-        maxLength: 50
-        type: string
-      name:
-        maxLength: 100
-        minLength: 1
-        type: string
-    type: object
-  core-gateway_models.UpdateExpenseRequest:
-    properties:
-      amount:
-        type: number
-      category_id:
-        type: string
-      currency:
-        type: string
-      description:
-        type: string
-      expense_date:
-        type: string
-      notes:
-        type: string
-      tag_ids:
-        description: Replaces existing tags if provided
-        items:
-          type: string
-        type: array
-    type: object
-  core-gateway_models.UpdateServiceRequest:
+  internal_domain_services.UpdateServiceRequest:
     properties:
       description:
         type: string
@@ -396,16 +501,26 @@ definitions:
       url:
         type: string
     type: object
-  core-gateway_models.UpdateTagRequest:
+  internal_domain_user.CreateUserRequest:
     properties:
-      color:
+      email:
         type: string
-      name:
-        maxLength: 100
-        minLength: 1
+      password:
+        maxLength: 128
+        minLength: 8
         type: string
+      role:
+        enum:
+        - guest
+        - user
+        - admin
+        type: string
+    required:
+    - email
+    - password
+    - role
     type: object
-  core-gateway_models.UpdateUserRequest:
+  internal_domain_user.UpdateUserRequest:
     properties:
       email:
         type: string
@@ -420,7 +535,7 @@ definitions:
         - admin
         type: string
     type: object
-  core-gateway_models.UserResponse:
+  internal_domain_user.UserResponse:
     properties:
       created_at:
         type: string
@@ -496,11 +611,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/core-gateway_models.UserResponse'
+            $ref: '#/definitions/internal_domain_auth.UserResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
       summary: Login as demo user
       tags:
       - auth
@@ -515,18 +630,18 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/core-gateway_models.LoginRequest'
+          $ref: '#/definitions/internal_domain_auth.LoginRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/core-gateway_models.UserResponse'
+            $ref: '#/definitions/internal_domain_auth.UserResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
       summary: Login user
       tags:
       - auth
@@ -554,11 +669,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/core-gateway_models.UserResponse'
+            $ref: '#/definitions/internal_domain_auth.UserResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
       summary: Get current user
       tags:
       - auth
@@ -573,22 +688,22 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/core-gateway_models.RegisterRequest'
+          $ref: '#/definitions/internal_domain_auth.RegisterRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/core-gateway_models.UserResponse'
+            $ref: '#/definitions/internal_domain_auth.UserResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
         "409":
           description: Conflict
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
       summary: Register a new user
       tags:
       - auth
@@ -601,7 +716,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/core-gateway_models.CategoryResponse'
+              $ref: '#/definitions/internal_domain_budget.CategoryResponse'
             type: array
       summary: List all budget categories
       tags:
@@ -615,26 +730,26 @@ paths:
         name: category
         required: true
         schema:
-          $ref: '#/definitions/core-gateway_models.CreateCategoryRequest'
+          $ref: '#/definitions/internal_domain_budget.CreateCategoryRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/core-gateway_models.CategoryResponse'
+            $ref: '#/definitions/internal_domain_budget.CategoryResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
       summary: Create a new budget category
       tags:
       - budget
@@ -652,11 +767,11 @@ paths:
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
       summary: Delete a budget category
       tags:
       - budget
@@ -674,50 +789,54 @@ paths:
         name: category
         required: true
         schema:
-          $ref: '#/definitions/core-gateway_models.UpdateCategoryRequest'
+          $ref: '#/definitions/internal_domain_budget.UpdateCategoryRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/core-gateway_models.CategoryResponse'
+            $ref: '#/definitions/internal_domain_budget.CategoryResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
       summary: Update a budget category
       tags:
       - budget
   /api/budget/expenses:
     get:
       parameters:
-      - description: Start date (YYYY-MM-DD)
+      - description: Page number (default 1)
         in: query
-        name: start_date
-        type: string
-      - description: End date (YYYY-MM-DD)
+        name: page
+        type: integer
+      - description: Page size (default 5, max 100)
         in: query
-        name: end_date
-        type: string
-      - description: Category ID
+        name: limit
+        type: integer
+      - description: Filter by category ID
         in: query
         name: category_id
         type: string
-      produces:
-      - application/json
+      - description: Filter from date (YYYY-MM-DD)
+        in: query
+        name: start_date
+        type: string
+      - description: Filter to date (YYYY-MM-DD)
+        in: query
+        name: end_date
+        type: string
       responses:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/core-gateway_models.ExpenseResponse'
-            type: array
-      summary: List expenses with filters
+            $ref: '#/definitions/core-gateway_internal_shared_models.PaginatedResponse-internal_domain_budget_ExpenseResponse'
+      summary: List expenses with pagination
       tags:
       - budget
     post:
@@ -729,22 +848,22 @@ paths:
         name: expense
         required: true
         schema:
-          $ref: '#/definitions/core-gateway_models.CreateExpenseRequest'
+          $ref: '#/definitions/internal_domain_budget.CreateExpenseRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/core-gateway_models.ExpenseResponse'
+            $ref: '#/definitions/internal_domain_budget.ExpenseResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
       summary: Create a new expense
       tags:
       - budget
@@ -762,11 +881,11 @@ paths:
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
       summary: Delete an expense
       tags:
       - budget
@@ -781,7 +900,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/core-gateway_models.ExpenseResponse'
+            $ref: '#/definitions/internal_domain_budget.ExpenseResponse'
       summary: Get expense details
       tags:
       - budget
@@ -799,23 +918,209 @@ paths:
         name: expense
         required: true
         schema:
-          $ref: '#/definitions/core-gateway_models.UpdateExpenseRequest'
+          $ref: '#/definitions/internal_domain_budget.UpdateExpenseRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/core-gateway_models.ExpenseResponse'
+            $ref: '#/definitions/internal_domain_budget.ExpenseResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
       summary: Update an expense
+      tags:
+      - budget
+  /api/budget/expenses/search:
+    get:
+      parameters:
+      - description: Search query
+        in: query
+        name: q
+        required: true
+        type: string
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Page size (default 5, max 100)
+        in: query
+        name: limit
+        type: integer
+      - description: Filter by category ID
+        in: query
+        name: category_id
+        type: string
+      - description: Filter from date (YYYY-MM-DD)
+        in: query
+        name: start_date
+        type: string
+      - description: Filter to date (YYYY-MM-DD)
+        in: query
+        name: end_date
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/core-gateway_internal_shared_models.PaginatedResponse-internal_domain_budget_ExpenseResponse'
+      summary: Search expenses by description
+      tags:
+      - budget
+  /api/budget/incomes:
+    get:
+      parameters:
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Page size (default 5, max 100)
+        in: query
+        name: limit
+        type: integer
+      - description: Filter by recurring type
+        in: query
+        name: recurring_type
+        type: string
+      - description: Filter from date (YYYY-MM-DD)
+        in: query
+        name: start_date
+        type: string
+      - description: Filter to date (YYYY-MM-DD)
+        in: query
+        name: end_date
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/core-gateway_internal_shared_models.PaginatedResponse-internal_domain_budget_IncomeResponse'
+      summary: List incomes with pagination
+      tags:
+      - budget
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Income to create
+        in: body
+        name: income
+        required: true
+        schema:
+          $ref: '#/definitions/internal_domain_budget.CreateIncomeRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_domain_budget.IncomeResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
+      summary: Create a new income
+      tags:
+      - budget
+  /api/budget/incomes/{id}:
+    delete:
+      parameters:
+      - description: Income ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
+      summary: Delete an income
+      tags:
+      - budget
+    get:
+      parameters:
+      - description: Income ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_domain_budget.IncomeResponse'
+      summary: Get a single income
+      tags:
+      - budget
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Income ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Income updates
+        in: body
+        name: income
+        required: true
+        schema:
+          $ref: '#/definitions/internal_domain_budget.UpdateIncomeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_domain_budget.IncomeResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
+      summary: Update an income
+      tags:
+      - budget
+  /api/budget/remaining:
+    get:
+      parameters:
+      - description: Date (YYYY-MM-DD), defaults to today
+        in: query
+        name: date
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_domain_budget.BudgetRemainingResponse'
+      summary: Get budget remaining
       tags:
       - budget
   /api/budget/stats/category-breakdown:
@@ -836,7 +1141,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/core-gateway_models.CategoryBreakdownItem'
+              $ref: '#/definitions/internal_domain_budget.CategoryBreakdownItem'
             type: array
       summary: Get spending by category
       tags:
@@ -844,11 +1149,11 @@ paths:
   /api/budget/stats/summary:
     get:
       parameters:
-      - description: Start date
+      - description: Start date (YYYY-MM-DD)
         in: query
         name: start_date
         type: string
-      - description: End date
+      - description: End date (YYYY-MM-DD)
         in: query
         name: end_date
         type: string
@@ -858,8 +1163,8 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/core-gateway_models.SummaryStatsResponse'
-      summary: Get spending summary
+            $ref: '#/definitions/internal_domain_budget.SummaryStatsResponse'
+      summary: Get spending summary with budget remaining
       tags:
       - budget
   /api/budget/stats/trends:
@@ -880,7 +1185,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/core-gateway_models.TrendItem'
+              $ref: '#/definitions/internal_domain_budget.TrendItem'
             type: array
       summary: Get spending trends
       tags:
@@ -894,7 +1199,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/core-gateway_models.TagResponse'
+              $ref: '#/definitions/internal_domain_budget.TagResponse'
             type: array
       summary: List all budget tags
       tags:
@@ -908,22 +1213,22 @@ paths:
         name: tag
         required: true
         schema:
-          $ref: '#/definitions/core-gateway_models.CreateTagRequest'
+          $ref: '#/definitions/internal_domain_budget.CreateTagRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/core-gateway_models.TagResponse'
+            $ref: '#/definitions/internal_domain_budget.TagResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
       summary: Create a new budget tag
       tags:
       - budget
@@ -941,11 +1246,11 @@ paths:
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
       summary: Delete a budget tag
       tags:
       - budget
@@ -963,22 +1268,22 @@ paths:
         name: tag
         required: true
         schema:
-          $ref: '#/definitions/core-gateway_models.UpdateTagRequest'
+          $ref: '#/definitions/internal_domain_budget.UpdateTagRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/core-gateway_models.TagResponse'
+            $ref: '#/definitions/internal_domain_budget.TagResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
       summary: Update a budget tag
       tags:
       - budget
@@ -993,7 +1298,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/apps_api-gateway.ServiceStatus'
+              $ref: '#/definitions/internal_app.serviceStatus'
             type: array
       summary: Get legacy services (deprecated)
       tags:
@@ -1008,22 +1313,22 @@ paths:
         name: service
         required: true
         schema:
-          $ref: '#/definitions/core-gateway_models.CreateServiceRequest'
+          $ref: '#/definitions/internal_domain_services.CreateServiceRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/core-gateway_internal_sqlc.Service'
+            $ref: '#/definitions/core-gateway_internal_repository_sqlc.Service'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
       summary: Create a new service
       tags:
       - services
@@ -1042,15 +1347,15 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
       summary: Delete a service
       tags:
       - services
@@ -1068,19 +1373,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/core-gateway_internal_sqlc.Service'
+            $ref: '#/definitions/core-gateway_internal_repository_sqlc.Service'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
       summary: Get a service by ID
       tags:
       - services
@@ -1099,26 +1404,26 @@ paths:
         name: service
         required: true
         schema:
-          $ref: '#/definitions/core-gateway_models.UpdateServiceRequest'
+          $ref: '#/definitions/internal_domain_services.UpdateServiceRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/core-gateway_internal_sqlc.Service'
+            $ref: '#/definitions/core-gateway_internal_repository_sqlc.Service'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
       summary: Update a service
       tags:
       - services
@@ -1143,16 +1448,16 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/core-gateway_internal_sqlc.ServiceHealthHistory'
+              $ref: '#/definitions/core-gateway_internal_repository_sqlc.ServiceHealthHistory'
             type: array
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
       summary: Get service health history
       tags:
       - services
@@ -1176,11 +1481,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
       summary: Get service statistics
       tags:
       - services
@@ -1194,12 +1499,12 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/core-gateway_internal_sqlc.ListServicesRow'
+              $ref: '#/definitions/core-gateway_internal_repository_sqlc.ListServicesRow'
             type: array
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
       summary: List all services
       tags:
       - services
@@ -1217,7 +1522,7 @@ paths:
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
       summary: Get overall statistics
       tags:
       - services
@@ -1230,7 +1535,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/apps_api-gateway.SystemStats'
+            $ref: '#/definitions/internal_app.systemStats'
       summary: Get system statistics
       tags:
       - system
@@ -1244,16 +1549,16 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/core-gateway_models.UserResponse'
+              $ref: '#/definitions/internal_domain_user.UserResponse'
             type: array
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
       summary: List all users
       tags:
       - users
@@ -1267,30 +1572,30 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/core-gateway_models.CreateUserRequest'
+          $ref: '#/definitions/internal_domain_user.CreateUserRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/core-gateway_models.UserResponse'
+            $ref: '#/definitions/internal_domain_user.UserResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
         "409":
           description: Conflict
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
       summary: Create a new user
       tags:
       - users
@@ -1309,19 +1614,19 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
       summary: Delete user
       tags:
       - users
@@ -1339,19 +1644,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/core-gateway_models.UserResponse'
+            $ref: '#/definitions/internal_domain_user.UserResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
       summary: Get user by ID
       tags:
       - users
@@ -1370,30 +1675,30 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/core-gateway_models.UpdateUserRequest'
+          $ref: '#/definitions/internal_domain_user.UpdateUserRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/core-gateway_models.UserResponse'
+            $ref: '#/definitions/internal_domain_user.UserResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/core-gateway_models.ErrorResponse'
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
       summary: Update user
       tags:
       - users

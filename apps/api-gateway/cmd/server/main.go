@@ -21,6 +21,7 @@ import (
 
 	"core-gateway/internal/app"
 
+	_ "core-gateway/docs"
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/rs/zerolog"
 )
