@@ -137,7 +137,7 @@ migrate-baseline:
 
 backend-build:
 	@echo -e "${YELLOW}Building backend...${NC}"
-	@cd apps/api-gateway && go build -o bin/server main.go
+	@cd apps/api-gateway && go build -o bin/server ./cmd/server
 
 backend-run:
 	@echo -e "${YELLOW}Running backend (production)...${NC}"
@@ -145,7 +145,7 @@ backend-run:
 
 backend-dev:
 	@echo -e "${YELLOW}Starting backend in development mode...${NC}"
-	@cd apps/api-gateway && go run main.go
+	@cd apps/api-gateway && go run ./cmd/server
 
 backend-install:
 	@echo -e "${YELLOW}Installing backend dependencies...${NC}"
@@ -169,7 +169,7 @@ sqlc-check:
 
 swagger-gen:
 	@echo -e "${YELLOW}Generating Swagger documentation...${NC}"
-	@cd apps/api-gateway && swag init -g main.go -o docs --parseDependency --parseInternal
+	@cd apps/api-gateway && swag init -g cmd/server/main.go -o docs --parseDependency --parseInternal
 
 # ==============================================================================
 # Frontend (Next.js)
