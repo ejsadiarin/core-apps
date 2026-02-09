@@ -119,7 +119,7 @@ help:
 
 run:
 	@echo -e "${YELLOW}Starting API Gateway in development mode...${NC}"
-	@ENV=$(ENV) PORT=$(PORT) go run main.go
+	@ENV=$(ENV) PORT=$(PORT) go run ./cmd/server
 
 dev:
 	@echo -e "${YELLOW}Starting API Gateway with live reload...${NC}"
@@ -127,7 +127,7 @@ dev:
 		ENV=$(ENV) PORT=$(PORT) air; \
 	else \
 		echo -e "${RED}air not found. Run: go install github.com/air-verse/air@latest${NC}"; \
-		ENV=$(ENV) PORT=$(PORT) go run main.go; \
+		ENV=$(ENV) PORT=$(PORT) go run ./cmd/server; \
 	fi
 
 # ==============================================================================
@@ -137,7 +137,7 @@ dev:
 build:
 	@echo -e "${YELLOW}Building API Gateway...${NC}"
 	@mkdir -p $(BUILD_DIR)
-	@go build -o $(BUILD_DIR)/$(BINARY_NAME) -ldflags="-s -w" main.go
+	@go build -o $(BUILD_DIR)/$(BINARY_NAME) -ldflags="-s -w" ./cmd/server
 	@echo -e "${GREEN}Built successfully: $(BUILD_DIR)/$(BINARY_NAME)${NC}"
 
 build-docker:
@@ -209,7 +209,7 @@ sqlc-check:
 
 swagger:
 	@echo -e "${YELLOW}Generating Swagger documentation...${NC}"
-	@swag init -g main.go -o docs --parseDependency --parseInternal
+	@swag init -g cmd/server/main.go -o docs --parseDependency --parseInternal
 	@echo -e "${GREEN}Swagger docs generated in docs/${NC}"
 
 generate: sqlc swagger

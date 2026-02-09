@@ -1,0 +1,325 @@
+package budget
+
+import (
+	"net/http"
+	"time"
+
+	"core-gateway/internal/repository/sqlc"
+	"core-gateway/internal/shared/models"
+	"core-gateway/internal/shared/validator"
+
+	"github.com/google/uuid"
+	"github.com/labstack/echo/v4"
+)
+
+// Incomes
+
+// CreateIncome godoc
+// @Summary Create a new income
+// @Tags budget
+// @Accept json
+// @Produce json
+// @Param income body CreateIncomeRequest true "Income to create"
+// @Success 201 {object} IncomeResponse
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 403 {object} models.ErrorResponse
+// @Router /api/budget/incomes [post]
+func (h *Handler) CreateIncome(c echo.Context) error {
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return c.JSON(http.StatusForbidden, models.ErrorResponse{Error: "Guest users cannot create incomes"})
+	}
+
+	req, err := validator.BindAndValidate[CreateIncomeRequest](c)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: err.Error()})
+	}
+
+	// validate end_date >= start_date if both are provided
+	if req.EndDate != nil && req.StartDate != nil {
+		endDate, err1 := time.Parse("2006-01-02", *req.EndDate)
+		startDate, err2 := time.Parse("2006-01-02", *req.StartDate)
+		if err1 == nil && err2 == nil && endDate.Before(startDate) {
+			return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "end_date must be on or after start_date"})
+		}
+	}
+
+	arg := sqlc.CreateIncomeParams{
+		Amount:        float64ToNumeric(req.Amount),
+		Currency:      stringPtrToText(req.Currency),
+		Date:          stringToDate(req.Date),
+		Description:   stringPtrToText(req.Description),
+		RecurringType: stringPtrToText(req.RecurringType),
+		StartDate:     stringPtrToDate(req.StartDate),
+		EndDate:       stringPtrToDate(req.EndDate),
+		UserID:        userID,
+	}
+
+	inc, err := h.queries.CreateIncome(c.Request().Context(), arg)
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to create income")
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to create income"})
+	}
+
+	return c.JSON(http.StatusCreated, IncomeResponse{
+		ID:            inc.ID,
+		Amount:        numericToFloat64(inc.Amount),
+		Currency:      getCurrency(inc.Currency),
+		Date:          dateToString(inc.Date),
+		Description:   textToStringPtr(inc.Description),
+		RecurringType: textToStringPtr(inc.RecurringType),
+		StartDate:     dateToNullableStringPtr(inc.StartDate),
+		EndDate:       dateToNullableStringPtr(inc.EndDate),
+		CreatedAt:     inc.CreatedAt.Time.Format(time.RFC3339),
+		UpdatedAt:     inc.UpdatedAt.Time.Format(time.RFC3339),
+	})
+}
+
+// ListIncomes godoc
+// @Summary List incomes with pagination
+// @Tags budget
+// @Param page query int false "Page number (default 1)"
+// @Param limit query int false "Page size (default 5, max 100)"
+// @Param recurring_type query string false "Filter by recurring type"
+// @Param start_date query string false "Filter from date (YYYY-MM-DD)"
+// @Param end_date query string false "Filter to date (YYYY-MM-DD)"
+// @Success 200 {object} models.PaginatedResponse[IncomeResponse]
+// @Router /api/budget/incomes [get]
+func (h *Handler) ListIncomes(c echo.Context) error {
+	userID, err := h.getUserID(c)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to get user context"})
+	}
+
+	// bind pagination params
+	var paginationParams models.PaginationParams
+	if err := c.Bind(&paginationParams); err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid pagination parameters"})
+	}
+
+	// set defaults
+	if paginationParams.Page == 0 {
+		paginationParams.Page = 1
+	}
+	if paginationParams.Limit == 0 {
+		paginationParams.Limit = models.DefaultIncomeLimit
+	}
+
+	// validate pagination params
+	if err := c.Validate(&paginationParams); err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid pagination parameters", Details: err})
+	}
+
+	// bind filters
+	var filters IncomeFilters
+	if err := c.Bind(&filters); err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid filters"})
+	}
+
+	// calculate offset from page
+	offset := (paginationParams.Page - 1) * paginationParams.Limit
+
+	// get total count
+	countArg := sqlc.CountIncomesParams{
+		UserID:        userID,
+		RecurringType: stringPtrToText(filters.RecurringType),
+		StartDate:     stringPtrToDate(filters.StartDate),
+		EndDate:       stringPtrToDate(filters.EndDate),
+	}
+	total, err := h.queries.CountIncomes(c.Request().Context(), countArg)
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to count incomes")
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to count incomes"})
+	}
+
+	// fetch paginated data
+	arg := sqlc.ListIncomesParams{
+		UserID:        userID,
+		Limit:         int32(paginationParams.Limit),
+		Offset:        int32(offset),
+		RecurringType: stringPtrToText(filters.RecurringType),
+		StartDate:     stringPtrToDate(filters.StartDate),
+		EndDate:       stringPtrToDate(filters.EndDate),
+	}
+
+	rows, err := h.queries.ListIncomes(c.Request().Context(), arg)
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to list incomes")
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to list incomes"})
+	}
+
+	// build response
+	res := make([]IncomeResponse, len(rows))
+	for i, row := range rows {
+		res[i] = IncomeResponse{
+			ID:            row.ID,
+			Amount:        numericToFloat64(row.Amount),
+			Currency:      getCurrency(row.Currency),
+			Date:          dateToString(row.Date),
+			Description:   textToStringPtr(row.Description),
+			RecurringType: textToStringPtr(row.RecurringType),
+			StartDate:     dateToNullableStringPtr(row.StartDate),
+			EndDate:       dateToNullableStringPtr(row.EndDate),
+			CreatedAt:     row.CreatedAt.Time.Format(time.RFC3339),
+			UpdatedAt:     row.UpdatedAt.Time.Format(time.RFC3339),
+		}
+	}
+
+	// calculate pagination metadata
+	totalPages := int(total) / paginationParams.Limit
+	if int(total)%paginationParams.Limit != 0 {
+		totalPages++
+	}
+	hasMore := paginationParams.Page < totalPages
+
+	return c.JSON(http.StatusOK, models.PaginatedResponse[IncomeResponse]{
+		Data: res,
+		Pagination: models.OffsetPagination{
+			Total:      total,
+			Page:       paginationParams.Page,
+			Limit:      paginationParams.Limit,
+			TotalPages: totalPages,
+			HasMore:    hasMore,
+		},
+	})
+}
+
+// GetIncome godoc
+// @Summary Get a single income
+// @Tags budget
+// @Produce json
+// @Param id path string true "Income ID"
+// @Success 200 {object} IncomeResponse
+// @Router /api/budget/incomes/{id} [get]
+func (h *Handler) GetIncome(c echo.Context) error {
+	userID, err := h.getUserID(c)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to get user context"})
+	}
+
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid ID format"})
+	}
+
+	inc, err := h.queries.GetIncome(c.Request().Context(), sqlc.GetIncomeParams{
+		ID:     id,
+		UserID: userID,
+	})
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to get income")
+		return c.JSON(http.StatusNotFound, models.ErrorResponse{Error: "Income not found"})
+	}
+
+	return c.JSON(http.StatusOK, IncomeResponse{
+		ID:            inc.ID,
+		Amount:        numericToFloat64(inc.Amount),
+		Currency:      getCurrency(inc.Currency),
+		Date:          dateToString(inc.Date),
+		Description:   textToStringPtr(inc.Description),
+		RecurringType: textToStringPtr(inc.RecurringType),
+		StartDate:     dateToNullableStringPtr(inc.StartDate),
+		EndDate:       dateToNullableStringPtr(inc.EndDate),
+		CreatedAt:     inc.CreatedAt.Time.Format(time.RFC3339),
+		UpdatedAt:     inc.UpdatedAt.Time.Format(time.RFC3339),
+	})
+}
+
+// UpdateIncome godoc
+// @Summary Update an income
+// @Tags budget
+// @Accept json
+// @Produce json
+// @Param id path string true "Income ID"
+// @Param income body UpdateIncomeRequest true "Income updates"
+// @Success 200 {object} IncomeResponse
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 403 {object} models.ErrorResponse
+// @Router /api/budget/incomes/{id} [put]
+func (h *Handler) UpdateIncome(c echo.Context) error {
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return c.JSON(http.StatusForbidden, models.ErrorResponse{Error: "Guest users cannot modify incomes"})
+	}
+
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid ID format"})
+	}
+
+	req, err := validator.BindAndValidate[UpdateIncomeRequest](c)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: err.Error()})
+	}
+
+	// validate end_date >= start_date if both are provided
+	if req.EndDate != nil && req.StartDate != nil {
+		endDate, err1 := time.Parse("2006-01-02", *req.EndDate)
+		startDate, err2 := time.Parse("2006-01-02", *req.StartDate)
+		if err1 == nil && err2 == nil && endDate.Before(startDate) {
+			return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "end_date must be on or after start_date"})
+		}
+	}
+
+	arg := sqlc.UpdateIncomeParams{
+		ID:            id,
+		UserID:        userID,
+		Amount:        float64PtrToNumeric(req.Amount),
+		Currency:      stringPtrToText(req.Currency),
+		Date:          stringPtrToDate(req.Date),
+		Description:   stringPtrToText(req.Description),
+		RecurringType: stringPtrToText(req.RecurringType),
+		StartDate:     stringPtrToDate(req.StartDate),
+		EndDate:       stringPtrToDate(req.EndDate),
+	}
+
+	inc, err := h.queries.UpdateIncome(c.Request().Context(), arg)
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to update income")
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to update income"})
+	}
+
+	return c.JSON(http.StatusOK, IncomeResponse{
+		ID:            inc.ID,
+		Amount:        numericToFloat64(inc.Amount),
+		Currency:      getCurrency(inc.Currency),
+		Date:          dateToString(inc.Date),
+		Description:   textToStringPtr(inc.Description),
+		RecurringType: textToStringPtr(inc.RecurringType),
+		StartDate:     dateToNullableStringPtr(inc.StartDate),
+		EndDate:       dateToNullableStringPtr(inc.EndDate),
+		CreatedAt:     inc.CreatedAt.Time.Format(time.RFC3339),
+		UpdatedAt:     inc.UpdatedAt.Time.Format(time.RFC3339),
+	})
+}
+
+// DeleteIncome godoc
+// @Summary Delete an income
+// @Tags budget
+// @Param id path string true "Income ID"
+// @Success 204 "No Content"
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 403 {object} models.ErrorResponse
+// @Router /api/budget/incomes/{id} [delete]
+func (h *Handler) DeleteIncome(c echo.Context) error {
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return c.JSON(http.StatusForbidden, models.ErrorResponse{Error: "Guest users cannot delete incomes"})
+	}
+
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid ID format"})
+	}
+
+	err = h.queries.DeleteIncome(c.Request().Context(), sqlc.DeleteIncomeParams{
+		ID:     id,
+		UserID: userID,
+	})
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to delete income")
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to delete income"})
+	}
+
+	return c.NoContent(http.StatusNoContent)
+}
