@@ -375,6 +375,12 @@ const docTemplate = `{
                         "description": "Filter to date (YYYY-MM-DD)",
                         "name": "end_date",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by recurring type (daily, weekly, monthly, yearly)",
+                        "name": "recurring_type",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -2102,10 +2108,25 @@ const docTemplate = `{
                 "description": {
                     "type": "string"
                 },
+                "end_date": {
+                    "type": "string"
+                },
                 "expense_date": {
                     "type": "string"
                 },
                 "notes": {
+                    "type": "string"
+                },
+                "recurring_type": {
+                    "type": "string",
+                    "enum": [
+                        "daily",
+                        "weekly",
+                        "monthly",
+                        "yearly"
+                    ]
+                },
+                "start_date": {
                     "type": "string"
                 },
                 "tag_ids": {
@@ -2185,6 +2206,9 @@ const docTemplate = `{
                 "description": {
                     "type": "string"
                 },
+                "end_date": {
+                    "type": "string"
+                },
                 "expense_date": {
                     "type": "string"
                 },
@@ -2192,6 +2216,12 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "notes": {
+                    "type": "string"
+                },
+                "recurring_type": {
+                    "type": "string"
+                },
+                "start_date": {
                     "type": "string"
                 },
                 "tags": {
@@ -2320,10 +2350,25 @@ const docTemplate = `{
                 "description": {
                     "type": "string"
                 },
+                "end_date": {
+                    "type": "string"
+                },
                 "expense_date": {
                     "type": "string"
                 },
                 "notes": {
+                    "type": "string"
+                },
+                "recurring_type": {
+                    "type": "string",
+                    "enum": [
+                        "daily",
+                        "weekly",
+                        "monthly",
+                        "yearly"
+                    ]
+                },
+                "start_date": {
                     "type": "string"
                 },
                 "tag_ids": {

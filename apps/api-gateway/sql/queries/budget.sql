@@ -85,9 +85,9 @@ WHERE id = $1 AND user_id = $2;
 
 -- name: CreateExpense :one
 INSERT INTO budget_expenses (
-    description, amount, currency, category_id, expense_date, notes, user_id
+    description, amount, currency, category_id, expense_date, notes, user_id, recurring_type, start_date, end_date
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
 )
 RETURNING *;
 
@@ -108,6 +108,7 @@ WHERE
     AND (sqlc.narg('category_id')::uuid IS NULL OR e.category_id = sqlc.narg('category_id'))
     AND (sqlc.narg('start_date')::date IS NULL OR e.expense_date >= sqlc.narg('start_date')::date)
     AND (sqlc.narg('end_date')::date IS NULL OR e.expense_date <= sqlc.narg('end_date')::date)
+    AND (sqlc.narg('recurring_type')::text IS NULL OR e.recurring_type = sqlc.narg('recurring_type'))
 ORDER BY e.expense_date DESC, e.created_at DESC
 LIMIT $2 OFFSET $3;
 
@@ -117,7 +118,8 @@ WHERE
     e.user_id = $1
     AND (sqlc.narg('category_id')::uuid IS NULL OR e.category_id = sqlc.narg('category_id'))
     AND (sqlc.narg('start_date')::date IS NULL OR e.expense_date >= sqlc.narg('start_date')::date)
-    AND (sqlc.narg('end_date')::date IS NULL OR e.expense_date <= sqlc.narg('end_date')::date);
+    AND (sqlc.narg('end_date')::date IS NULL OR e.expense_date <= sqlc.narg('end_date')::date)
+    AND (sqlc.narg('recurring_type')::text IS NULL OR e.recurring_type = sqlc.narg('recurring_type'));
 
 -- name: SearchExpenses :many
 SELECT e.*, c.name as category_name, c.color as category_color, c.icon as category_icon
@@ -162,6 +164,9 @@ SET
     category_id = COALESCE(sqlc.narg('category_id'), category_id),
     expense_date = COALESCE(sqlc.narg('expense_date'), expense_date),
     notes = COALESCE(sqlc.narg('notes'), notes),
+    recurring_type = COALESCE(sqlc.narg('recurring_type'), recurring_type),
+    start_date = COALESCE(sqlc.narg('start_date'), start_date),
+    end_date = sqlc.narg('end_date'),
     updated_at = NOW()
 WHERE id = $1 AND user_id = $2
 RETURNING *;

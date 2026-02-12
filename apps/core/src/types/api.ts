@@ -109,6 +109,9 @@ export interface Expense {
     expense_date: string;
     notes?: string;
     tags?: Tag[];
+    recurring_type?: "daily" | "weekly" | "monthly" | "yearly" | null;
+    start_date?: string;
+    end_date?: string;
     created_at: string;
     updated_at: string;
 }
@@ -143,6 +146,9 @@ export interface CreateExpenseRequest {
     expense_date: string;
     notes?: string;
     tag_ids?: string[];
+    recurring_type?: "daily" | "weekly" | "monthly" | "yearly" | null;
+    start_date?: string;
+    end_date?: string;
 }
 
 export interface UpdateExpenseRequest {
@@ -153,12 +159,16 @@ export interface UpdateExpenseRequest {
     expense_date?: string;
     notes?: string;
     tag_ids?: string[];
+    recurring_type?: "daily" | "weekly" | "monthly" | "yearly" | null;
+    start_date?: string;
+    end_date?: string;
 }
 
 export interface ExpenseFilters {
     start_date?: string;
     end_date?: string;
     category_id?: string;
+    recurring_type?: string;
 }
 
 // Pagination Types

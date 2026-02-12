@@ -44,29 +44,36 @@ type TagResponse struct {
 // Expenses
 
 type CreateExpenseRequest struct {
-	Description string      `json:"description" validate:"required"`
-	Amount      float64     `json:"amount" validate:"required"`
-	Currency    *string     `json:"currency,omitempty" validate:"omitempty,len=3"`
-	CategoryID  *uuid.UUID  `json:"category_id,omitempty"`
-	ExpenseDate string      `json:"expense_date" validate:"required,datetime=2006-01-02"`
-	Notes       *string     `json:"notes,omitempty"`
-	TagIDs      []uuid.UUID `json:"tag_ids,omitempty"`
+	Description   string      `json:"description" validate:"required"`
+	Amount        float64     `json:"amount" validate:"required"`
+	Currency      *string     `json:"currency,omitempty" validate:"omitempty,len=3"`
+	CategoryID    *uuid.UUID  `json:"category_id,omitempty"`
+	ExpenseDate   string      `json:"expense_date" validate:"required,datetime=2006-01-02"`
+	Notes         *string     `json:"notes,omitempty"`
+	TagIDs        []uuid.UUID `json:"tag_ids,omitempty"`
+	RecurringType *string     `json:"recurring_type,omitempty" validate:"omitempty,oneof=daily weekly monthly yearly"`
+	StartDate     *string     `json:"start_date,omitempty" validate:"omitempty,datetime=2006-01-02"`
+	EndDate       *string     `json:"end_date,omitempty" validate:"omitempty,datetime=2006-01-02"`
 }
 
 type UpdateExpenseRequest struct {
-	Description *string     `json:"description,omitempty"`
-	Amount      *float64    `json:"amount,omitempty"`
-	Currency    *string     `json:"currency,omitempty" validate:"omitempty,len=3"`
-	CategoryID  *uuid.UUID  `json:"category_id,omitempty"`
-	ExpenseDate *string     `json:"expense_date,omitempty" validate:"omitempty,datetime=2006-01-02"`
-	Notes       *string     `json:"notes,omitempty"`
-	TagIDs      []uuid.UUID `json:"tag_ids,omitempty"`
+	Description   *string     `json:"description,omitempty"`
+	Amount        *float64    `json:"amount,omitempty"`
+	Currency      *string     `json:"currency,omitempty" validate:"omitempty,len=3"`
+	CategoryID    *uuid.UUID  `json:"category_id,omitempty"`
+	ExpenseDate   *string     `json:"expense_date,omitempty" validate:"omitempty,datetime=2006-01-02"`
+	Notes         *string     `json:"notes,omitempty"`
+	TagIDs        []uuid.UUID `json:"tag_ids,omitempty"`
+	RecurringType *string     `json:"recurring_type,omitempty" validate:"omitempty,oneof=daily weekly monthly yearly"`
+	StartDate     *string     `json:"start_date,omitempty" validate:"omitempty,datetime=2006-01-02"`
+	EndDate       *string     `json:"end_date,omitempty" validate:"omitempty,datetime=2006-01-02"`
 }
 
 type ExpenseFilters struct {
-	StartDate  *string    `query:"start_date" validate:"omitempty,datetime=2006-01-02"`
-	EndDate    *string    `query:"end_date" validate:"omitempty,datetime=2006-01-02"`
-	CategoryID *uuid.UUID `query:"category_id" validate:"omitempty"`
+	StartDate     *string    `query:"start_date" validate:"omitempty,datetime=2006-01-02"`
+	EndDate       *string    `query:"end_date" validate:"omitempty,datetime=2006-01-02"`
+	CategoryID    *uuid.UUID `query:"category_id" validate:"omitempty"`
+	RecurringType *string    `query:"recurring_type" validate:"omitempty,oneof=daily weekly monthly yearly"`
 }
 
 type ExpenseSearchParams struct {
@@ -77,16 +84,19 @@ type ExpenseSearchParams struct {
 }
 
 type ExpenseResponse struct {
-	ID          uuid.UUID         `json:"id"`
-	Description string            `json:"description"`
-	Amount      float64           `json:"amount"`
-	Currency    string            `json:"currency"`
-	Category    *CategoryResponse `json:"category,omitempty"`
-	ExpenseDate string            `json:"expense_date"`
-	Notes       *string           `json:"notes,omitempty"`
-	Tags        []TagResponse     `json:"tags,omitempty"`
-	CreatedAt   string            `json:"created_at"`
-	UpdatedAt   string            `json:"updated_at"`
+	ID            uuid.UUID         `json:"id"`
+	Description   string            `json:"description"`
+	Amount        float64           `json:"amount"`
+	Currency      string            `json:"currency"`
+	Category      *CategoryResponse `json:"category,omitempty"`
+	ExpenseDate   string            `json:"expense_date"`
+	Notes         *string           `json:"notes,omitempty"`
+	Tags          []TagResponse     `json:"tags,omitempty"`
+	RecurringType *string           `json:"recurring_type,omitempty"`
+	StartDate     *string           `json:"start_date,omitempty"`
+	EndDate       *string           `json:"end_date,omitempty"`
+	CreatedAt     string            `json:"created_at"`
+	UpdatedAt     string            `json:"updated_at"`
 }
 
 // Incomes

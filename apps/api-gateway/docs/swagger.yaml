@@ -242,9 +242,20 @@ definitions:
         type: string
       description:
         type: string
+      end_date:
+        type: string
       expense_date:
         type: string
       notes:
+        type: string
+      recurring_type:
+        enum:
+        - daily
+        - weekly
+        - monthly
+        - yearly
+        type: string
+      start_date:
         type: string
       tag_ids:
         items:
@@ -302,11 +313,17 @@ definitions:
         type: string
       description:
         type: string
+      end_date:
+        type: string
       expense_date:
         type: string
       id:
         type: string
       notes:
+        type: string
+      recurring_type:
+        type: string
+      start_date:
         type: string
       tags:
         items:
@@ -391,9 +408,20 @@ definitions:
         type: string
       description:
         type: string
+      end_date:
+        type: string
       expense_date:
         type: string
       notes:
+        type: string
+      recurring_type:
+        enum:
+        - daily
+        - weekly
+        - monthly
+        - yearly
+        type: string
+      start_date:
         type: string
       tag_ids:
         items:
@@ -830,6 +858,10 @@ paths:
       - description: Filter to date (YYYY-MM-DD)
         in: query
         name: end_date
+        type: string
+      - description: Filter by recurring type (daily, weekly, monthly, yearly)
+        in: query
+        name: recurring_type
         type: string
       responses:
         "200":

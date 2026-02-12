@@ -372,6 +372,12 @@
                         "description": "Filter to date (YYYY-MM-DD)",
                         "name": "end_date",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by recurring type (daily, weekly, monthly, yearly)",
+                        "name": "recurring_type",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -2099,10 +2105,25 @@
                 "description": {
                     "type": "string"
                 },
+                "end_date": {
+                    "type": "string"
+                },
                 "expense_date": {
                     "type": "string"
                 },
                 "notes": {
+                    "type": "string"
+                },
+                "recurring_type": {
+                    "type": "string",
+                    "enum": [
+                        "daily",
+                        "weekly",
+                        "monthly",
+                        "yearly"
+                    ]
+                },
+                "start_date": {
                     "type": "string"
                 },
                 "tag_ids": {
@@ -2182,6 +2203,9 @@
                 "description": {
                     "type": "string"
                 },
+                "end_date": {
+                    "type": "string"
+                },
                 "expense_date": {
                     "type": "string"
                 },
@@ -2189,6 +2213,12 @@
                     "type": "string"
                 },
                 "notes": {
+                    "type": "string"
+                },
+                "recurring_type": {
+                    "type": "string"
+                },
+                "start_date": {
                     "type": "string"
                 },
                 "tags": {
@@ -2317,10 +2347,25 @@
                 "description": {
                     "type": "string"
                 },
+                "end_date": {
+                    "type": "string"
+                },
                 "expense_date": {
                     "type": "string"
                 },
                 "notes": {
+                    "type": "string"
+                },
+                "recurring_type": {
+                    "type": "string",
+                    "enum": [
+                        "daily",
+                        "weekly",
+                        "monthly",
+                        "yearly"
+                    ]
+                },
+                "start_date": {
                     "type": "string"
                 },
                 "tag_ids": {

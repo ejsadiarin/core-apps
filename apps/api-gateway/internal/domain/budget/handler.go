@@ -384,14 +384,26 @@ func (h *Handler) CreateExpense(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: err.Error()})
 	}
 
+	// validate end_date >= start_date if both are provided
+	if req.EndDate != nil && req.StartDate != nil {
+		endDate, err1 := time.Parse("2006-01-02", *req.EndDate)
+		startDate, err2 := time.Parse("2006-01-02", *req.StartDate)
+		if err1 == nil && err2 == nil && endDate.Before(startDate) {
+			return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "end_date must be on or after start_date"})
+		}
+	}
+
 	arg := sqlc.CreateExpenseParams{
-		Description: req.Description,
-		Amount:      float64ToNumeric(req.Amount),
-		Currency:    stringPtrToText(req.Currency),
-		CategoryID:  uuidPtrToNullUUID(req.CategoryID),
-		ExpenseDate: stringToDate(req.ExpenseDate),
-		Notes:       stringPtrToText(req.Notes),
-		UserID:      userID,
+		Description:   req.Description,
+		Amount:        float64ToNumeric(req.Amount),
+		Currency:      stringPtrToText(req.Currency),
+		CategoryID:    uuidPtrToNullUUID(req.CategoryID),
+		ExpenseDate:   stringToDate(req.ExpenseDate),
+		Notes:         stringPtrToText(req.Notes),
+		RecurringType: stringPtrToText(req.RecurringType),
+		StartDate:     stringPtrToDate(req.StartDate),
+		EndDate:       stringPtrToDate(req.EndDate),
+		UserID:        userID,
 	}
 
 	exp, err := h.queries.CreateExpense(c.Request().Context(), arg)
@@ -418,6 +430,7 @@ func (h *Handler) CreateExpense(c echo.Context) error {
 // @Param category_id query string false "Filter by category ID"
 // @Param start_date query string false "Filter from date (YYYY-MM-DD)"
 // @Param end_date query string false "Filter to date (YYYY-MM-DD)"
+// @Param recurring_type query string false "Filter by recurring type (daily, weekly, monthly, yearly)"
 // @Success 200 {object} models.PaginatedResponse[ExpenseResponse]
 // @Router /api/budget/expenses [get]
 func (h *Handler) ListExpenses(c echo.Context) error {
@@ -456,10 +469,11 @@ func (h *Handler) ListExpenses(c echo.Context) error {
 
 	// get total count
 	countArg := sqlc.CountExpensesParams{
-		UserID:     userID,
-		CategoryID: uuidPtrToNullUUID(filters.CategoryID),
-		StartDate:  stringPtrToDate(filters.StartDate),
-		EndDate:    stringPtrToDate(filters.EndDate),
+		UserID:        userID,
+		CategoryID:    uuidPtrToNullUUID(filters.CategoryID),
+		StartDate:     stringPtrToDate(filters.StartDate),
+		EndDate:       stringPtrToDate(filters.EndDate),
+		RecurringType: stringPtrToText(filters.RecurringType),
 	}
 	total, err := h.queries.CountExpenses(c.Request().Context(), countArg)
 	if err != nil {
@@ -469,12 +483,13 @@ func (h *Handler) ListExpenses(c echo.Context) error {
 
 	// fetch paginated data
 	arg := sqlc.ListExpensesParams{
-		UserID:     userID,
-		Limit:      int32(paginationParams.Limit),
-		Offset:     int32(offset),
-		CategoryID: uuidPtrToNullUUID(filters.CategoryID),
-		StartDate:  stringPtrToDate(filters.StartDate),
-		EndDate:    stringPtrToDate(filters.EndDate),
+		UserID:        userID,
+		Limit:         int32(paginationParams.Limit),
+		Offset:        int32(offset),
+		CategoryID:    uuidPtrToNullUUID(filters.CategoryID),
+		StartDate:     stringPtrToDate(filters.StartDate),
+		EndDate:       stringPtrToDate(filters.EndDate),
+		RecurringType: stringPtrToText(filters.RecurringType),
 	}
 
 	rows, err := h.queries.ListExpenses(c.Request().Context(), arg)
@@ -507,16 +522,19 @@ func (h *Handler) ListExpenses(c echo.Context) error {
 		}
 
 		res[i] = ExpenseResponse{
-			ID:          row.ID,
-			Description: row.Description,
-			Amount:      numericToFloat64(row.Amount),
-			Currency:    getCurrency(row.Currency),
-			Category:    cat,
-			ExpenseDate: dateToString(row.ExpenseDate),
-			Notes:       textToStringPtr(row.Notes),
-			Tags:        tagResps,
-			CreatedAt:   row.CreatedAt.Time.Format(time.RFC3339),
-			UpdatedAt:   row.UpdatedAt.Time.Format(time.RFC3339),
+			ID:            row.ID,
+			Description:   row.Description,
+			Amount:        numericToFloat64(row.Amount),
+			Currency:      getCurrency(row.Currency),
+			Category:      cat,
+			ExpenseDate:   dateToString(row.ExpenseDate),
+			Notes:         textToStringPtr(row.Notes),
+			Tags:          tagResps,
+			RecurringType: textToStringPtr(row.RecurringType),
+			StartDate:     dateToNullableStringPtr(row.StartDate),
+			EndDate:       dateToNullableStringPtr(row.EndDate),
+			CreatedAt:     row.CreatedAt.Time.Format(time.RFC3339),
+			UpdatedAt:     row.UpdatedAt.Time.Format(time.RFC3339),
 		}
 	}
 
@@ -585,17 +603,31 @@ func (h *Handler) UpdateExpense(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: err.Error()})
 	}
 
+	// validate end_date >= start_date if both are provided
+	if req.EndDate != nil && req.StartDate != nil {
+		endDate, err1 := time.Parse("2006-01-02", *req.EndDate)
+		startDate, err2 := time.Parse("2006-01-02", *req.StartDate)
+		if err1 == nil && err2 == nil && endDate.Before(startDate) {
+			return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "end_date must be on or after start_date"})
+		}
+	}
+
 	arg := sqlc.UpdateExpenseParams{
-		ID:          id,
-		UserID:      userID,
-		Description: stringPtrToText(req.Description),
-		Currency:    stringPtrToText(req.Currency),
-		CategoryID:  uuidPtrToNullUUID(req.CategoryID),
-		ExpenseDate: stringPtrToDate(req.ExpenseDate),
-		Notes:       stringPtrToText(req.Notes),
+		ID:            id,
+		UserID:        userID,
+		Description:   stringPtrToText(req.Description),
+		Currency:      stringPtrToText(req.Currency),
+		CategoryID:    uuidPtrToNullUUID(req.CategoryID),
+		ExpenseDate:   stringPtrToDate(req.ExpenseDate),
+		Notes:         stringPtrToText(req.Notes),
+		RecurringType: stringPtrToText(req.RecurringType),
+		StartDate:     stringPtrToDate(req.StartDate),
 	}
 	if req.Amount != nil {
 		arg.Amount = float64ToNumeric(*req.Amount)
+	}
+	if req.EndDate != nil {
+		arg.EndDate = stringPtrToDate(req.EndDate)
 	}
 
 	_, err = h.queries.UpdateExpense(c.Request().Context(), arg)
@@ -752,16 +784,19 @@ func (h *Handler) SearchExpenses(c echo.Context) error {
 		}
 
 		res[i] = ExpenseResponse{
-			ID:          row.ID,
-			Description: row.Description,
-			Amount:      numericToFloat64(row.Amount),
-			Currency:    getCurrency(row.Currency),
-			Category:    cat,
-			ExpenseDate: dateToString(row.ExpenseDate),
-			Notes:       textToStringPtr(row.Notes),
-			Tags:        tagResps,
-			CreatedAt:   row.CreatedAt.Time.Format(time.RFC3339),
-			UpdatedAt:   row.UpdatedAt.Time.Format(time.RFC3339),
+			ID:            row.ID,
+			Description:   row.Description,
+			Amount:        numericToFloat64(row.Amount),
+			Currency:      getCurrency(row.Currency),
+			Category:      cat,
+			ExpenseDate:   dateToString(row.ExpenseDate),
+			Notes:         textToStringPtr(row.Notes),
+			Tags:          tagResps,
+			RecurringType: textToStringPtr(row.RecurringType),
+			StartDate:     dateToNullableStringPtr(row.StartDate),
+			EndDate:       dateToNullableStringPtr(row.EndDate),
+			CreatedAt:     row.CreatedAt.Time.Format(time.RFC3339),
+			UpdatedAt:     row.UpdatedAt.Time.Format(time.RFC3339),
 		}
 	}
 
@@ -820,15 +855,18 @@ func (h *Handler) getExpenseResponse(c echo.Context, id uuid.UUID, userID uuid.U
 	}
 
 	return c.JSON(http.StatusOK, ExpenseResponse{
-		ID:          exp.ID,
-		Description: exp.Description,
-		Amount:      numericToFloat64(exp.Amount),
-		Currency:    getCurrency(exp.Currency),
-		Category:    catResp,
-		ExpenseDate: dateToString(exp.ExpenseDate),
-		Notes:       textToStringPtr(exp.Notes),
-		Tags:        tagResps,
-		CreatedAt:   exp.CreatedAt.Time.Format(time.RFC3339),
-		UpdatedAt:   exp.UpdatedAt.Time.Format(time.RFC3339),
+		ID:            exp.ID,
+		Description:   exp.Description,
+		Amount:        numericToFloat64(exp.Amount),
+		Currency:      getCurrency(exp.Currency),
+		Category:      catResp,
+		ExpenseDate:   dateToString(exp.ExpenseDate),
+		Notes:         textToStringPtr(exp.Notes),
+		Tags:          tagResps,
+		RecurringType: textToStringPtr(exp.RecurringType),
+		StartDate:     dateToNullableStringPtr(exp.StartDate),
+		EndDate:       dateToNullableStringPtr(exp.EndDate),
+		CreatedAt:     exp.CreatedAt.Time.Format(time.RFC3339),
+		UpdatedAt:     exp.UpdatedAt.Time.Format(time.RFC3339),
 	})
 }

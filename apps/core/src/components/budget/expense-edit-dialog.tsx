@@ -29,6 +29,9 @@ export function EditExpenseDialog({ expense, open, onOpenChange, onSubmit, isLoa
     expense_date: expense.expense_date,
     notes: expense.notes,
     tag_ids: expense.tags?.map((t) => t.id) || [],
+    recurring_type: expense.recurring_type,
+    start_date: expense.start_date,
+    end_date: expense.end_date,
   };
 
   return (

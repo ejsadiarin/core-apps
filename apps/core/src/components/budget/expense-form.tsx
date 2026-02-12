@@ -30,9 +30,13 @@ export function ExpenseForm({ initialData, onSubmit, onCancel, isLoading }: Expe
     expense_date: initialData?.expense_date || new Date().toISOString().split('T')[0],
     notes: initialData?.notes,
     tag_ids: initialData?.tag_ids || [],
+    recurring_type: initialData?.recurring_type || null,
+    start_date: initialData?.start_date || undefined,
+    end_date: initialData?.end_date || undefined,
   });
 
   const [selectedTags, setSelectedTags] = useState<string[]>(initialData?.tag_ids || []);
+  const [noEndDate, setNoEndDate] = useState(!initialData?.end_date);
 
   useEffect(() => {
     if (initialData?.tag_ids) {
@@ -52,6 +56,8 @@ export function ExpenseForm({ initialData, onSubmit, onCancel, isLoading }: Expe
     e.preventDefault();
     await onSubmit({ ...formData, tag_ids: selectedTags });
   };
+
+  const isRecurring = formData.recurring_type !== null && formData.recurring_type !== undefined;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -117,17 +123,96 @@ export function ExpenseForm({ initialData, onSubmit, onCancel, isLoading }: Expe
         </Select>
       </div>
 
-      {/* Expense Date */}
+      {/* Recurring Type */}
       <div className="space-y-2">
-        <Label htmlFor="expense_date">Date *</Label>
+        <Label htmlFor="recurring_type">Type</Label>
+        <Select
+          value={formData.recurring_type || "one-time"}
+          onValueChange={(value) =>
+            setFormData({
+              ...formData,
+              recurring_type: value === "one-time" ? null : (value as "daily" | "weekly" | "monthly" | "yearly"),
+              start_date: value !== "one-time" ? formData.expense_date : undefined,
+              end_date: value !== "one-time" ? formData.end_date : undefined,
+            })
+          }
+        >
+          <SelectTrigger id="recurring_type">
+            <SelectValue placeholder="Select type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="one-time">One-time</SelectItem>
+            <SelectItem value="daily">Daily Recurring</SelectItem>
+            <SelectItem value="weekly">Weekly Recurring</SelectItem>
+            <SelectItem value="monthly">Monthly Recurring</SelectItem>
+            <SelectItem value="yearly">Yearly Recurring</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Date for one-time, Start Date for recurring */}
+      <div className="space-y-2">
+        <Label htmlFor="expense_date">{isRecurring ? "Start Date *" : "Date *"}</Label>
         <Input
           id="expense_date"
           type="date"
           required
           value={formData.expense_date}
-          onChange={(e) => setFormData({ ...formData, expense_date: e.target.value })}
+          onChange={(e) => {
+            const newDate = e.target.value;
+            setFormData({
+              ...formData,
+              expense_date: newDate,
+              start_date: isRecurring ? newDate : formData.start_date,
+            });
+          }}
         />
       </div>
+
+      {/* End Date for recurring expenses */}
+      {isRecurring && (
+        <>
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="no_end_date"
+              checked={noEndDate}
+              onChange={(e) => {
+                setNoEndDate(e.target.checked);
+                if (e.target.checked) {
+                  setFormData({ ...formData, end_date: undefined });
+                }
+              }}
+              className="h-4 w-4 rounded border-gray-300"
+            />
+            <Label htmlFor="no_end_date" className="font-normal cursor-pointer">
+              No end date (ongoing)
+            </Label>
+          </div>
+
+          {!noEndDate && (
+            <div className="space-y-2">
+              <Label htmlFor="end_date">End Date</Label>
+              <Input
+                id="end_date"
+                type="date"
+                value={formData.end_date || ""}
+                min={formData.start_date || formData.expense_date}
+                onChange={(e) => setFormData({ ...formData, end_date: e.target.value || undefined })}
+              />
+              {formData.end_date && formData.start_date && formData.end_date < formData.start_date && (
+                <p className="text-sm text-red-600">End date must be on or after start date</p>
+              )}
+            </div>
+          )}
+
+          {initialData?.end_date === undefined && noEndDate && (
+            <div className="text-sm text-muted-foreground bg-blue-50 border border-blue-200 rounded px-3 py-2">
+              <span className="font-medium">Ongoing</span> - This expense will continue indefinitely
+            </div>
+          )}
+        </>
+      )}
 
       {/* Tags */}
       <div className="space-y-2">

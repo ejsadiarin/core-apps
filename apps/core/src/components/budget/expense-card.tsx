@@ -14,7 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Trash2, Edit } from "lucide-react";
+import { Trash2, Edit, Repeat, Calendar } from "lucide-react";
 import type { Expense } from "@/types/api";
 import { format } from "date-fns";
 
@@ -57,6 +57,23 @@ export function ExpenseCard({ expense, onView, onEdit, onDelete, disabled, showT
     setDeleteDialogOpen(false);
   };
 
+  const getRecurringLabel = (type: string | null | undefined) => {
+    switch (type) {
+      case "daily":
+        return "Daily";
+      case "weekly":
+        return "Weekly";
+      case "monthly":
+        return "Monthly";
+      case "yearly":
+        return "Yearly";
+      default:
+        return "One-time";
+    }
+  };
+
+  const isRecurring = expense.recurring_type !== null && expense.recurring_type !== undefined;
+
   return (
     <>
       <Card
@@ -84,7 +101,28 @@ export function ExpenseCard({ expense, onView, onEdit, onDelete, disabled, showT
                     {expense.category.name}
                   </Badge>
                 )}
+                <Badge
+                  variant={isRecurring ? "default" : "outline"}
+                  className="text-xs"
+                >
+                  {isRecurring && <Repeat className="h-3 w-3 mr-1" />}
+                  {getRecurringLabel(expense.recurring_type)}
+                </Badge>
               </div>
+
+              {isRecurring && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                  <Calendar className="h-3 w-3" />
+                  <span>
+                    {expense.start_date && format(new Date(expense.start_date), "MMM dd, yyyy")}
+                    {expense.end_date ? (
+                      <> - {format(new Date(expense.end_date), "MMM dd, yyyy")}</>
+                    ) : (
+                      <> - Ongoing</>
+                    )}
+                  </span>
+                </div>
+              )}
 
               {expense.notes && (
                 <p className="text-sm text-muted-foreground mb-2 line-clamp-2">{expense.notes}</p>

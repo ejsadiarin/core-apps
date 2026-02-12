@@ -14,7 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Edit, Trash2, Calendar, Tag as TagIcon, ChevronDown, ChevronUp } from "lucide-react";
+import { Edit, Trash2, Calendar, Tag as TagIcon, ChevronDown, ChevronUp, Repeat } from "lucide-react";
 import type { Expense } from "@/types/api";
 import { format } from "date-fns";
 import { EditExpenseDialog } from "./expense-edit-dialog";
@@ -43,6 +43,23 @@ export function ExpenseDetailDialog({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   if (!expense) return null;
+
+  const getRecurringLabel = (type: string | null | undefined) => {
+    switch (type) {
+      case "daily":
+        return "Daily";
+      case "weekly":
+        return "Weekly";
+      case "monthly":
+        return "Monthly";
+      case "yearly":
+        return "Yearly";
+      default:
+        return "One-time";
+    }
+  };
+
+  const isRecurring = expense.recurring_type !== null && expense.recurring_type !== undefined;
 
   const handleEditClick = () => {
     if (isGuest && showToast) {
@@ -78,9 +95,9 @@ export function ExpenseDetailDialog({
           </DialogHeader>
 
           <div className="space-y-5 mt-2">
-            {/* Category */}
-            {expense.category && (
-              <div>
+            {/* Category & Recurring */}
+            <div className="flex flex-wrap gap-2">
+              {expense.category && (
                 <Badge
                   variant="outline"
                   className="text-sm"
@@ -95,8 +112,15 @@ export function ExpenseDetailDialog({
                   {expense.category.icon && <span className="mr-1">{expense.category.icon}</span>}
                   {expense.category.name}
                 </Badge>
-              </div>
-            )}
+              )}
+              <Badge
+                variant={isRecurring ? "default" : "outline"}
+                className="text-sm"
+              >
+                {isRecurring && <Repeat className="h-3 w-3 mr-1" />}
+                {getRecurringLabel(expense.recurring_type)}
+              </Badge>
+            </div>
 
             {/* Title + Price row */}
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-6">
@@ -166,7 +190,20 @@ export function ExpenseDetailDialog({
             {/* Date */}
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Calendar className="h-4 w-4 shrink-0" />
-              <span>{format(new Date(expense.expense_date), "MMMM dd, yyyy")}</span>
+              <span>
+                {isRecurring ? (
+                  <>
+                    {expense.start_date && format(new Date(expense.start_date), "MMMM dd, yyyy")}
+                    {expense.end_date ? (
+                      <> - {format(new Date(expense.end_date), "MMMM dd, yyyy")}</>
+                    ) : (
+                      <> - Ongoing</>
+                    )}
+                  </>
+                ) : (
+                  format(new Date(expense.expense_date), "MMMM dd, yyyy")
+                )}
+              </span>
             </div>
 
             {/* Action Buttons */}

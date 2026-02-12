@@ -19,16 +19,19 @@ type BudgetCategory struct {
 }
 
 type BudgetExpense struct {
-	ID          uuid.UUID        `json:"id"`
-	Description string           `json:"description"`
-	Amount      pgtype.Numeric   `json:"amount"`
-	Currency    pgtype.Text      `json:"currency"`
-	CategoryID  pgtype.UUID      `json:"category_id"`
-	ExpenseDate pgtype.Date      `json:"expense_date"`
-	CreatedAt   pgtype.Timestamp `json:"created_at"`
-	UpdatedAt   pgtype.Timestamp `json:"updated_at"`
-	Notes       pgtype.Text      `json:"notes"`
-	UserID      uuid.UUID        `json:"user_id"`
+	ID            uuid.UUID        `json:"id"`
+	Description   string           `json:"description"`
+	Amount        pgtype.Numeric   `json:"amount"`
+	Currency      pgtype.Text      `json:"currency"`
+	CategoryID    pgtype.UUID      `json:"category_id"`
+	ExpenseDate   pgtype.Date      `json:"expense_date"`
+	CreatedAt     pgtype.Timestamp `json:"created_at"`
+	UpdatedAt     pgtype.Timestamp `json:"updated_at"`
+	Notes         pgtype.Text      `json:"notes"`
+	UserID        uuid.UUID        `json:"user_id"`
+	RecurringType pgtype.Text      `json:"recurring_type"`
+	StartDate     pgtype.Date      `json:"start_date"`
+	EndDate       pgtype.Date      `json:"end_date"`
 }
 
 type BudgetExpenseTag struct {
