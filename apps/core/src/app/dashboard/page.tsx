@@ -10,7 +10,7 @@ export default function Dashboard() {
     const { data: overallStats } = useAllServicesStats();
 
     return (
-        <div className="container mx-auto px-4 py-8">
+        <div className="px-4 md:px-6 py-6">
             {/* Welcome Banner */}
             <motion.div
                 className="mb-8 p-6 rounded-lg border border-primary/30 bg-gradient-to-r from-primary/10 via-accent/10 to-secondary/10 backdrop-blur-sm"

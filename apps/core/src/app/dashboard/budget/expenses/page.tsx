@@ -142,7 +142,7 @@ export default function ExpensesPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="px-4 md:px-6 py-6">
       {/* Header */}
       <motion.div
         className="mb-8 flex items-center justify-between"
@@ -184,8 +184,8 @@ export default function ExpensesPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.1 }}
       >
-        <div className="flex flex-col sm:flex-row items-end gap-4">
-          <div className="relative sm:max-w-xs w-full">
+        <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr] lg:grid-cols-[1fr_1fr_auto_auto] items-end gap-3">
+          <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search all expenses..."
@@ -205,7 +205,7 @@ export default function ExpensesPage() {
               setPage(1);
             }}
           >
-            <SelectTrigger className="sm:max-w-xs">
+            <SelectTrigger>
               <Filter className="mr-2 h-4 w-4" />
               <SelectValue placeholder="All Categories" />
             </SelectTrigger>
@@ -220,38 +220,34 @@ export default function ExpensesPage() {
             </SelectContent>
           </Select>
 
-          <div className="flex items-center gap-2">
-            <div className="flex flex-col sm:flex-row gap-2">
-              <div className="flex flex-col gap-1">
-                <label htmlFor="start-date" className="text-xs text-muted-foreground">
-                  From
-                </label>
-                <Input
-                  id="start-date"
-                  type="date"
-                  value={filters.start_date || ""}
-                  onChange={(e) => {
-                    setFilters((prev) => ({ ...prev, start_date: e.target.value }));
-                    setPage(1);
-                  }}
-                  className="w-[150px]"
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label htmlFor="end-date" className="text-xs text-muted-foreground">
-                  To (optional)
-                </label>
-                <Input
-                  id="end-date"
-                  type="date"
-                  value={filters.end_date || ""}
-                  onChange={(e) => {
-                    setFilters((prev) => ({ ...prev, end_date: e.target.value }));
-                    setPage(1);
-                  }}
-                  className="w-[150px]"
-                />
-              </div>
+          <div className="grid grid-cols-2 gap-2 sm:col-span-2 lg:col-span-1">
+            <div className="flex flex-col gap-1">
+              <label htmlFor="start-date" className="text-xs text-muted-foreground">
+                From
+              </label>
+              <Input
+                id="start-date"
+                type="date"
+                value={filters.start_date || ""}
+                onChange={(e) => {
+                  setFilters((prev) => ({ ...prev, start_date: e.target.value }));
+                  setPage(1);
+                }}
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="end-date" className="text-xs text-muted-foreground">
+                To (optional)
+              </label>
+              <Input
+                id="end-date"
+                type="date"
+                value={filters.end_date || ""}
+                onChange={(e) => {
+                  setFilters((prev) => ({ ...prev, end_date: e.target.value }));
+                  setPage(1);
+                }}
+              />
             </div>
           </div>
 
@@ -260,7 +256,7 @@ export default function ExpensesPage() {
               variant="outline"
               size="sm"
               onClick={handleClearFilters}
-              className="self-end"
+              className="self-end w-full sm:w-auto"
             >
               Clear Filters
             </Button>

@@ -149,7 +149,7 @@ export default function SettingsPage() {
   };
 
   return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="px-4 md:px-6 py-6">
       {/* Header */}
       <motion.div
         className="mb-8"
