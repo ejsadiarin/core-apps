@@ -113,3 +113,19 @@ FROM budget_expenses
 WHERE
     (sqlc.narg('user_id')::uuid IS NULL OR user_id = sqlc.narg('user_id'))
     AND expense_date <= sqlc.narg('date')::date;
+
+-- Savings Rate Calculation
+
+-- name: GetIncomeForPeriod :one
+SELECT COALESCE(SUM(amount), 0::numeric) as total_amount
+FROM budget_incomes
+WHERE user_id = $1
+    AND date >= $2
+    AND date <= $3;
+
+-- name: GetExpensesForPeriod :one
+SELECT COALESCE(SUM(amount), 0::numeric) as total_amount
+FROM budget_expenses
+WHERE user_id = $1
+    AND expense_date >= $2
+    AND expense_date <= $3;

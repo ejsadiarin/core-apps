@@ -278,3 +278,183 @@ WHERE
     (sqlc.narg('user_id')::uuid IS NULL OR user_id = sqlc.narg('user_id'))
     AND (sqlc.narg('start_date')::date IS NULL OR expense_date >= sqlc.narg('start_date')::date)
     AND (sqlc.narg('end_date')::date IS NULL OR expense_date <= sqlc.narg('end_date')::date);
+
+-- Category Budgets
+
+-- name: CreateCategoryBudget :one
+INSERT INTO category_budgets (
+    user_id, category_id, month, budget_amount
+) VALUES (
+    $1, $2, $3, $4
+)
+RETURNING *;
+
+-- name: GetCategoryBudget :one
+SELECT * FROM category_budgets
+WHERE id = $1 AND user_id = $2 LIMIT 1;
+
+-- name: GetCategoryBudgetByCategoryAndMonth :one
+SELECT * FROM category_budgets
+WHERE user_id = $1 AND category_id = $2 AND month = $3 LIMIT 1;
+
+-- name: ListCategoryBudgets :many
+SELECT cb.*, c.name as category_name, c.color as category_color
+FROM category_budgets cb
+JOIN budget_categories c ON cb.category_id = c.id
+WHERE cb.user_id = $1
+    AND (sqlc.narg('month')::date IS NULL OR cb.month = sqlc.narg('month')::date)
+ORDER BY cb.month DESC, c.name;
+
+-- name: UpdateCategoryBudget :one
+UPDATE category_budgets
+SET
+    budget_amount = COALESCE(sqlc.narg('budget_amount'), budget_amount),
+    updated_at = NOW()
+WHERE id = $1 AND user_id = $2
+RETURNING *;
+
+-- name: DeleteCategoryBudget :exec
+DELETE FROM category_budgets
+WHERE id = $1 AND user_id = $2;
+
+-- name: GetBudgetVariance :many
+SELECT 
+    c.id as category_id,
+    c.name as category_name,
+    c.color as category_color,
+    c.category_type,
+    COALESCE(cb.budget_amount, 0::numeric) as budget_amount,
+    COALESCE(SUM(e.amount), 0::numeric) as spent_amount,
+    COUNT(e.id) as transaction_count
+FROM budget_categories c
+LEFT JOIN category_budgets cb ON c.id = cb.category_id 
+    AND cb.user_id = c.user_id
+    AND cb.month = sqlc.narg('month')::date
+LEFT JOIN budget_expenses e ON c.id = e.category_id 
+    AND e.user_id = c.user_id
+    AND (sqlc.narg('start_date')::date IS NULL OR e.expense_date >= sqlc.narg('start_date')::date)
+    AND (sqlc.narg('end_date')::date IS NULL OR e.expense_date <= sqlc.narg('end_date')::date)
+WHERE c.user_id = $1
+GROUP BY c.id, c.name, c.color, c.category_type, cb.budget_amount
+ORDER BY c.name;
+
+-- Category Type Management
+
+-- name: UpdateCategoryType :one
+UPDATE budget_categories
+SET category_type = $2
+WHERE id = $1 AND user_id = $3
+RETURNING *;
+
+-- name: GetCategoriesByType :many
+SELECT * FROM budget_categories
+WHERE user_id = $1 AND category_type = $2
+ORDER BY name;
+
+-- 50/30/20 Analysis
+
+-- name: GetSpendingByCategoryType :many
+SELECT 
+    c.category_type,
+    COALESCE(SUM(e.amount), 0::numeric) as total_amount,
+    COUNT(e.id) as transaction_count
+FROM budget_categories c
+LEFT JOIN budget_expenses e ON c.id = e.category_id 
+    AND e.user_id = c.user_id
+    AND (sqlc.narg('start_date')::date IS NULL OR e.expense_date >= sqlc.narg('start_date')::date)
+    AND (sqlc.narg('end_date')::date IS NULL OR e.expense_date <= sqlc.narg('end_date')::date)
+WHERE c.user_id = $1 AND c.category_type IS NOT NULL
+GROUP BY c.category_type
+ORDER BY total_amount DESC;
+
+-- Spending Velocity & Trends
+
+-- name: GetDailySpendingForVelocity :many
+SELECT 
+    expense_date,
+    COALESCE(SUM(amount), 0::numeric) as total_amount,
+    COUNT(id) as transaction_count
+FROM budget_expenses
+WHERE user_id = $1
+    AND expense_date >= $2
+    AND expense_date <= $3
+GROUP BY expense_date
+ORDER BY expense_date ASC;
+
+-- name: GetMonthToDateSpending :one
+SELECT 
+    COALESCE(SUM(amount), 0::numeric) as total_amount,
+    COUNT(id) as transaction_count
+FROM budget_expenses
+WHERE user_id = $1
+    AND expense_date >= $2
+    AND expense_date <= $3;
+
+-- Weekday Analysis
+
+-- name: GetSpendingByDayOfWeek :many
+SELECT 
+    EXTRACT(DOW FROM expense_date) as day_of_week,
+    COALESCE(SUM(amount), 0::numeric) as total_amount,
+    COUNT(id) as transaction_count,
+    AVG(amount) as avg_amount
+FROM budget_expenses
+WHERE user_id = $1
+    AND (sqlc.narg('start_date')::date IS NULL OR expense_date >= sqlc.narg('start_date')::date)
+    AND (sqlc.narg('end_date')::date IS NULL OR expense_date <= sqlc.narg('end_date')::date)
+GROUP BY day_of_week
+ORDER BY day_of_week;
+
+-- Merchant Analysis
+
+-- name: GetTopMerchants :many
+SELECT 
+    description,
+    COALESCE(SUM(amount), 0::numeric) as total_amount,
+    COUNT(id) as transaction_count,
+    AVG(amount) as avg_amount
+FROM budget_expenses
+WHERE user_id = $1
+    AND (sqlc.narg('start_date')::date IS NULL OR expense_date >= sqlc.narg('start_date')::date)
+    AND (sqlc.narg('end_date')::date IS NULL OR expense_date <= sqlc.narg('end_date')::date)
+GROUP BY description
+ORDER BY total_amount DESC
+LIMIT sqlc.narg('limit');
+
+-- name: GetMerchantSpendingTrend :many
+SELECT 
+    description,
+    TO_CHAR(expense_date, 'YYYY-MM') as month,
+    COALESCE(SUM(amount), 0::numeric) as total_amount,
+    COUNT(id) as transaction_count
+FROM budget_expenses
+WHERE user_id = $1
+    AND description ILIKE '%' || sqlc.narg('merchant_pattern') || '%'
+GROUP BY description, month
+ORDER BY month DESC;
+
+-- Upcoming Recurring Expenses Forecasting
+
+-- name: GetUpcomingRecurringExpenses :many
+SELECT 
+    id,
+    description,
+    amount,
+    currency,
+    recurring_type,
+    start_date,
+    end_date,
+    category_id
+FROM budget_expenses
+WHERE user_id = $1
+    AND recurring_type IS NOT NULL
+    AND start_date <= $2
+    AND (end_date IS NULL OR end_date >= CURRENT_DATE)
+ORDER BY 
+    CASE recurring_type
+        WHEN 'daily' THEN 1
+        WHEN 'weekly' THEN 2
+        WHEN 'monthly' THEN 3
+        WHEN 'yearly' THEN 4
+    END,
+    description;

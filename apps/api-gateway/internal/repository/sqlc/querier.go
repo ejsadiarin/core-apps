@@ -21,11 +21,15 @@ type Querier interface {
 	CountSearchExpenses(ctx context.Context, arg CountSearchExpensesParams) (int64, error)
 	// Categories
 	CreateCategory(ctx context.Context, arg CreateCategoryParams) (BudgetCategory, error)
+	// Category Budgets
+	CreateCategoryBudget(ctx context.Context, arg CreateCategoryBudgetParams) (CategoryBudget, error)
 	// Expenses
 	CreateExpense(ctx context.Context, arg CreateExpenseParams) (BudgetExpense, error)
 	CreateHealthHistory(ctx context.Context, arg CreateHealthHistoryParams) (ServiceHealthHistory, error)
 	// Incomes
 	CreateIncome(ctx context.Context, arg CreateIncomeParams) (BudgetIncome, error)
+	// Savings Goals
+	CreateSavingsGoal(ctx context.Context, arg CreateSavingsGoalParams) (SavingsGoal, error)
 	CreateService(ctx context.Context, arg CreateServiceParams) (Service, error)
 	// Sessions
 	CreateSession(ctx context.Context, arg CreateSessionParams) (Session, error)
@@ -34,9 +38,11 @@ type Querier interface {
 	// Users
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteCategory(ctx context.Context, arg DeleteCategoryParams) error
+	DeleteCategoryBudget(ctx context.Context, arg DeleteCategoryBudgetParams) error
 	DeleteExpense(ctx context.Context, arg DeleteExpenseParams) error
 	DeleteExpiredSessions(ctx context.Context) error
 	DeleteIncome(ctx context.Context, arg DeleteIncomeParams) error
+	DeleteSavingsGoal(ctx context.Context, arg DeleteSavingsGoalParams) error
 	DeleteService(ctx context.Context, id uuid.UUID) error
 	DeleteSession(ctx context.Context, id uuid.UUID) error
 	DeleteSessionByTokenHash(ctx context.Context, tokenHash string) error
@@ -49,32 +55,53 @@ type Querier interface {
 	GetAllServicesStats(ctx context.Context) (GetAllServicesStatsRow, error)
 	GetAllTotalExpensesToDate(ctx context.Context, arg GetAllTotalExpensesToDateParams) (interface{}, error)
 	GetAllTotalSpending(ctx context.Context, arg GetAllTotalSpendingParams) (GetAllTotalSpendingRow, error)
+	GetBudgetVariance(ctx context.Context, arg GetBudgetVarianceParams) ([]GetBudgetVarianceRow, error)
+	GetCategoriesByType(ctx context.Context, arg GetCategoriesByTypeParams) ([]BudgetCategory, error)
 	GetCategory(ctx context.Context, arg GetCategoryParams) (BudgetCategory, error)
+	GetCategoryBudget(ctx context.Context, arg GetCategoryBudgetParams) (CategoryBudget, error)
+	GetCategoryBudgetByCategoryAndMonth(ctx context.Context, arg GetCategoryBudgetByCategoryAndMonthParams) (CategoryBudget, error)
 	GetCategoryByID(ctx context.Context, id uuid.UUID) (BudgetCategory, error)
 	GetCategorySpending(ctx context.Context, arg GetCategorySpendingParams) ([]GetCategorySpendingRow, error)
 	GetDailySpending(ctx context.Context, arg GetDailySpendingParams) ([]GetDailySpendingRow, error)
+	// Spending Velocity & Trends
+	GetDailySpendingForVelocity(ctx context.Context, arg GetDailySpendingForVelocityParams) ([]GetDailySpendingForVelocityRow, error)
 	GetExpense(ctx context.Context, arg GetExpenseParams) (BudgetExpense, error)
 	GetExpenseByID(ctx context.Context, id uuid.UUID) (BudgetExpense, error)
 	GetExpenseTags(ctx context.Context, expenseID uuid.UUID) ([]BudgetTag, error)
 	// Statistics (filtered by user)
 	GetExpensesByDateRange(ctx context.Context, arg GetExpensesByDateRangeParams) ([]BudgetExpense, error)
+	GetExpensesForPeriod(ctx context.Context, arg GetExpensesForPeriodParams) (interface{}, error)
 	GetIncome(ctx context.Context, arg GetIncomeParams) (BudgetIncome, error)
 	GetIncomeByID(ctx context.Context, id uuid.UUID) (BudgetIncome, error)
+	// Savings Rate Calculation
+	GetIncomeForPeriod(ctx context.Context, arg GetIncomeForPeriodParams) (interface{}, error)
+	GetMerchantSpendingTrend(ctx context.Context, arg GetMerchantSpendingTrendParams) ([]GetMerchantSpendingTrendRow, error)
+	GetMonthToDateSpending(ctx context.Context, arg GetMonthToDateSpendingParams) (GetMonthToDateSpendingRow, error)
 	GetMonthlySpending(ctx context.Context, userID uuid.UUID) ([]GetMonthlySpendingRow, error)
 	// Budget Remaining Calculation Queries
 	// These queries fetch raw data; proration logic is handled in the application layer
 	GetOneTimeIncomeToDate(ctx context.Context, arg GetOneTimeIncomeToDateParams) (interface{}, error)
 	GetRecurringIncomeRules(ctx context.Context, arg GetRecurringIncomeRulesParams) ([]BudgetIncome, error)
+	GetSavingsGoal(ctx context.Context, arg GetSavingsGoalParams) (SavingsGoal, error)
+	GetSavingsGoalsSummary(ctx context.Context, userID uuid.UUID) (GetSavingsGoalsSummaryRow, error)
 	GetService(ctx context.Context, id uuid.UUID) (Service, error)
 	GetServiceHistory(ctx context.Context, arg GetServiceHistoryParams) ([]ServiceHealthHistory, error)
 	GetServiceStats24h(ctx context.Context, serviceID pgtype.UUID) (GetServiceStats24hRow, error)
 	GetServiceStats30d(ctx context.Context, serviceID pgtype.UUID) (GetServiceStats30dRow, error)
 	GetServiceStats7d(ctx context.Context, serviceID pgtype.UUID) (GetServiceStats7dRow, error)
 	GetSessionByTokenHash(ctx context.Context, tokenHash string) (GetSessionByTokenHashRow, error)
+	// 50/30/20 Analysis
+	GetSpendingByCategoryType(ctx context.Context, arg GetSpendingByCategoryTypeParams) ([]GetSpendingByCategoryTypeRow, error)
+	// Weekday Analysis
+	GetSpendingByDayOfWeek(ctx context.Context, arg GetSpendingByDayOfWeekParams) ([]GetSpendingByDayOfWeekRow, error)
 	GetTag(ctx context.Context, arg GetTagParams) (BudgetTag, error)
 	GetTagByID(ctx context.Context, id uuid.UUID) (BudgetTag, error)
+	// Merchant Analysis
+	GetTopMerchants(ctx context.Context, arg GetTopMerchantsParams) ([]GetTopMerchantsRow, error)
 	GetTotalExpensesToDate(ctx context.Context, arg GetTotalExpensesToDateParams) (interface{}, error)
 	GetTotalSpending(ctx context.Context, arg GetTotalSpendingParams) (GetTotalSpendingRow, error)
+	// Upcoming Recurring Expenses Forecasting
+	GetUpcomingRecurringExpenses(ctx context.Context, arg GetUpcomingRecurringExpensesParams) ([]GetUpcomingRecurringExpensesRow, error)
 	GetUser(ctx context.Context, id uuid.UUID) (User, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	ListActiveServicesForHealthCheck(ctx context.Context) ([]ListActiveServicesForHealthCheckRow, error)
@@ -83,8 +110,10 @@ type Querier interface {
 	ListAllIncomes(ctx context.Context, arg ListAllIncomesParams) ([]ListAllIncomesRow, error)
 	ListAllTags(ctx context.Context) ([]ListAllTagsRow, error)
 	ListCategories(ctx context.Context, userID uuid.UUID) ([]BudgetCategory, error)
+	ListCategoryBudgets(ctx context.Context, arg ListCategoryBudgetsParams) ([]ListCategoryBudgetsRow, error)
 	ListExpenses(ctx context.Context, arg ListExpensesParams) ([]ListExpensesRow, error)
 	ListIncomes(ctx context.Context, arg ListIncomesParams) ([]BudgetIncome, error)
+	ListSavingsGoals(ctx context.Context, userID uuid.UUID) ([]SavingsGoal, error)
 	ListServices(ctx context.Context) ([]ListServicesRow, error)
 	ListTags(ctx context.Context, userID uuid.UUID) ([]BudgetTag, error)
 	ListUsers(ctx context.Context) ([]User, error)
@@ -92,8 +121,13 @@ type Querier interface {
 	RemoveExpenseTag(ctx context.Context, arg RemoveExpenseTagParams) error
 	SearchExpenses(ctx context.Context, arg SearchExpensesParams) ([]SearchExpensesRow, error)
 	UpdateCategory(ctx context.Context, arg UpdateCategoryParams) (BudgetCategory, error)
+	UpdateCategoryBudget(ctx context.Context, arg UpdateCategoryBudgetParams) (CategoryBudget, error)
+	// Category Type Management
+	UpdateCategoryType(ctx context.Context, arg UpdateCategoryTypeParams) (BudgetCategory, error)
 	UpdateExpense(ctx context.Context, arg UpdateExpenseParams) (BudgetExpense, error)
 	UpdateIncome(ctx context.Context, arg UpdateIncomeParams) (BudgetIncome, error)
+	UpdateSavingsGoal(ctx context.Context, arg UpdateSavingsGoalParams) (SavingsGoal, error)
+	UpdateSavingsGoalProgress(ctx context.Context, arg UpdateSavingsGoalProgressParams) (SavingsGoal, error)
 	UpdateService(ctx context.Context, arg UpdateServiceParams) (Service, error)
 	UpdateTag(ctx context.Context, arg UpdateTagParams) (BudgetTag, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)

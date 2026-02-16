@@ -27,7 +27,24 @@ import type {
   UpdateIncomeRequest,
   BudgetRemainingResponse,
   PaginatedResponse,
-  PaginationParams
+  PaginationParams,
+  SavingsRateResponse,
+  SpendingVelocityResponse,
+  UpcomingBillsResponse,
+  CategoryBudget,
+  CategoryBudgetWithVariance,
+  CreateCategoryBudgetRequest,
+  UpdateCategoryBudgetRequest,
+  UpdateCategoryTypeRequest,
+  CategoryTypeSpending,
+  DayOfWeekSpending,
+  MerchantSpending,
+  HealthScoreResponse,
+  FiftyThirtyTwentyResponse,
+  WeekdayPatternResponse,
+  MonthOverMonthResponse,
+  MerchantAnalysisResponse,
+  SubscriptionsResponse
 } from '@/types/api';
 
 const url = 'http://localhost:8080';
@@ -627,6 +644,253 @@ export async function fetchBudgetRemaining(date?: string): Promise<BudgetRemaini
   });
   if (!res.ok) {
     throw new Error(`Error fetching budget remaining: ${res.status}`);
+  }
+  return res.json();
+}
+
+// Budget Analytics API
+
+export async function fetchSavingsRate(startDate?: string, endDate?: string): Promise<SavingsRateResponse> {
+  const params = new URLSearchParams();
+  if (startDate) params.append('start_date', startDate);
+  if (endDate) params.append('end_date', endDate);
+
+  const queryString = params.toString();
+  const endpoint = queryString
+    ? `/api/budget/stats/savings-rate?${queryString}`
+    : '/api/budget/stats/savings-rate';
+
+  const res = await fetch(url + endpoint, {
+    credentials: 'include'
+  });
+  if (!res.ok) {
+    throw new Error(`Error fetching savings rate: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function fetchSpendingVelocity(): Promise<SpendingVelocityResponse> {
+  const res = await fetch(url + '/api/budget/velocity', {
+    credentials: 'include'
+  });
+  if (!res.ok) {
+    throw new Error(`Error fetching spending velocity: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function fetchUpcomingBills(days: 7 | 30 = 30): Promise<UpcomingBillsResponse> {
+  const res = await fetch(url + `/api/budget/forecast/upcoming?days=${days}`, {
+    credentials: 'include'
+  });
+  if (!res.ok) {
+    throw new Error(`Error fetching upcoming bills: ${res.status}`);
+  }
+  return res.json();
+}
+
+// Category Budget API
+
+export async function createCategoryBudget(data: CreateCategoryBudgetRequest): Promise<CategoryBudget> {
+  const res = await fetch(url + '/api/budget/category-budgets', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    credentials: 'include',
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    throw new Error(`Error creating category budget: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function fetchCategoryBudgets(month?: string): Promise<CategoryBudgetWithVariance[]> {
+  const params = month ? `?month=${month}` : '';
+  const res = await fetch(url + `/api/budget/category-budgets${params}`, {
+    credentials: 'include'
+  });
+  if (!res.ok) {
+    throw new Error(`Error fetching category budgets: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function updateCategoryBudget(id: string, data: UpdateCategoryBudgetRequest): Promise<CategoryBudget> {
+  const res = await fetch(url + `/api/budget/category-budgets/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    credentials: 'include',
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    throw new Error(`Error updating category budget: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function deleteCategoryBudget(id: string): Promise<void> {
+  const res = await fetch(url + `/api/budget/category-budgets/${id}`, {
+    method: 'DELETE',
+    credentials: 'include'
+  });
+  if (!res.ok) {
+    throw new Error(`Error deleting category budget: ${res.status}`);
+  }
+}
+
+export async function updateCategoryType(id: string, data: UpdateCategoryTypeRequest): Promise<Category> {
+  const res = await fetch(url + `/api/budget/categories/${id}/type`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    credentials: 'include',
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    throw new Error(`Error updating category type: ${res.status}`);
+  }
+  return res.json();
+}
+
+// Financial Health API
+
+export async function fetchCategoryTypeSpending(startDate?: string, endDate?: string): Promise<CategoryTypeSpending[]> {
+  const params = new URLSearchParams();
+  if (startDate) params.append('start_date', startDate);
+  if (endDate) params.append('end_date', endDate);
+
+  const queryString = params.toString();
+  const endpoint = queryString
+    ? `/api/budget/analysis/503020?${queryString}`
+    : '/api/budget/analysis/503020';
+
+  const res = await fetch(url + endpoint, {
+    credentials: 'include'
+  });
+  if (!res.ok) {
+    throw new Error(`Error fetching 50/30/20 analysis: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function fetchDayOfWeekSpending(startDate?: string, endDate?: string): Promise<DayOfWeekSpending[]> {
+  const params = new URLSearchParams();
+  if (startDate) params.append('start_date', startDate);
+  if (endDate) params.append('end_date', endDate);
+
+  const queryString = params.toString();
+  const endpoint = queryString
+    ? `/api/budget/analysis/weekday-pattern?${queryString}`
+    : '/api/budget/analysis/weekday-pattern';
+
+  const res = await fetch(url + endpoint, {
+    credentials: 'include'
+  });
+  if (!res.ok) {
+    throw new Error(`Error fetching weekday pattern: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function fetchTopMerchants(limit: number = 10, startDate?: string, endDate?: string): Promise<MerchantSpending[]> {
+  const params = new URLSearchParams();
+  params.append('limit', limit.toString());
+  if (startDate) params.append('start_date', startDate);
+  if (endDate) params.append('end_date', endDate);
+
+  const res = await fetch(url + `/api/budget/analysis/merchants?${params.toString()}`, {
+    credentials: 'include'
+  });
+  if (!res.ok) {
+    throw new Error(`Error fetching top merchants: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function fetchHealthScore(): Promise<HealthScoreResponse> {
+  const res = await fetch(url + '/api/budget/stats/health-score', {
+    credentials: 'include'
+  });
+  if (!res.ok) {
+    throw new Error(`Error fetching health score: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function fetchFiftyThirtyTwenty(startDate?: string, endDate?: string): Promise<FiftyThirtyTwentyResponse> {
+  const params = new URLSearchParams();
+  if (startDate) params.append('start_date', startDate);
+  if (endDate) params.append('end_date', endDate);
+
+  const queryString = params.toString();
+  const endpoint = queryString
+    ? `/api/budget/analysis/503020?${queryString}`
+    : '/api/budget/analysis/503020';
+
+  const res = await fetch(url + endpoint, {
+    credentials: 'include'
+  });
+  if (!res.ok) {
+    throw new Error(`Error fetching 50/30/20 analysis: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function fetchWeekdayPattern(startDate?: string, endDate?: string): Promise<WeekdayPatternResponse> {
+  const params = new URLSearchParams();
+  if (startDate) params.append('start_date', startDate);
+  if (endDate) params.append('end_date', endDate);
+
+  const queryString = params.toString();
+  const endpoint = queryString
+    ? `/api/budget/analysis/weekday-pattern?${queryString}`
+    : '/api/budget/analysis/weekday-pattern';
+
+  const res = await fetch(url + endpoint, {
+    credentials: 'include'
+  });
+  if (!res.ok) {
+    throw new Error(`Error fetching weekday pattern: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function fetchMonthOverMonth(): Promise<MonthOverMonthResponse> {
+  const res = await fetch(url + '/api/budget/trends/month-over-month', {
+    credentials: 'include'
+  });
+  if (!res.ok) {
+    throw new Error(`Error fetching month-over-month trends: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function fetchMerchantAnalysis(limit: number = 10, startDate?: string, endDate?: string): Promise<MerchantAnalysisResponse> {
+  const params = new URLSearchParams();
+  params.append('limit', limit.toString());
+  if (startDate) params.append('start_date', startDate);
+  if (endDate) params.append('end_date', endDate);
+
+  const res = await fetch(url + `/api/budget/analysis/merchants?${params.toString()}`, {
+    credentials: 'include'
+  });
+  if (!res.ok) {
+    throw new Error(`Error fetching merchant analysis: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function fetchSubscriptions(): Promise<SubscriptionsResponse> {
+  const res = await fetch(url + '/api/budget/subscriptions', {
+    credentials: 'include'
+  });
+  if (!res.ok) {
+    throw new Error(`Error fetching subscriptions: ${res.status}`);
   }
   return res.json();
 }

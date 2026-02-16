@@ -169,3 +169,162 @@ type TrendItem struct {
 	TotalAmount float64 `json:"total_amount"`
 	Count       int64   `json:"count"`
 }
+
+// Budget Analytics
+
+type SavingsRateResponse struct {
+	Income      float64 `json:"income"`
+	Expenses    float64 `json:"expenses"`
+	Savings     float64 `json:"savings"`
+	SavingsRate float64 `json:"savings_rate"`
+	Status      string  `json:"status"`
+	Period      string  `json:"period"`
+}
+
+type SpendingVelocityResponse struct {
+	AmountSpent    float64 `json:"amount_spent"`
+	DaysElapsed    int32   `json:"days_elapsed"`
+	DaysInMonth    int32   `json:"days_in_month"`
+	ProjectedSpend float64 `json:"projected_spend"`
+	TotalBudget    float64 `json:"total_budget"`
+	Status         string  `json:"status"`
+}
+
+type UpcomingBill struct {
+	ID            uuid.UUID `json:"id"`
+	Description   string    `json:"description"`
+	Amount        float64   `json:"amount"`
+	Currency      string    `json:"currency"`
+	RecurringType string    `json:"recurring_type"`
+	DueDate       string    `json:"due_date"`
+	CategoryID    uuid.UUID `json:"category_id,omitempty"`
+}
+
+type UpcomingBillsResponse struct {
+	Bills       []UpcomingBill `json:"bills"`
+	TotalAmount float64        `json:"total_amount"`
+	Period      int            `json:"period"`
+}
+
+// Category Budget
+
+type CreateCategoryBudgetRequest struct {
+	CategoryID   uuid.UUID `json:"category_id" validate:"required"`
+	Month        string    `json:"month" validate:"required,datetime=2006-01-02"`
+	BudgetAmount float64   `json:"budget_amount" validate:"required,gt=0"`
+}
+
+type UpdateCategoryBudgetRequest struct {
+	BudgetAmount *float64 `json:"budget_amount,omitempty" validate:"omitempty,gt=0"`
+}
+
+type CategoryBudgetResponse struct {
+	ID           uuid.UUID `json:"id"`
+	CategoryID   uuid.UUID `json:"category_id"`
+	Month        string    `json:"month"`
+	BudgetAmount float64   `json:"budget_amount"`
+	CreatedAt    string    `json:"created_at"`
+	UpdatedAt    string    `json:"updated_at"`
+}
+
+type CategoryBudgetWithVarianceResponse struct {
+	CategoryID       uuid.UUID `json:"category_id"`
+	CategoryName     string    `json:"category_name"`
+	CategoryColor    *string   `json:"category_color,omitempty"`
+	CategoryType     *string   `json:"category_type,omitempty"`
+	BudgetAmount     float64   `json:"budget_amount"`
+	SpentAmount      float64   `json:"spent_amount"`
+	Variance         *float64  `json:"variance,omitempty"`
+	Percentage       float64   `json:"percentage"`
+	TransactionCount int64     `json:"transaction_count"`
+}
+
+type UpdateCategoryTypeRequest struct {
+	CategoryType *string `json:"category_type,omitempty" validate:"omitempty,oneof=need want savings"`
+}
+
+// Financial Health
+
+type HealthScoreResponse struct {
+	Score           int      `json:"score"`
+	Status          string   `json:"status"`
+	SavingsRate     float64  `json:"savings_rate"`
+	DebtToIncome    float64  `json:"debt_to_income"`
+	EmergencyFund   float64  `json:"emergency_fund_months"`
+	Recommendations []string `json:"recommendations"`
+}
+
+type FiftyThirtyTwentyItem struct {
+	Category string  `json:"category"`
+	Amount   float64 `json:"amount"`
+	Target   float64 `json:"target_percentage"`
+	Actual   float64 `json:"actual_percentage"`
+	Status   string  `json:"status"`
+}
+
+type FiftyThirtyTwentyResponse struct {
+	Needs       FiftyThirtyTwentyItem `json:"needs"`
+	Wants       FiftyThirtyTwentyItem `json:"wants"`
+	Savings     FiftyThirtyTwentyItem `json:"savings"`
+	TotalIncome float64               `json:"total_income"`
+}
+
+type WeekdaySpendingItem struct {
+	Day           string  `json:"day"`
+	TotalAmount   float64 `json:"total_amount"`
+	Count         int64   `json:"count"`
+	AverageAmount float64 `json:"average_amount"`
+}
+
+type WeekdayPatternResponse struct {
+	Weekdays   []WeekdaySpendingItem `json:"weekdays"`
+	HighestDay string                `json:"highest_spending_day"`
+	LowestDay  string                `json:"lowest_spending_day"`
+}
+
+type MonthOverMonthItem struct {
+	Month         string  `json:"month"`
+	Income        float64 `json:"income"`
+	Expenses      float64 `json:"expenses"`
+	Savings       float64 `json:"savings"`
+	SavingsRate   float64 `json:"savings_rate"`
+	ExpenseChange float64 `json:"expense_change_percent"`
+}
+
+type MonthOverMonthResponse struct {
+	Trends             []MonthOverMonthItem `json:"trends"`
+	AverageSavingsRate float64              `json:"average_savings_rate"`
+}
+
+// Merchant Analysis
+
+type MerchantItem struct {
+	Name          string  `json:"name"`
+	TotalSpent    float64 `json:"total_spent"`
+	Count         int64   `json:"count"`
+	AverageAmount float64 `json:"average_amount"`
+	Percentage    float64 `json:"percentage"`
+	CategoryName  *string `json:"category_name,omitempty"`
+}
+
+type MerchantAnalysisResponse struct {
+	Merchants   []MerchantItem `json:"merchants"`
+	TotalSpent  float64        `json:"total_spent"`
+	UniqueCount int            `json:"unique_merchant_count"`
+}
+
+type SubscriptionItem struct {
+	ID            uuid.UUID `json:"id"`
+	Description   string    `json:"description"`
+	Amount        float64   `json:"amount"`
+	Currency      string    `json:"currency"`
+	RecurringType string    `json:"recurring_type"`
+	CategoryName  *string   `json:"category_name,omitempty"`
+	NextDueDate   string    `json:"next_due_date"`
+}
+
+type SubscriptionsResponse struct {
+	Subscriptions []SubscriptionItem `json:"subscriptions"`
+	TotalMonthly  float64            `json:"total_monthly"`
+	Count         int                `json:"count"`
+}

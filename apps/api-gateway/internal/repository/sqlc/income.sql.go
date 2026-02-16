@@ -193,6 +193,27 @@ func (q *Queries) GetAllTotalExpensesToDate(ctx context.Context, arg GetAllTotal
 	return total_amount, err
 }
 
+const getExpensesForPeriod = `-- name: GetExpensesForPeriod :one
+SELECT COALESCE(SUM(amount), 0::numeric) as total_amount
+FROM budget_expenses
+WHERE user_id = $1
+    AND expense_date >= $2
+    AND expense_date <= $3
+`
+
+type GetExpensesForPeriodParams struct {
+	UserID        uuid.UUID   `json:"user_id"`
+	ExpenseDate   pgtype.Date `json:"expense_date"`
+	ExpenseDate_2 pgtype.Date `json:"expense_date_2"`
+}
+
+func (q *Queries) GetExpensesForPeriod(ctx context.Context, arg GetExpensesForPeriodParams) (interface{}, error) {
+	row := q.db.QueryRow(ctx, getExpensesForPeriod, arg.UserID, arg.ExpenseDate, arg.ExpenseDate_2)
+	var total_amount interface{}
+	err := row.Scan(&total_amount)
+	return total_amount, err
+}
+
 const getIncome = `-- name: GetIncome :one
 SELECT id, user_id, amount, currency, date, description, recurring_type, start_date, created_at, updated_at, end_date FROM budget_incomes
 WHERE id = $1 AND user_id = $2 LIMIT 1
@@ -244,6 +265,29 @@ func (q *Queries) GetIncomeByID(ctx context.Context, id uuid.UUID) (BudgetIncome
 		&i.EndDate,
 	)
 	return i, err
+}
+
+const getIncomeForPeriod = `-- name: GetIncomeForPeriod :one
+
+SELECT COALESCE(SUM(amount), 0::numeric) as total_amount
+FROM budget_incomes
+WHERE user_id = $1
+    AND date >= $2
+    AND date <= $3
+`
+
+type GetIncomeForPeriodParams struct {
+	UserID uuid.UUID   `json:"user_id"`
+	Date   pgtype.Date `json:"date"`
+	Date_2 pgtype.Date `json:"date_2"`
+}
+
+// Savings Rate Calculation
+func (q *Queries) GetIncomeForPeriod(ctx context.Context, arg GetIncomeForPeriodParams) (interface{}, error) {
+	row := q.db.QueryRow(ctx, getIncomeForPeriod, arg.UserID, arg.Date, arg.Date_2)
+	var total_amount interface{}
+	err := row.Scan(&total_amount)
+	return total_amount, err
 }
 
 const getOneTimeIncomeToDate = `-- name: GetOneTimeIncomeToDate :one

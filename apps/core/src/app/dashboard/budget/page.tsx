@@ -7,6 +7,12 @@ import { ExpenseStats } from "@/components/budget/expense-stats";
 import { IncomeForm } from "@/components/budget/income-form";
 import { ExpenseFormDialog } from "@/components/budget/expense-form-dialog";
 import {
+  SavingsRateCard,
+  SpendingVelocityCard,
+  UpcomingBillsCard,
+  BudgetVarianceTable
+} from "@/components/budget";
+import {
   useSummaryStats,
   useExpenses,
   useIncomes,
@@ -22,7 +28,7 @@ import { GuestBlockedError } from "@/hooks/use-budget";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, ArrowRight, Receipt, Settings, Wallet } from "lucide-react";
+import { Plus, ArrowRight, Receipt, Settings, Wallet, Target, TrendingUp, Calendar, Heart, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -239,6 +245,19 @@ export default function BudgetDashboard() {
         transition={{ duration: 0.5, delay: 0.15 }}
       >
         <ExpenseStats stats={summaryStats} isLoading={statsLoading} />
+      </motion.div>
+
+      {/* Budget Analytics Cards */}
+      <motion.div
+        className="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+      >
+        <SavingsRateCard />
+        <SpendingVelocityCard />
+        <UpcomingBillsCard days={7} />
+        <BudgetVarianceTable />
       </motion.div>
 
       {/* Recent Transactions */}
@@ -486,6 +505,24 @@ export default function BudgetDashboard() {
               <Button variant="outline" className="w-full justify-start">
                 <Settings className="mr-2 h-4 w-4" />
                 Manage Categories & Tags
+              </Button>
+            </Link>
+            <Link href="/dashboard/budget/settings#budgets" className="block" onClick={handleActionClick}>
+              <Button variant="outline" className="w-full justify-start">
+                <Target className="mr-2 h-4 w-4" />
+                Set Budget Goals
+              </Button>
+            </Link>
+            <Link href="/dashboard/budget/health" className="block">
+              <Button variant="outline" className="w-full justify-start">
+                <Heart className="mr-2 h-4 w-4" />
+                Financial Health
+              </Button>
+            </Link>
+            <Link href="/dashboard/budget/subscriptions" className="block">
+              <Button variant="outline" className="w-full justify-start">
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Subscriptions & Merchants
               </Button>
             </Link>
           </CardContent>

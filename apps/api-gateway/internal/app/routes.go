@@ -88,6 +88,7 @@ func (a *Application) RegisterRoutes() {
 			categories.GET("", a.BudgetHandler.ListCategories)
 			categories.PUT("/:id", a.BudgetHandler.UpdateCategory)
 			categories.DELETE("/:id", a.BudgetHandler.DeleteCategory)
+			categories.PUT("/:id/type", a.BudgetHandler.UpdateCategoryType)
 
 			// tags
 			tags := budget.Group("/tags")
@@ -121,6 +122,28 @@ func (a *Application) RegisterRoutes() {
 			stats.GET("/summary", a.BudgetHandler.GetSummary)
 			stats.GET("/trends", a.BudgetHandler.GetTrends)
 			stats.GET("/category-breakdown", a.BudgetHandler.GetCategoryBreakdown)
+			stats.GET("/savings-rate", a.BudgetHandler.GetSavingsRate)
+			stats.GET("/health-score", a.BudgetHandler.GetHealthScore)
+
+			// New budget analytics endpoints
+			budget.GET("/velocity", a.BudgetHandler.GetSpendingVelocity)
+			budget.GET("/forecast/upcoming", a.BudgetHandler.GetUpcomingBills)
+
+			// Financial Health Analysis
+			budget.GET("/analysis/503020", a.BudgetHandler.GetFiftyThirtyTwenty)
+			budget.GET("/analysis/weekday-pattern", a.BudgetHandler.GetWeekdayPattern)
+			budget.GET("/analysis/merchants", a.BudgetHandler.GetMerchantAnalysis)
+			budget.GET("/trends/month-over-month", a.BudgetHandler.GetMonthOverMonthTrends)
+
+			// Subscriptions
+			budget.GET("/subscriptions", a.BudgetHandler.GetSubscriptions)
+
+			// Category budgets
+			categoryBudgets := budget.Group("/category-budgets")
+			categoryBudgets.POST("", a.BudgetHandler.CreateCategoryBudget)
+			categoryBudgets.GET("", a.BudgetHandler.GetCategoryBudgets)
+			categoryBudgets.PUT("/:id", a.BudgetHandler.UpdateCategoryBudget)
+			categoryBudgets.DELETE("/:id", a.BudgetHandler.DeleteCategoryBudget)
 		}
 	}
 }

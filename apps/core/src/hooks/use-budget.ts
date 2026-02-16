@@ -86,7 +86,27 @@ export const budgetKeys = {
   breakdown: (startDate?: string, endDate?: string) =>
     [...budgetKeys.stats(), 'breakdown', { startDate, endDate }] as const,
   trends: (granularity: 'day' | 'month', startDate?: string, endDate?: string) =>
-    [...budgetKeys.stats(), 'trends', { granularity, startDate, endDate }] as const
+    [...budgetKeys.stats(), 'trends', { granularity, startDate, endDate }] as const,
+
+  // Budget Analytics
+  savingsRate: (startDate?: string, endDate?: string) =>
+    [...budgetKeys.stats(), 'savingsRate', { startDate, endDate }] as const,
+  spendingVelocity: () => [...budgetKeys.stats(), 'spendingVelocity'] as const,
+  upcomingBills: (days: 7 | 30) => [...budgetKeys.all, 'upcomingBills', days] as const,
+  categoryBudgets: (month?: string) => [...budgetKeys.all, 'categoryBudgets', month] as const,
+
+  // Financial Health
+  healthScore: () => [...budgetKeys.stats(), 'healthScore'] as const,
+  fiftyThirtyTwenty: (startDate?: string, endDate?: string) =>
+    [...budgetKeys.stats(), 'fiftyThirtyTwenty', { startDate, endDate }] as const,
+  weekdayPattern: (startDate?: string, endDate?: string) =>
+    [...budgetKeys.stats(), 'weekdayPattern', { startDate, endDate }] as const,
+  monthOverMonth: () => [...budgetKeys.stats(), 'monthOverMonth'] as const,
+
+  // Merchant Analysis
+  merchantAnalysis: (limit?: number, startDate?: string, endDate?: string) =>
+    [...budgetKeys.stats(), 'merchantAnalysis', { limit, startDate, endDate }] as const,
+  subscriptions: () => [...budgetKeys.all, 'subscriptions'] as const
 };
 
 // Categories
@@ -496,5 +516,216 @@ export function useTrends(granularity: 'day' | 'month' = 'month', startDate?: st
     queryKey: budgetKeys.trends(granularity, startDate, endDate),
     queryFn: () => fetchTrends(granularity, startDate, endDate),
     staleTime: 60000
+  });
+}
+
+// Import new API functions
+import {
+  fetchSavingsRate,
+  fetchSpendingVelocity,
+  fetchUpcomingBills,
+  createCategoryBudget,
+  fetchCategoryBudgets,
+  updateCategoryBudget,
+  deleteCategoryBudget,
+  updateCategoryType,
+  fetchHealthScore,
+  fetchFiftyThirtyTwenty,
+  fetchSubscriptions,
+  fetchWeekdayPattern,
+  fetchMonthOverMonth,
+  fetchMerchantAnalysis
+} from '@/lib/api';
+
+import type {
+  SavingsRateResponse,
+  SpendingVelocityResponse,
+  UpcomingBillsResponse,
+  CategoryBudgetWithVariance,
+  CreateCategoryBudgetRequest,
+  UpdateCategoryBudgetRequest,
+  UpdateCategoryTypeRequest,
+  HealthScoreResponse,
+  FiftyThirtyTwentyResponse,
+  SubscriptionsResponse,
+  WeekdayPatternResponse,
+  MonthOverMonthResponse,
+  MerchantAnalysisResponse
+} from '@/types/api';
+
+// Budget Analytics Hooks
+
+export function useSavingsRate(startDate?: string, endDate?: string) {
+  return useQuery<SavingsRateResponse>({
+    queryKey: budgetKeys.savingsRate(startDate, endDate),
+    queryFn: () => fetchSavingsRate(startDate, endDate),
+    staleTime: 300000 // 5 minutes
+  });
+}
+
+export function useSpendingVelocity() {
+  return useQuery<SpendingVelocityResponse>({
+    queryKey: budgetKeys.spendingVelocity(),
+    queryFn: fetchSpendingVelocity,
+    staleTime: 60000 // 1 minute
+  });
+}
+
+export function useUpcomingBills(days: 7 | 30 = 30) {
+  return useQuery<UpcomingBillsResponse>({
+    queryKey: budgetKeys.upcomingBills(days),
+    queryFn: () => fetchUpcomingBills(days),
+    staleTime: 300000 // 5 minutes
+  });
+}
+
+// Category Budget Hooks
+
+export function useCategoryBudgets(month?: string) {
+  return useQuery<CategoryBudgetWithVariance[]>({
+    queryKey: budgetKeys.categoryBudgets(month),
+    queryFn: () => fetchCategoryBudgets(month),
+    staleTime: 300000 // 5 minutes
+  });
+}
+
+export function useCreateCategoryBudget() {
+  const queryClient = useQueryClient();
+  const { isGuest } = useAuth();
+
+  return useMutation({
+    mutationFn: (data: CreateCategoryBudgetRequest) => {
+      if (isGuest) {
+        throw new GuestBlockedError();
+      }
+      return createCategoryBudget(data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: budgetKeys.categoryBudgets() });
+    },
+    onError: (error: Error) => {
+      if (!(error instanceof GuestBlockedError)) {
+        console.error("Failed to create category budget:", error);
+      }
+    }
+  });
+}
+
+export function useUpdateCategoryBudget() {
+  const queryClient = useQueryClient();
+  const { isGuest } = useAuth();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateCategoryBudgetRequest }) => {
+      if (isGuest) {
+        throw new GuestBlockedError();
+      }
+      return updateCategoryBudget(id, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: budgetKeys.categoryBudgets() });
+    },
+    onError: (error: Error) => {
+      if (!(error instanceof GuestBlockedError)) {
+        console.error("Failed to update category budget:", error);
+      }
+    }
+  });
+}
+
+export function useDeleteCategoryBudget() {
+  const queryClient = useQueryClient();
+  const { isGuest } = useAuth();
+
+  return useMutation({
+    mutationFn: (id: string) => {
+      if (isGuest) {
+        throw new GuestBlockedError();
+      }
+      return deleteCategoryBudget(id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: budgetKeys.categoryBudgets() });
+    },
+    onError: (error: Error) => {
+      if (!(error instanceof GuestBlockedError)) {
+        console.error("Failed to delete category budget:", error);
+      }
+    }
+  });
+}
+
+export function useUpdateCategoryType() {
+  const queryClient = useQueryClient();
+  const { isGuest } = useAuth();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateCategoryTypeRequest }) => {
+      if (isGuest) {
+        throw new GuestBlockedError();
+      }
+      return updateCategoryType(id, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: budgetKeys.categories() });
+      queryClient.invalidateQueries({ queryKey: budgetKeys.categoryBudgets() });
+    },
+    onError: (error: Error) => {
+      if (!(error instanceof GuestBlockedError)) {
+        console.error("Failed to update category type:", error);
+      }
+    }
+  });
+}
+
+// Financial Health Hooks
+
+export function useHealthScore() {
+  return useQuery<HealthScoreResponse>({
+    queryKey: budgetKeys.healthScore(),
+    queryFn: fetchHealthScore,
+    staleTime: 300000
+  });
+}
+
+export function useFiftyThirtyTwenty(startDate?: string, endDate?: string) {
+  return useQuery<FiftyThirtyTwentyResponse>({
+    queryKey: budgetKeys.fiftyThirtyTwenty(startDate, endDate),
+    queryFn: () => fetchFiftyThirtyTwenty(startDate, endDate),
+    staleTime: 300000
+  });
+}
+
+export function useWeekdayPattern(startDate?: string, endDate?: string) {
+  return useQuery<WeekdayPatternResponse>({
+    queryKey: budgetKeys.weekdayPattern(startDate, endDate),
+    queryFn: () => fetchWeekdayPattern(startDate, endDate),
+    staleTime: 300000
+  });
+}
+
+export function useMonthOverMonth() {
+  return useQuery<MonthOverMonthResponse>({
+    queryKey: budgetKeys.monthOverMonth(),
+    queryFn: fetchMonthOverMonth,
+    staleTime: 300000
+  });
+}
+
+// Merchant Analysis Hooks
+
+export function useMerchantAnalysis(limit: number = 10, startDate?: string, endDate?: string) {
+  return useQuery<MerchantAnalysisResponse>({
+    queryKey: budgetKeys.merchantAnalysis(limit, startDate, endDate),
+    queryFn: () => fetchMerchantAnalysis(limit, startDate, endDate),
+    staleTime: 300000
+  });
+}
+
+export function useSubscriptions() {
+  return useQuery<SubscriptionsResponse>({
+    queryKey: budgetKeys.subscriptions(),
+    queryFn: fetchSubscriptions,
+    staleTime: 300000
   });
 }

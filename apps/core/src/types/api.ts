@@ -92,6 +92,7 @@ export interface Category {
     name: string;
     color?: string;
     icon?: string;
+    category_type?: "need" | "want" | "savings";
 }
 
 export interface Tag {
@@ -284,4 +285,192 @@ export interface UpdateUserRequest {
     email?: string;
     password?: string;
     role?: UserRole;
+}
+
+// Budget Analytics Types
+
+export interface SavingsRateResponse {
+    income: number;
+    expenses: number;
+    savings: number;
+    savings_rate: number;
+    status: "excellent" | "good" | "fair" | "poor" | "negative";
+    period: string;
+}
+
+export interface SpendingVelocityResponse {
+    amount_spent: number;
+    days_elapsed: number;
+    days_in_month: number;
+    projected_spend: number;
+    total_budget: number;
+    status: "on_track" | "warning" | "at_risk" | "over_pace" | "unknown";
+}
+
+export interface UpcomingBill {
+    id: string;
+    description: string;
+    amount: number;
+    currency: string;
+    recurring_type: string;
+    due_date: string;
+    category_id?: string;
+}
+
+export interface UpcomingBillsResponse {
+    bills: UpcomingBill[];
+    total_amount: number;
+    period: number;
+}
+
+// Category Budget Types
+
+export interface CategoryBudget {
+    id: string;
+    category_id: string;
+    month: string;
+    budget_amount: number;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface CategoryBudgetWithVariance {
+    category_id: string;
+    category_name: string;
+    category_color?: string;
+    category_type?: "need" | "want" | "savings";
+    budget_amount: number;
+    spent_amount: number;
+    variance?: number;
+    percentage: number;
+    transaction_count: number;
+}
+
+export interface CreateCategoryBudgetRequest {
+    category_id: string;
+    month: string;
+    budget_amount: number;
+}
+
+export interface UpdateCategoryBudgetRequest {
+    budget_amount?: number;
+}
+
+export interface UpdateCategoryTypeRequest {
+    category_type?: "need" | "want" | "savings";
+}
+
+// Financial Health Types
+
+export interface CategoryTypeSpending {
+    category_type: "need" | "want" | "savings";
+    total_amount: number;
+    transaction_count: number;
+}
+
+export interface FiftyThirtyTwentyData {
+    needs_percentage: number;
+    wants_percentage: number;
+    savings_percentage: number;
+    needs_amount: number;
+    wants_amount: number;
+    savings_amount: number;
+}
+
+export interface DayOfWeekSpending {
+    day_of_week: number;
+    total_amount: number;
+    transaction_count: number;
+    avg_amount: number;
+}
+
+export interface MerchantSpending {
+    description: string;
+    total_amount: number;
+    transaction_count: number;
+    avg_amount: number;
+}
+
+// Financial Health Response Types
+
+export interface HealthScoreResponse {
+    score: number;
+    status: string;
+    savings_rate: number;
+    debt_to_income: number;
+    emergency_fund_months: number;
+    recommendations: string[];
+}
+
+export interface FiftyThirtyTwentyItem {
+    category: string;
+    amount: number;
+    target_percentage: number;
+    actual_percentage: number;
+    status: string;
+}
+
+export interface FiftyThirtyTwentyResponse {
+    needs: FiftyThirtyTwentyItem;
+    wants: FiftyThirtyTwentyItem;
+    savings: FiftyThirtyTwentyItem;
+    total_income: number;
+}
+
+export interface WeekdaySpendingItem {
+    day: string;
+    total_amount: number;
+    count: number;
+    average_amount: number;
+}
+
+export interface WeekdayPatternResponse {
+    weekdays: WeekdaySpendingItem[];
+    highest_spending_day: string;
+    lowest_spending_day: string;
+}
+
+export interface MonthOverMonthItem {
+    month: string;
+    income: number;
+    expenses: number;
+    savings: number;
+    savings_rate: number;
+    expense_change_percent: number;
+}
+
+export interface MonthOverMonthResponse {
+    trends: MonthOverMonthItem[];
+    average_savings_rate: number;
+}
+
+export interface MerchantItem {
+    name: string;
+    total_spent: number;
+    count: number;
+    average_amount: number;
+    percentage: number;
+    category_name?: string;
+}
+
+export interface MerchantAnalysisResponse {
+    merchants: MerchantItem[];
+    total_spent: number;
+    unique_merchant_count: number;
+}
+
+export interface SubscriptionItem {
+    id: string;
+    description: string;
+    amount: number;
+    currency: string;
+    recurring_type: string;
+    category_name?: string;
+    next_due_date: string;
+}
+
+export interface SubscriptionsResponse {
+    subscriptions: SubscriptionItem[];
+    total_monthly: number;
+    count: number;
 }

@@ -10,12 +10,13 @@ import (
 )
 
 type BudgetCategory struct {
-	ID        uuid.UUID        `json:"id"`
-	Name      string           `json:"name"`
-	Color     pgtype.Text      `json:"color"`
-	Icon      pgtype.Text      `json:"icon"`
-	CreatedAt pgtype.Timestamp `json:"created_at"`
-	UserID    uuid.UUID        `json:"user_id"`
+	ID           uuid.UUID        `json:"id"`
+	Name         string           `json:"name"`
+	Color        pgtype.Text      `json:"color"`
+	Icon         pgtype.Text      `json:"icon"`
+	CreatedAt    pgtype.Timestamp `json:"created_at"`
+	UserID       uuid.UUID        `json:"user_id"`
+	CategoryType pgtype.Text      `json:"category_type"`
 }
 
 type BudgetExpense struct {
@@ -59,6 +60,29 @@ type BudgetTag struct {
 	Color     pgtype.Text      `json:"color"`
 	CreatedAt pgtype.Timestamp `json:"created_at"`
 	UserID    uuid.UUID        `json:"user_id"`
+}
+
+type CategoryBudget struct {
+	ID           uuid.UUID        `json:"id"`
+	UserID       uuid.UUID        `json:"user_id"`
+	CategoryID   uuid.UUID        `json:"category_id"`
+	Month        pgtype.Date      `json:"month"`
+	BudgetAmount pgtype.Numeric   `json:"budget_amount"`
+	CreatedAt    pgtype.Timestamp `json:"created_at"`
+	UpdatedAt    pgtype.Timestamp `json:"updated_at"`
+}
+
+type SavingsGoal struct {
+	ID            uuid.UUID        `json:"id"`
+	UserID        uuid.UUID        `json:"user_id"`
+	Name          string           `json:"name"`
+	TargetAmount  pgtype.Numeric   `json:"target_amount"`
+	CurrentAmount pgtype.Numeric   `json:"current_amount"`
+	Deadline      pgtype.Date      `json:"deadline"`
+	Icon          pgtype.Text      `json:"icon"`
+	Color         pgtype.Text      `json:"color"`
+	CreatedAt     pgtype.Timestamp `json:"created_at"`
+	UpdatedAt     pgtype.Timestamp `json:"updated_at"`
 }
 
 type Service struct {
