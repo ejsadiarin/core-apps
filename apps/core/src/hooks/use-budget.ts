@@ -108,7 +108,10 @@ export const budgetKeys = {
   // Merchant Analysis
   merchantAnalysis: (limit?: number, startDate?: string, endDate?: string) =>
     [...budgetKeys.stats(), 'merchantAnalysis', { limit, startDate, endDate }] as const,
-  subscriptions: () => [...budgetKeys.all, 'subscriptions'] as const
+  subscriptions: () => [...budgetKeys.all, 'subscriptions'] as const,
+
+  // Current Total Money
+  currentTotalMoney: () => [...budgetKeys.all, 'currentTotalMoney'] as const
 };
 
 // Categories
@@ -536,7 +539,8 @@ import {
   fetchSubscriptions,
   fetchWeekdayPattern,
   fetchMonthOverMonth,
-  fetchMerchantAnalysis
+  fetchMerchantAnalysis,
+  fetchCurrentTotalMoney
 } from '@/lib/api';
 
 import type {
@@ -552,7 +556,8 @@ import type {
   SubscriptionsResponse,
   WeekdayPatternResponse,
   MonthOverMonthResponse,
-  MerchantAnalysisResponse
+  MerchantAnalysisResponse,
+  CurrentTotalMoneyResponse
 } from '@/types/api';
 
 // Budget Analytics Hooks
@@ -713,6 +718,14 @@ export function useSubscriptions() {
   return useQuery<SubscriptionsResponse>({
     queryKey: budgetKeys.subscriptions(),
     queryFn: fetchSubscriptions,
+    staleTime: 300000
+  });
+}
+
+export function useCurrentTotalMoney() {
+  return useQuery<CurrentTotalMoneyResponse>({
+    queryKey: budgetKeys.currentTotalMoney(),
+    queryFn: fetchCurrentTotalMoney,
     staleTime: 300000
   });
 }

@@ -10,7 +10,8 @@ import {
   SavingsRateCard,
   SpendingVelocityCard,
   UpcomingBillsCard,
-  BudgetVarianceTable
+  BudgetVarianceTable,
+  CurrentTotalMoneyCard
 } from "@/components/budget";
 import {
   useSummaryStats,
@@ -253,9 +254,19 @@ export default function BudgetDashboard() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.2 }}
       >
+        <CurrentTotalMoneyCard />
         <SavingsRateCard />
         <SpendingVelocityCard />
         <UpcomingBillsCard days={7} />
+      </motion.div>
+
+      {/* Budget Variance Table */}
+      <motion.div
+        className="mb-8"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.25 }}
+      >
         <BudgetVarianceTable />
       </motion.div>
 

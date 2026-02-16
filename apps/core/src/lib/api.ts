@@ -41,7 +41,8 @@ import type {
   WeekdayPatternResponse,
   MonthOverMonthResponse,
   MerchantAnalysisResponse,
-  SubscriptionsResponse
+  SubscriptionsResponse,
+  CurrentTotalMoneyResponse
 } from '@/types/api';
 
 const url = 'http://localhost:8080';
@@ -832,6 +833,16 @@ export async function fetchSubscriptions(): Promise<SubscriptionsResponse> {
   });
   if (!res.ok) {
     throw new Error(`Error fetching subscriptions: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function fetchCurrentTotalMoney(): Promise<CurrentTotalMoneyResponse> {
+  const res = await fetch(url + '/api/budget/current-total-money', {
+    credentials: 'include'
+  });
+  if (!res.ok) {
+    throw new Error(`Error fetching current total money: ${res.status}`);
   }
   return res.json();
 }

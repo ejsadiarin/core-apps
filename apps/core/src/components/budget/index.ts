@@ -10,3 +10,4 @@ export { SpendingTrendCard } from './spending-trend-card';
 export { TopMerchantsTable } from './top-merchants-table';
 export { SubscriptionList } from './subscription-list';
 export { SubscriptionTotalCard } from './subscription-total-card';
+export { CurrentTotalMoneyCard } from './current-total-money-card';
