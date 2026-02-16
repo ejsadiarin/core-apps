@@ -56,7 +56,6 @@ type Querier interface {
 	GetAllTotalExpensesToDate(ctx context.Context, arg GetAllTotalExpensesToDateParams) (interface{}, error)
 	GetAllTotalSpending(ctx context.Context, arg GetAllTotalSpendingParams) (GetAllTotalSpendingRow, error)
 	GetBudgetVariance(ctx context.Context, arg GetBudgetVarianceParams) ([]GetBudgetVarianceRow, error)
-	GetCategoriesByType(ctx context.Context, arg GetCategoriesByTypeParams) ([]BudgetCategory, error)
 	GetCategory(ctx context.Context, arg GetCategoryParams) (BudgetCategory, error)
 	GetCategoryBudget(ctx context.Context, arg GetCategoryBudgetParams) (CategoryBudget, error)
 	GetCategoryBudgetByCategoryAndMonth(ctx context.Context, arg GetCategoryBudgetByCategoryAndMonthParams) (CategoryBudget, error)
@@ -81,6 +80,7 @@ type Querier interface {
 	// Budget Remaining Calculation Queries
 	// These queries fetch raw data; proration logic is handled in the application layer
 	GetOneTimeIncomeToDate(ctx context.Context, arg GetOneTimeIncomeToDateParams) (interface{}, error)
+	GetPriorityGroupBySlug(ctx context.Context, slug string) (BudgetPriorityGroup, error)
 	GetRecurringIncomeRules(ctx context.Context, arg GetRecurringIncomeRulesParams) ([]BudgetIncome, error)
 	GetSavingsGoal(ctx context.Context, arg GetSavingsGoalParams) (SavingsGoal, error)
 	GetSavingsGoalsSummary(ctx context.Context, userID uuid.UUID) (GetSavingsGoalsSummaryRow, error)
@@ -90,16 +90,17 @@ type Querier interface {
 	GetServiceStats30d(ctx context.Context, serviceID pgtype.UUID) (GetServiceStats30dRow, error)
 	GetServiceStats7d(ctx context.Context, serviceID pgtype.UUID) (GetServiceStats7dRow, error)
 	GetSessionByTokenHash(ctx context.Context, tokenHash string) (GetSessionByTokenHashRow, error)
-	// 50/30/20 Analysis
-	GetSpendingByCategoryType(ctx context.Context, arg GetSpendingByCategoryTypeParams) ([]GetSpendingByCategoryTypeRow, error)
 	// Weekday Analysis
 	GetSpendingByDayOfWeek(ctx context.Context, arg GetSpendingByDayOfWeekParams) ([]GetSpendingByDayOfWeekRow, error)
+	// 50/30/20 Analysis
+	GetSpendingByPriorityGroup(ctx context.Context, arg GetSpendingByPriorityGroupParams) ([]GetSpendingByPriorityGroupRow, error)
 	GetTag(ctx context.Context, arg GetTagParams) (BudgetTag, error)
 	GetTagByID(ctx context.Context, id uuid.UUID) (BudgetTag, error)
 	// Merchant Analysis
 	GetTopMerchants(ctx context.Context, arg GetTopMerchantsParams) ([]GetTopMerchantsRow, error)
 	GetTotalExpensesToDate(ctx context.Context, arg GetTotalExpensesToDateParams) (interface{}, error)
 	GetTotalSpending(ctx context.Context, arg GetTotalSpendingParams) (GetTotalSpendingRow, error)
+	GetUnclassifiedExpenseCount(ctx context.Context, arg GetUnclassifiedExpenseCountParams) (GetUnclassifiedExpenseCountRow, error)
 	// Upcoming Recurring Expenses Forecasting
 	GetUpcomingRecurringExpenses(ctx context.Context, arg GetUpcomingRecurringExpensesParams) ([]GetUpcomingRecurringExpensesRow, error)
 	GetUser(ctx context.Context, id uuid.UUID) (User, error)
@@ -113,6 +114,8 @@ type Querier interface {
 	ListCategoryBudgets(ctx context.Context, arg ListCategoryBudgetsParams) ([]ListCategoryBudgetsRow, error)
 	ListExpenses(ctx context.Context, arg ListExpensesParams) ([]ListExpensesRow, error)
 	ListIncomes(ctx context.Context, arg ListIncomesParams) ([]BudgetIncome, error)
+	// Priority Groups
+	ListPriorityGroups(ctx context.Context) ([]BudgetPriorityGroup, error)
 	ListSavingsGoals(ctx context.Context, userID uuid.UUID) ([]SavingsGoal, error)
 	ListServices(ctx context.Context) ([]ListServicesRow, error)
 	ListTags(ctx context.Context, userID uuid.UUID) ([]BudgetTag, error)
@@ -122,8 +125,6 @@ type Querier interface {
 	SearchExpenses(ctx context.Context, arg SearchExpensesParams) ([]SearchExpensesRow, error)
 	UpdateCategory(ctx context.Context, arg UpdateCategoryParams) (BudgetCategory, error)
 	UpdateCategoryBudget(ctx context.Context, arg UpdateCategoryBudgetParams) (CategoryBudget, error)
-	// Category Type Management
-	UpdateCategoryType(ctx context.Context, arg UpdateCategoryTypeParams) (BudgetCategory, error)
 	UpdateExpense(ctx context.Context, arg UpdateExpenseParams) (BudgetExpense, error)
 	UpdateIncome(ctx context.Context, arg UpdateIncomeParams) (BudgetIncome, error)
 	UpdateSavingsGoal(ctx context.Context, arg UpdateSavingsGoalParams) (SavingsGoal, error)

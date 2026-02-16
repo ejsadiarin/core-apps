@@ -82,13 +82,15 @@ func (a *Application) RegisterRoutes() {
 		// budget tracking routes
 		budget := api.Group("/budget")
 		{
+			// priority groups (reference data)
+			budget.GET("/priority-groups", a.BudgetHandler.GetPriorityGroups)
+
 			// categories
 			categories := budget.Group("/categories")
 			categories.POST("", a.BudgetHandler.CreateCategory)
 			categories.GET("", a.BudgetHandler.ListCategories)
 			categories.PUT("/:id", a.BudgetHandler.UpdateCategory)
 			categories.DELETE("/:id", a.BudgetHandler.DeleteCategory)
-			categories.PUT("/:id/type", a.BudgetHandler.UpdateCategoryType)
 
 			// tags
 			tags := budget.Group("/tags")

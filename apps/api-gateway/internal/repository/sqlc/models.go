@@ -10,29 +10,29 @@ import (
 )
 
 type BudgetCategory struct {
-	ID           uuid.UUID        `json:"id"`
-	Name         string           `json:"name"`
-	Color        pgtype.Text      `json:"color"`
-	Icon         pgtype.Text      `json:"icon"`
-	CreatedAt    pgtype.Timestamp `json:"created_at"`
-	UserID       uuid.UUID        `json:"user_id"`
-	CategoryType pgtype.Text      `json:"category_type"`
+	ID        uuid.UUID        `json:"id"`
+	Name      string           `json:"name"`
+	Color     pgtype.Text      `json:"color"`
+	Icon      pgtype.Text      `json:"icon"`
+	CreatedAt pgtype.Timestamp `json:"created_at"`
+	UserID    uuid.UUID        `json:"user_id"`
 }
 
 type BudgetExpense struct {
-	ID            uuid.UUID        `json:"id"`
-	Description   string           `json:"description"`
-	Amount        pgtype.Numeric   `json:"amount"`
-	Currency      pgtype.Text      `json:"currency"`
-	CategoryID    pgtype.UUID      `json:"category_id"`
-	ExpenseDate   pgtype.Date      `json:"expense_date"`
-	CreatedAt     pgtype.Timestamp `json:"created_at"`
-	UpdatedAt     pgtype.Timestamp `json:"updated_at"`
-	Notes         pgtype.Text      `json:"notes"`
-	UserID        uuid.UUID        `json:"user_id"`
-	RecurringType pgtype.Text      `json:"recurring_type"`
-	StartDate     pgtype.Date      `json:"start_date"`
-	EndDate       pgtype.Date      `json:"end_date"`
+	ID              uuid.UUID        `json:"id"`
+	Description     string           `json:"description"`
+	Amount          pgtype.Numeric   `json:"amount"`
+	Currency        pgtype.Text      `json:"currency"`
+	CategoryID      pgtype.UUID      `json:"category_id"`
+	ExpenseDate     pgtype.Date      `json:"expense_date"`
+	CreatedAt       pgtype.Timestamp `json:"created_at"`
+	UpdatedAt       pgtype.Timestamp `json:"updated_at"`
+	Notes           pgtype.Text      `json:"notes"`
+	UserID          uuid.UUID        `json:"user_id"`
+	RecurringType   pgtype.Text      `json:"recurring_type"`
+	StartDate       pgtype.Date      `json:"start_date"`
+	EndDate         pgtype.Date      `json:"end_date"`
+	PriorityGroupID pgtype.UUID      `json:"priority_group_id"`
 }
 
 type BudgetExpenseTag struct {
@@ -52,6 +52,14 @@ type BudgetIncome struct {
 	CreatedAt     pgtype.Timestamp `json:"created_at"`
 	UpdatedAt     pgtype.Timestamp `json:"updated_at"`
 	EndDate       pgtype.Date      `json:"end_date"`
+}
+
+type BudgetPriorityGroup struct {
+	ID           uuid.UUID        `json:"id"`
+	Name         string           `json:"name"`
+	Slug         string           `json:"slug"`
+	DisplayOrder int32            `json:"display_order"`
+	CreatedAt    pgtype.Timestamp `json:"created_at"`
 }
 
 type BudgetTag struct {

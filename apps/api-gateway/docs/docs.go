@@ -404,58 +404,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/budget/categories/{id}/type": {
-            "put": {
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "budget"
-                ],
-                "summary": "Update category type (need/want/savings)",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Category ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Category type",
-                        "name": "type",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/internal_domain_budget.UpdateCategoryTypeRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/internal_domain_budget.CategoryResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/api/budget/category-budgets": {
             "get": {
                 "produces": [
@@ -1104,6 +1052,28 @@ const docTemplate = `{
                         "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/budget/priority-groups": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budget"
+                ],
+                "summary": "List all priority groups",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/internal_domain_budget.PriorityGroupResponse"
+                            }
                         }
                     }
                 }
@@ -2513,9 +2483,6 @@ const docTemplate = `{
                 "category_name": {
                     "type": "string"
                 },
-                "category_type": {
-                    "type": "string"
-                },
                 "percentage": {
                     "type": "number"
                 },
@@ -2613,6 +2580,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "notes": {
+                    "type": "string"
+                },
+                "priority_group_id": {
                     "type": "string"
                 },
                 "recurring_type": {
@@ -2716,6 +2686,9 @@ const docTemplate = `{
                 "notes": {
                     "type": "string"
                 },
+                "priority_group": {
+                    "$ref": "#/definitions/internal_domain_budget.PriorityGroupResponse"
+                },
                 "recurring_type": {
                     "type": "string"
                 },
@@ -2764,6 +2737,12 @@ const docTemplate = `{
                 },
                 "total_income": {
                     "type": "number"
+                },
+                "unclassified_amount": {
+                    "type": "number"
+                },
+                "unclassified_count": {
+                    "type": "integer"
                 },
                 "wants": {
                     "$ref": "#/definitions/internal_domain_budget.FiftyThirtyTwentyItem"
@@ -2905,6 +2884,23 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/internal_domain_budget.MonthOverMonthItem"
                     }
+                }
+            }
+        },
+        "internal_domain_budget.PriorityGroupResponse": {
+            "type": "object",
+            "properties": {
+                "display_order": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
                 }
             }
         },
@@ -3113,19 +3109,6 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_domain_budget.UpdateCategoryTypeRequest": {
-            "type": "object",
-            "properties": {
-                "category_type": {
-                    "type": "string",
-                    "enum": [
-                        "need",
-                        "want",
-                        "savings"
-                    ]
-                }
-            }
-        },
         "internal_domain_budget.UpdateExpenseRequest": {
             "type": "object",
             "properties": {
@@ -3148,6 +3131,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "notes": {
+                    "type": "string"
+                },
+                "priority_group_id": {
                     "type": "string"
                 },
                 "recurring_type": {

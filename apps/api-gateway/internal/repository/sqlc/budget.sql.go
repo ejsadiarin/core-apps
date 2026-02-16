@@ -99,7 +99,7 @@ INSERT INTO budget_categories (
 ) VALUES (
     $1, $2, $3, $4
 )
-RETURNING id, name, color, icon, created_at, user_id, category_type
+RETURNING id, name, color, icon, created_at, user_id
 `
 
 type CreateCategoryParams struct {
@@ -125,7 +125,6 @@ func (q *Queries) CreateCategory(ctx context.Context, arg CreateCategoryParams) 
 		&i.Icon,
 		&i.CreatedAt,
 		&i.UserID,
-		&i.CategoryType,
 	)
 	return i, err
 }
@@ -171,24 +170,25 @@ func (q *Queries) CreateCategoryBudget(ctx context.Context, arg CreateCategoryBu
 const createExpense = `-- name: CreateExpense :one
 
 INSERT INTO budget_expenses (
-    description, amount, currency, category_id, expense_date, notes, user_id, recurring_type, start_date, end_date
+    description, amount, currency, category_id, expense_date, notes, user_id, recurring_type, start_date, end_date, priority_group_id
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
 )
-RETURNING id, description, amount, currency, category_id, expense_date, created_at, updated_at, notes, user_id, recurring_type, start_date, end_date
+RETURNING id, description, amount, currency, category_id, expense_date, created_at, updated_at, notes, user_id, recurring_type, start_date, end_date, priority_group_id
 `
 
 type CreateExpenseParams struct {
-	Description   string         `json:"description"`
-	Amount        pgtype.Numeric `json:"amount"`
-	Currency      pgtype.Text    `json:"currency"`
-	CategoryID    pgtype.UUID    `json:"category_id"`
-	ExpenseDate   pgtype.Date    `json:"expense_date"`
-	Notes         pgtype.Text    `json:"notes"`
-	UserID        uuid.UUID      `json:"user_id"`
-	RecurringType pgtype.Text    `json:"recurring_type"`
-	StartDate     pgtype.Date    `json:"start_date"`
-	EndDate       pgtype.Date    `json:"end_date"`
+	Description     string         `json:"description"`
+	Amount          pgtype.Numeric `json:"amount"`
+	Currency        pgtype.Text    `json:"currency"`
+	CategoryID      pgtype.UUID    `json:"category_id"`
+	ExpenseDate     pgtype.Date    `json:"expense_date"`
+	Notes           pgtype.Text    `json:"notes"`
+	UserID          uuid.UUID      `json:"user_id"`
+	RecurringType   pgtype.Text    `json:"recurring_type"`
+	StartDate       pgtype.Date    `json:"start_date"`
+	EndDate         pgtype.Date    `json:"end_date"`
+	PriorityGroupID pgtype.UUID    `json:"priority_group_id"`
 }
 
 // Expenses
@@ -204,6 +204,7 @@ func (q *Queries) CreateExpense(ctx context.Context, arg CreateExpenseParams) (B
 		arg.RecurringType,
 		arg.StartDate,
 		arg.EndDate,
+		arg.PriorityGroupID,
 	)
 	var i BudgetExpense
 	err := row.Scan(
@@ -220,6 +221,7 @@ func (q *Queries) CreateExpense(ctx context.Context, arg CreateExpenseParams) (B
 		&i.RecurringType,
 		&i.StartDate,
 		&i.EndDate,
+		&i.PriorityGroupID,
 	)
 	return i, err
 }
@@ -405,7 +407,6 @@ SELECT
     c.id as category_id,
     c.name as category_name,
     c.color as category_color,
-    c.category_type,
     COALESCE(cb.budget_amount, 0::numeric) as budget_amount,
     COALESCE(SUM(e.amount), 0::numeric) as spent_amount,
     COUNT(e.id) as transaction_count
@@ -418,7 +419,7 @@ LEFT JOIN budget_expenses e ON c.id = e.category_id
     AND ($3::date IS NULL OR e.expense_date >= $3::date)
     AND ($4::date IS NULL OR e.expense_date <= $4::date)
 WHERE c.user_id = $1
-GROUP BY c.id, c.name, c.color, c.category_type, cb.budget_amount
+GROUP BY c.id, c.name, c.color, cb.budget_amount
 ORDER BY c.name
 `
 
@@ -433,7 +434,6 @@ type GetBudgetVarianceRow struct {
 	CategoryID       uuid.UUID      `json:"category_id"`
 	CategoryName     string         `json:"category_name"`
 	CategoryColor    pgtype.Text    `json:"category_color"`
-	CategoryType     pgtype.Text    `json:"category_type"`
 	BudgetAmount     pgtype.Numeric `json:"budget_amount"`
 	SpentAmount      interface{}    `json:"spent_amount"`
 	TransactionCount int64          `json:"transaction_count"`
@@ -457,7 +457,6 @@ func (q *Queries) GetBudgetVariance(ctx context.Context, arg GetBudgetVariancePa
 			&i.CategoryID,
 			&i.CategoryName,
 			&i.CategoryColor,
-			&i.CategoryType,
 			&i.BudgetAmount,
 			&i.SpentAmount,
 			&i.TransactionCount,
@@ -472,47 +471,8 @@ func (q *Queries) GetBudgetVariance(ctx context.Context, arg GetBudgetVariancePa
 	return items, nil
 }
 
-const getCategoriesByType = `-- name: GetCategoriesByType :many
-SELECT id, name, color, icon, created_at, user_id, category_type FROM budget_categories
-WHERE user_id = $1 AND category_type = $2
-ORDER BY name
-`
-
-type GetCategoriesByTypeParams struct {
-	UserID       uuid.UUID   `json:"user_id"`
-	CategoryType pgtype.Text `json:"category_type"`
-}
-
-func (q *Queries) GetCategoriesByType(ctx context.Context, arg GetCategoriesByTypeParams) ([]BudgetCategory, error) {
-	rows, err := q.db.Query(ctx, getCategoriesByType, arg.UserID, arg.CategoryType)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []BudgetCategory{}
-	for rows.Next() {
-		var i BudgetCategory
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.Color,
-			&i.Icon,
-			&i.CreatedAt,
-			&i.UserID,
-			&i.CategoryType,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getCategory = `-- name: GetCategory :one
-SELECT id, name, color, icon, created_at, user_id, category_type FROM budget_categories
+SELECT id, name, color, icon, created_at, user_id FROM budget_categories
 WHERE id = $1 AND user_id = $2 LIMIT 1
 `
 
@@ -531,7 +491,6 @@ func (q *Queries) GetCategory(ctx context.Context, arg GetCategoryParams) (Budge
 		&i.Icon,
 		&i.CreatedAt,
 		&i.UserID,
-		&i.CategoryType,
 	)
 	return i, err
 }
@@ -588,7 +547,7 @@ func (q *Queries) GetCategoryBudgetByCategoryAndMonth(ctx context.Context, arg G
 }
 
 const getCategoryByID = `-- name: GetCategoryByID :one
-SELECT id, name, color, icon, created_at, user_id, category_type FROM budget_categories
+SELECT id, name, color, icon, created_at, user_id FROM budget_categories
 WHERE id = $1 LIMIT 1
 `
 
@@ -602,7 +561,6 @@ func (q *Queries) GetCategoryByID(ctx context.Context, id uuid.UUID) (BudgetCate
 		&i.Icon,
 		&i.CreatedAt,
 		&i.UserID,
-		&i.CategoryType,
 	)
 	return i, err
 }
@@ -758,7 +716,7 @@ func (q *Queries) GetDailySpendingForVelocity(ctx context.Context, arg GetDailyS
 }
 
 const getExpense = `-- name: GetExpense :one
-SELECT id, description, amount, currency, category_id, expense_date, created_at, updated_at, notes, user_id, recurring_type, start_date, end_date FROM budget_expenses
+SELECT id, description, amount, currency, category_id, expense_date, created_at, updated_at, notes, user_id, recurring_type, start_date, end_date, priority_group_id FROM budget_expenses
 WHERE id = $1 AND user_id = $2 LIMIT 1
 `
 
@@ -784,12 +742,13 @@ func (q *Queries) GetExpense(ctx context.Context, arg GetExpenseParams) (BudgetE
 		&i.RecurringType,
 		&i.StartDate,
 		&i.EndDate,
+		&i.PriorityGroupID,
 	)
 	return i, err
 }
 
 const getExpenseByID = `-- name: GetExpenseByID :one
-SELECT id, description, amount, currency, category_id, expense_date, created_at, updated_at, notes, user_id, recurring_type, start_date, end_date FROM budget_expenses
+SELECT id, description, amount, currency, category_id, expense_date, created_at, updated_at, notes, user_id, recurring_type, start_date, end_date, priority_group_id FROM budget_expenses
 WHERE id = $1 LIMIT 1
 `
 
@@ -810,6 +769,7 @@ func (q *Queries) GetExpenseByID(ctx context.Context, id uuid.UUID) (BudgetExpen
 		&i.RecurringType,
 		&i.StartDate,
 		&i.EndDate,
+		&i.PriorityGroupID,
 	)
 	return i, err
 }
@@ -849,7 +809,7 @@ func (q *Queries) GetExpenseTags(ctx context.Context, expenseID uuid.UUID) ([]Bu
 
 const getExpensesByDateRange = `-- name: GetExpensesByDateRange :many
 
-SELECT id, description, amount, currency, category_id, expense_date, created_at, updated_at, notes, user_id, recurring_type, start_date, end_date FROM budget_expenses
+SELECT id, description, amount, currency, category_id, expense_date, created_at, updated_at, notes, user_id, recurring_type, start_date, end_date, priority_group_id FROM budget_expenses
 WHERE user_id = $1 AND expense_date BETWEEN $2 AND $3
 ORDER BY expense_date DESC
 `
@@ -884,6 +844,7 @@ func (q *Queries) GetExpensesByDateRange(ctx context.Context, arg GetExpensesByD
 			&i.RecurringType,
 			&i.StartDate,
 			&i.EndDate,
+			&i.PriorityGroupID,
 		); err != nil {
 			return nil, err
 		}
@@ -1011,53 +972,22 @@ func (q *Queries) GetMonthlySpending(ctx context.Context, userID uuid.UUID) ([]G
 	return items, nil
 }
 
-const getSpendingByCategoryType = `-- name: GetSpendingByCategoryType :many
-
-SELECT 
-    c.category_type,
-    COALESCE(SUM(e.amount), 0::numeric) as total_amount,
-    COUNT(e.id) as transaction_count
-FROM budget_categories c
-LEFT JOIN budget_expenses e ON c.id = e.category_id 
-    AND e.user_id = c.user_id
-    AND ($2::date IS NULL OR e.expense_date >= $2::date)
-    AND ($3::date IS NULL OR e.expense_date <= $3::date)
-WHERE c.user_id = $1 AND c.category_type IS NOT NULL
-GROUP BY c.category_type
-ORDER BY total_amount DESC
+const getPriorityGroupBySlug = `-- name: GetPriorityGroupBySlug :one
+SELECT id, name, slug, display_order, created_at FROM budget_priority_groups
+WHERE slug = $1 LIMIT 1
 `
 
-type GetSpendingByCategoryTypeParams struct {
-	UserID    uuid.UUID   `json:"user_id"`
-	StartDate pgtype.Date `json:"start_date"`
-	EndDate   pgtype.Date `json:"end_date"`
-}
-
-type GetSpendingByCategoryTypeRow struct {
-	CategoryType     pgtype.Text `json:"category_type"`
-	TotalAmount      interface{} `json:"total_amount"`
-	TransactionCount int64       `json:"transaction_count"`
-}
-
-// 50/30/20 Analysis
-func (q *Queries) GetSpendingByCategoryType(ctx context.Context, arg GetSpendingByCategoryTypeParams) ([]GetSpendingByCategoryTypeRow, error) {
-	rows, err := q.db.Query(ctx, getSpendingByCategoryType, arg.UserID, arg.StartDate, arg.EndDate)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []GetSpendingByCategoryTypeRow{}
-	for rows.Next() {
-		var i GetSpendingByCategoryTypeRow
-		if err := rows.Scan(&i.CategoryType, &i.TotalAmount, &i.TransactionCount); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+func (q *Queries) GetPriorityGroupBySlug(ctx context.Context, slug string) (BudgetPriorityGroup, error) {
+	row := q.db.QueryRow(ctx, getPriorityGroupBySlug, slug)
+	var i BudgetPriorityGroup
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Slug,
+		&i.DisplayOrder,
+		&i.CreatedAt,
+	)
+	return i, err
 }
 
 const getSpendingByDayOfWeek = `-- name: GetSpendingByDayOfWeek :many
@@ -1103,6 +1033,67 @@ func (q *Queries) GetSpendingByDayOfWeek(ctx context.Context, arg GetSpendingByD
 			&i.TotalAmount,
 			&i.TransactionCount,
 			&i.AvgAmount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getSpendingByPriorityGroup = `-- name: GetSpendingByPriorityGroup :many
+
+SELECT 
+    pg.id as priority_group_id,
+    pg.name as priority_group_name,
+    pg.slug as priority_group_slug,
+    pg.display_order,
+    COALESCE(SUM(e.amount), 0::numeric) as total_amount,
+    COUNT(e.id) as transaction_count
+FROM budget_priority_groups pg
+LEFT JOIN budget_expenses e ON e.priority_group_id = pg.id
+    AND e.user_id = $1
+    AND ($2::date IS NULL OR e.expense_date >= $2::date)
+    AND ($3::date IS NULL OR e.expense_date <= $3::date)
+GROUP BY pg.id, pg.name, pg.slug, pg.display_order
+ORDER BY pg.display_order
+`
+
+type GetSpendingByPriorityGroupParams struct {
+	UserID    uuid.UUID   `json:"user_id"`
+	StartDate pgtype.Date `json:"start_date"`
+	EndDate   pgtype.Date `json:"end_date"`
+}
+
+type GetSpendingByPriorityGroupRow struct {
+	PriorityGroupID   uuid.UUID   `json:"priority_group_id"`
+	PriorityGroupName string      `json:"priority_group_name"`
+	PriorityGroupSlug string      `json:"priority_group_slug"`
+	DisplayOrder      int32       `json:"display_order"`
+	TotalAmount       interface{} `json:"total_amount"`
+	TransactionCount  int64       `json:"transaction_count"`
+}
+
+// 50/30/20 Analysis
+func (q *Queries) GetSpendingByPriorityGroup(ctx context.Context, arg GetSpendingByPriorityGroupParams) ([]GetSpendingByPriorityGroupRow, error) {
+	rows, err := q.db.Query(ctx, getSpendingByPriorityGroup, arg.UserID, arg.StartDate, arg.EndDate)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetSpendingByPriorityGroupRow{}
+	for rows.Next() {
+		var i GetSpendingByPriorityGroupRow
+		if err := rows.Scan(
+			&i.PriorityGroupID,
+			&i.PriorityGroupName,
+			&i.PriorityGroupSlug,
+			&i.DisplayOrder,
+			&i.TotalAmount,
+			&i.TransactionCount,
 		); err != nil {
 			return nil, err
 		}
@@ -1245,6 +1236,35 @@ func (q *Queries) GetTotalSpending(ctx context.Context, arg GetTotalSpendingPara
 	return i, err
 }
 
+const getUnclassifiedExpenseCount = `-- name: GetUnclassifiedExpenseCount :one
+SELECT 
+    COUNT(id) as unclassified_count,
+    COALESCE(SUM(amount), 0::numeric) as unclassified_amount
+FROM budget_expenses
+WHERE user_id = $1
+    AND priority_group_id IS NULL
+    AND ($2::date IS NULL OR expense_date >= $2::date)
+    AND ($3::date IS NULL OR expense_date <= $3::date)
+`
+
+type GetUnclassifiedExpenseCountParams struct {
+	UserID    uuid.UUID   `json:"user_id"`
+	StartDate pgtype.Date `json:"start_date"`
+	EndDate   pgtype.Date `json:"end_date"`
+}
+
+type GetUnclassifiedExpenseCountRow struct {
+	UnclassifiedCount  int64       `json:"unclassified_count"`
+	UnclassifiedAmount interface{} `json:"unclassified_amount"`
+}
+
+func (q *Queries) GetUnclassifiedExpenseCount(ctx context.Context, arg GetUnclassifiedExpenseCountParams) (GetUnclassifiedExpenseCountRow, error) {
+	row := q.db.QueryRow(ctx, getUnclassifiedExpenseCount, arg.UserID, arg.StartDate, arg.EndDate)
+	var i GetUnclassifiedExpenseCountRow
+	err := row.Scan(&i.UnclassifiedCount, &i.UnclassifiedAmount)
+	return i, err
+}
+
 const getUpcomingRecurringExpenses = `-- name: GetUpcomingRecurringExpenses :many
 
 SELECT 
@@ -1318,21 +1338,20 @@ func (q *Queries) GetUpcomingRecurringExpenses(ctx context.Context, arg GetUpcom
 }
 
 const listAllCategories = `-- name: ListAllCategories :many
-SELECT bc.id, bc.name, bc.color, bc.icon, bc.created_at, bc.user_id, bc.category_type, u.email as user_email
+SELECT bc.id, bc.name, bc.color, bc.icon, bc.created_at, bc.user_id, u.email as user_email
 FROM budget_categories bc
 JOIN users u ON bc.user_id = u.id
 ORDER BY bc.name
 `
 
 type ListAllCategoriesRow struct {
-	ID           uuid.UUID        `json:"id"`
-	Name         string           `json:"name"`
-	Color        pgtype.Text      `json:"color"`
-	Icon         pgtype.Text      `json:"icon"`
-	CreatedAt    pgtype.Timestamp `json:"created_at"`
-	UserID       uuid.UUID        `json:"user_id"`
-	CategoryType pgtype.Text      `json:"category_type"`
-	UserEmail    string           `json:"user_email"`
+	ID        uuid.UUID        `json:"id"`
+	Name      string           `json:"name"`
+	Color     pgtype.Text      `json:"color"`
+	Icon      pgtype.Text      `json:"icon"`
+	CreatedAt pgtype.Timestamp `json:"created_at"`
+	UserID    uuid.UUID        `json:"user_id"`
+	UserEmail string           `json:"user_email"`
 }
 
 func (q *Queries) ListAllCategories(ctx context.Context) ([]ListAllCategoriesRow, error) {
@@ -1351,7 +1370,6 @@ func (q *Queries) ListAllCategories(ctx context.Context) ([]ListAllCategoriesRow
 			&i.Icon,
 			&i.CreatedAt,
 			&i.UserID,
-			&i.CategoryType,
 			&i.UserEmail,
 		); err != nil {
 			return nil, err
@@ -1365,10 +1383,12 @@ func (q *Queries) ListAllCategories(ctx context.Context) ([]ListAllCategoriesRow
 }
 
 const listAllExpenses = `-- name: ListAllExpenses :many
-SELECT e.id, e.description, e.amount, e.currency, e.category_id, e.expense_date, e.created_at, e.updated_at, e.notes, e.user_id, e.recurring_type, e.start_date, e.end_date, c.name as category_name, c.color as category_color, c.icon as category_icon, u.email as user_email
+SELECT e.id, e.description, e.amount, e.currency, e.category_id, e.expense_date, e.created_at, e.updated_at, e.notes, e.user_id, e.recurring_type, e.start_date, e.end_date, e.priority_group_id, c.name as category_name, c.color as category_color, c.icon as category_icon, u.email as user_email,
+    pg.name as priority_group_name, pg.slug as priority_group_slug
 FROM budget_expenses e
 LEFT JOIN budget_categories c ON e.category_id = c.id
 JOIN users u ON e.user_id = u.id
+LEFT JOIN budget_priority_groups pg ON e.priority_group_id = pg.id
 WHERE
     ($1::uuid IS NULL OR e.user_id = $1)
     AND ($2::uuid IS NULL OR e.category_id = $2)
@@ -1385,23 +1405,26 @@ type ListAllExpensesParams struct {
 }
 
 type ListAllExpensesRow struct {
-	ID            uuid.UUID        `json:"id"`
-	Description   string           `json:"description"`
-	Amount        pgtype.Numeric   `json:"amount"`
-	Currency      pgtype.Text      `json:"currency"`
-	CategoryID    pgtype.UUID      `json:"category_id"`
-	ExpenseDate   pgtype.Date      `json:"expense_date"`
-	CreatedAt     pgtype.Timestamp `json:"created_at"`
-	UpdatedAt     pgtype.Timestamp `json:"updated_at"`
-	Notes         pgtype.Text      `json:"notes"`
-	UserID        uuid.UUID        `json:"user_id"`
-	RecurringType pgtype.Text      `json:"recurring_type"`
-	StartDate     pgtype.Date      `json:"start_date"`
-	EndDate       pgtype.Date      `json:"end_date"`
-	CategoryName  pgtype.Text      `json:"category_name"`
-	CategoryColor pgtype.Text      `json:"category_color"`
-	CategoryIcon  pgtype.Text      `json:"category_icon"`
-	UserEmail     string           `json:"user_email"`
+	ID                uuid.UUID        `json:"id"`
+	Description       string           `json:"description"`
+	Amount            pgtype.Numeric   `json:"amount"`
+	Currency          pgtype.Text      `json:"currency"`
+	CategoryID        pgtype.UUID      `json:"category_id"`
+	ExpenseDate       pgtype.Date      `json:"expense_date"`
+	CreatedAt         pgtype.Timestamp `json:"created_at"`
+	UpdatedAt         pgtype.Timestamp `json:"updated_at"`
+	Notes             pgtype.Text      `json:"notes"`
+	UserID            uuid.UUID        `json:"user_id"`
+	RecurringType     pgtype.Text      `json:"recurring_type"`
+	StartDate         pgtype.Date      `json:"start_date"`
+	EndDate           pgtype.Date      `json:"end_date"`
+	PriorityGroupID   pgtype.UUID      `json:"priority_group_id"`
+	CategoryName      pgtype.Text      `json:"category_name"`
+	CategoryColor     pgtype.Text      `json:"category_color"`
+	CategoryIcon      pgtype.Text      `json:"category_icon"`
+	UserEmail         string           `json:"user_email"`
+	PriorityGroupName pgtype.Text      `json:"priority_group_name"`
+	PriorityGroupSlug pgtype.Text      `json:"priority_group_slug"`
 }
 
 func (q *Queries) ListAllExpenses(ctx context.Context, arg ListAllExpensesParams) ([]ListAllExpensesRow, error) {
@@ -1432,10 +1455,13 @@ func (q *Queries) ListAllExpenses(ctx context.Context, arg ListAllExpensesParams
 			&i.RecurringType,
 			&i.StartDate,
 			&i.EndDate,
+			&i.PriorityGroupID,
 			&i.CategoryName,
 			&i.CategoryColor,
 			&i.CategoryIcon,
 			&i.UserEmail,
+			&i.PriorityGroupName,
+			&i.PriorityGroupSlug,
 		); err != nil {
 			return nil, err
 		}
@@ -1491,7 +1517,7 @@ func (q *Queries) ListAllTags(ctx context.Context) ([]ListAllTagsRow, error) {
 }
 
 const listCategories = `-- name: ListCategories :many
-SELECT id, name, color, icon, created_at, user_id, category_type FROM budget_categories
+SELECT id, name, color, icon, created_at, user_id FROM budget_categories
 WHERE user_id = $1
 ORDER BY name
 `
@@ -1512,7 +1538,6 @@ func (q *Queries) ListCategories(ctx context.Context, userID uuid.UUID) ([]Budge
 			&i.Icon,
 			&i.CreatedAt,
 			&i.UserID,
-			&i.CategoryType,
 		); err != nil {
 			return nil, err
 		}
@@ -1581,9 +1606,11 @@ func (q *Queries) ListCategoryBudgets(ctx context.Context, arg ListCategoryBudge
 }
 
 const listExpenses = `-- name: ListExpenses :many
-SELECT e.id, e.description, e.amount, e.currency, e.category_id, e.expense_date, e.created_at, e.updated_at, e.notes, e.user_id, e.recurring_type, e.start_date, e.end_date, c.name as category_name, c.color as category_color, c.icon as category_icon
+SELECT e.id, e.description, e.amount, e.currency, e.category_id, e.expense_date, e.created_at, e.updated_at, e.notes, e.user_id, e.recurring_type, e.start_date, e.end_date, e.priority_group_id, c.name as category_name, c.color as category_color, c.icon as category_icon,
+    pg.name as priority_group_name, pg.slug as priority_group_slug
 FROM budget_expenses e
 LEFT JOIN budget_categories c ON e.category_id = c.id
+LEFT JOIN budget_priority_groups pg ON e.priority_group_id = pg.id
 WHERE
     e.user_id = $1
     AND ($4::uuid IS NULL OR e.category_id = $4)
@@ -1605,22 +1632,25 @@ type ListExpensesParams struct {
 }
 
 type ListExpensesRow struct {
-	ID            uuid.UUID        `json:"id"`
-	Description   string           `json:"description"`
-	Amount        pgtype.Numeric   `json:"amount"`
-	Currency      pgtype.Text      `json:"currency"`
-	CategoryID    pgtype.UUID      `json:"category_id"`
-	ExpenseDate   pgtype.Date      `json:"expense_date"`
-	CreatedAt     pgtype.Timestamp `json:"created_at"`
-	UpdatedAt     pgtype.Timestamp `json:"updated_at"`
-	Notes         pgtype.Text      `json:"notes"`
-	UserID        uuid.UUID        `json:"user_id"`
-	RecurringType pgtype.Text      `json:"recurring_type"`
-	StartDate     pgtype.Date      `json:"start_date"`
-	EndDate       pgtype.Date      `json:"end_date"`
-	CategoryName  pgtype.Text      `json:"category_name"`
-	CategoryColor pgtype.Text      `json:"category_color"`
-	CategoryIcon  pgtype.Text      `json:"category_icon"`
+	ID                uuid.UUID        `json:"id"`
+	Description       string           `json:"description"`
+	Amount            pgtype.Numeric   `json:"amount"`
+	Currency          pgtype.Text      `json:"currency"`
+	CategoryID        pgtype.UUID      `json:"category_id"`
+	ExpenseDate       pgtype.Date      `json:"expense_date"`
+	CreatedAt         pgtype.Timestamp `json:"created_at"`
+	UpdatedAt         pgtype.Timestamp `json:"updated_at"`
+	Notes             pgtype.Text      `json:"notes"`
+	UserID            uuid.UUID        `json:"user_id"`
+	RecurringType     pgtype.Text      `json:"recurring_type"`
+	StartDate         pgtype.Date      `json:"start_date"`
+	EndDate           pgtype.Date      `json:"end_date"`
+	PriorityGroupID   pgtype.UUID      `json:"priority_group_id"`
+	CategoryName      pgtype.Text      `json:"category_name"`
+	CategoryColor     pgtype.Text      `json:"category_color"`
+	CategoryIcon      pgtype.Text      `json:"category_icon"`
+	PriorityGroupName pgtype.Text      `json:"priority_group_name"`
+	PriorityGroupSlug pgtype.Text      `json:"priority_group_slug"`
 }
 
 func (q *Queries) ListExpenses(ctx context.Context, arg ListExpensesParams) ([]ListExpensesRow, error) {
@@ -1654,9 +1684,45 @@ func (q *Queries) ListExpenses(ctx context.Context, arg ListExpensesParams) ([]L
 			&i.RecurringType,
 			&i.StartDate,
 			&i.EndDate,
+			&i.PriorityGroupID,
 			&i.CategoryName,
 			&i.CategoryColor,
 			&i.CategoryIcon,
+			&i.PriorityGroupName,
+			&i.PriorityGroupSlug,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPriorityGroups = `-- name: ListPriorityGroups :many
+
+SELECT id, name, slug, display_order, created_at FROM budget_priority_groups
+ORDER BY display_order
+`
+
+// Priority Groups
+func (q *Queries) ListPriorityGroups(ctx context.Context) ([]BudgetPriorityGroup, error) {
+	rows, err := q.db.Query(ctx, listPriorityGroups)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []BudgetPriorityGroup{}
+	for rows.Next() {
+		var i BudgetPriorityGroup
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Slug,
+			&i.DisplayOrder,
+			&i.CreatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -1726,9 +1792,11 @@ func (q *Queries) RemoveExpenseTag(ctx context.Context, arg RemoveExpenseTagPara
 }
 
 const searchExpenses = `-- name: SearchExpenses :many
-SELECT e.id, e.description, e.amount, e.currency, e.category_id, e.expense_date, e.created_at, e.updated_at, e.notes, e.user_id, e.recurring_type, e.start_date, e.end_date, c.name as category_name, c.color as category_color, c.icon as category_icon
+SELECT e.id, e.description, e.amount, e.currency, e.category_id, e.expense_date, e.created_at, e.updated_at, e.notes, e.user_id, e.recurring_type, e.start_date, e.end_date, e.priority_group_id, c.name as category_name, c.color as category_color, c.icon as category_icon,
+    pg.name as priority_group_name, pg.slug as priority_group_slug
 FROM budget_expenses e
 LEFT JOIN budget_categories c ON e.category_id = c.id
+LEFT JOIN budget_priority_groups pg ON e.priority_group_id = pg.id
 WHERE
     e.user_id = $1
     AND e.description ILIKE '%' || $2 || '%'
@@ -1750,22 +1818,25 @@ type SearchExpensesParams struct {
 }
 
 type SearchExpensesRow struct {
-	ID            uuid.UUID        `json:"id"`
-	Description   string           `json:"description"`
-	Amount        pgtype.Numeric   `json:"amount"`
-	Currency      pgtype.Text      `json:"currency"`
-	CategoryID    pgtype.UUID      `json:"category_id"`
-	ExpenseDate   pgtype.Date      `json:"expense_date"`
-	CreatedAt     pgtype.Timestamp `json:"created_at"`
-	UpdatedAt     pgtype.Timestamp `json:"updated_at"`
-	Notes         pgtype.Text      `json:"notes"`
-	UserID        uuid.UUID        `json:"user_id"`
-	RecurringType pgtype.Text      `json:"recurring_type"`
-	StartDate     pgtype.Date      `json:"start_date"`
-	EndDate       pgtype.Date      `json:"end_date"`
-	CategoryName  pgtype.Text      `json:"category_name"`
-	CategoryColor pgtype.Text      `json:"category_color"`
-	CategoryIcon  pgtype.Text      `json:"category_icon"`
+	ID                uuid.UUID        `json:"id"`
+	Description       string           `json:"description"`
+	Amount            pgtype.Numeric   `json:"amount"`
+	Currency          pgtype.Text      `json:"currency"`
+	CategoryID        pgtype.UUID      `json:"category_id"`
+	ExpenseDate       pgtype.Date      `json:"expense_date"`
+	CreatedAt         pgtype.Timestamp `json:"created_at"`
+	UpdatedAt         pgtype.Timestamp `json:"updated_at"`
+	Notes             pgtype.Text      `json:"notes"`
+	UserID            uuid.UUID        `json:"user_id"`
+	RecurringType     pgtype.Text      `json:"recurring_type"`
+	StartDate         pgtype.Date      `json:"start_date"`
+	EndDate           pgtype.Date      `json:"end_date"`
+	PriorityGroupID   pgtype.UUID      `json:"priority_group_id"`
+	CategoryName      pgtype.Text      `json:"category_name"`
+	CategoryColor     pgtype.Text      `json:"category_color"`
+	CategoryIcon      pgtype.Text      `json:"category_icon"`
+	PriorityGroupName pgtype.Text      `json:"priority_group_name"`
+	PriorityGroupSlug pgtype.Text      `json:"priority_group_slug"`
 }
 
 func (q *Queries) SearchExpenses(ctx context.Context, arg SearchExpensesParams) ([]SearchExpensesRow, error) {
@@ -1799,9 +1870,12 @@ func (q *Queries) SearchExpenses(ctx context.Context, arg SearchExpensesParams) 
 			&i.RecurringType,
 			&i.StartDate,
 			&i.EndDate,
+			&i.PriorityGroupID,
 			&i.CategoryName,
 			&i.CategoryColor,
 			&i.CategoryIcon,
+			&i.PriorityGroupName,
+			&i.PriorityGroupSlug,
 		); err != nil {
 			return nil, err
 		}
@@ -1820,7 +1894,7 @@ SET
     color = COALESCE($4, color),
     icon = COALESCE($5, icon)
 WHERE id = $1 AND user_id = $2
-RETURNING id, name, color, icon, created_at, user_id, category_type
+RETURNING id, name, color, icon, created_at, user_id
 `
 
 type UpdateCategoryParams struct {
@@ -1847,7 +1921,6 @@ func (q *Queries) UpdateCategory(ctx context.Context, arg UpdateCategoryParams) 
 		&i.Icon,
 		&i.CreatedAt,
 		&i.UserID,
-		&i.CategoryType,
 	)
 	return i, err
 }
@@ -1882,36 +1955,6 @@ func (q *Queries) UpdateCategoryBudget(ctx context.Context, arg UpdateCategoryBu
 	return i, err
 }
 
-const updateCategoryType = `-- name: UpdateCategoryType :one
-
-UPDATE budget_categories
-SET category_type = $2
-WHERE id = $1 AND user_id = $3
-RETURNING id, name, color, icon, created_at, user_id, category_type
-`
-
-type UpdateCategoryTypeParams struct {
-	ID           uuid.UUID   `json:"id"`
-	CategoryType pgtype.Text `json:"category_type"`
-	UserID       uuid.UUID   `json:"user_id"`
-}
-
-// Category Type Management
-func (q *Queries) UpdateCategoryType(ctx context.Context, arg UpdateCategoryTypeParams) (BudgetCategory, error) {
-	row := q.db.QueryRow(ctx, updateCategoryType, arg.ID, arg.CategoryType, arg.UserID)
-	var i BudgetCategory
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.Color,
-		&i.Icon,
-		&i.CreatedAt,
-		&i.UserID,
-		&i.CategoryType,
-	)
-	return i, err
-}
-
 const updateExpense = `-- name: UpdateExpense :one
 UPDATE budget_expenses
 SET
@@ -1924,23 +1967,25 @@ SET
     recurring_type = COALESCE($9, recurring_type),
     start_date = COALESCE($10, start_date),
     end_date = $11,
+    priority_group_id = $12,
     updated_at = NOW()
 WHERE id = $1 AND user_id = $2
-RETURNING id, description, amount, currency, category_id, expense_date, created_at, updated_at, notes, user_id, recurring_type, start_date, end_date
+RETURNING id, description, amount, currency, category_id, expense_date, created_at, updated_at, notes, user_id, recurring_type, start_date, end_date, priority_group_id
 `
 
 type UpdateExpenseParams struct {
-	ID            uuid.UUID      `json:"id"`
-	UserID        uuid.UUID      `json:"user_id"`
-	Description   pgtype.Text    `json:"description"`
-	Amount        pgtype.Numeric `json:"amount"`
-	Currency      pgtype.Text    `json:"currency"`
-	CategoryID    pgtype.UUID    `json:"category_id"`
-	ExpenseDate   pgtype.Date    `json:"expense_date"`
-	Notes         pgtype.Text    `json:"notes"`
-	RecurringType pgtype.Text    `json:"recurring_type"`
-	StartDate     pgtype.Date    `json:"start_date"`
-	EndDate       pgtype.Date    `json:"end_date"`
+	ID              uuid.UUID      `json:"id"`
+	UserID          uuid.UUID      `json:"user_id"`
+	Description     pgtype.Text    `json:"description"`
+	Amount          pgtype.Numeric `json:"amount"`
+	Currency        pgtype.Text    `json:"currency"`
+	CategoryID      pgtype.UUID    `json:"category_id"`
+	ExpenseDate     pgtype.Date    `json:"expense_date"`
+	Notes           pgtype.Text    `json:"notes"`
+	RecurringType   pgtype.Text    `json:"recurring_type"`
+	StartDate       pgtype.Date    `json:"start_date"`
+	EndDate         pgtype.Date    `json:"end_date"`
+	PriorityGroupID pgtype.UUID    `json:"priority_group_id"`
 }
 
 func (q *Queries) UpdateExpense(ctx context.Context, arg UpdateExpenseParams) (BudgetExpense, error) {
@@ -1956,6 +2001,7 @@ func (q *Queries) UpdateExpense(ctx context.Context, arg UpdateExpenseParams) (B
 		arg.RecurringType,
 		arg.StartDate,
 		arg.EndDate,
+		arg.PriorityGroupID,
 	)
 	var i BudgetExpense
 	err := row.Scan(
@@ -1972,6 +2018,7 @@ func (q *Queries) UpdateExpense(ctx context.Context, arg UpdateExpenseParams) (B
 		&i.RecurringType,
 		&i.StartDate,
 		&i.EndDate,
+		&i.PriorityGroupID,
 	)
 	return i, err
 }

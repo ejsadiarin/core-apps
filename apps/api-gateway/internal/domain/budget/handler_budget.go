@@ -109,7 +109,6 @@ func (h *Handler) GetCategoryBudgets(c echo.Context) error {
 			CategoryID:       item.CategoryID,
 			CategoryName:     item.CategoryName,
 			CategoryColor:    textToStringPtr(item.CategoryColor),
-			CategoryType:     textToStringPtr(item.CategoryType),
 			BudgetAmount:     budgetAmount,
 			SpentAmount:      spentAmount,
 			Variance:         variance,
@@ -207,58 +206,4 @@ func (h *Handler) DeleteCategoryBudget(c echo.Context) error {
 	}
 
 	return c.NoContent(http.StatusNoContent)
-}
-
-// UpdateCategoryType godoc
-// @Summary Update category type (need/want/savings)
-// @Tags budget
-// @Accept json
-// @Produce json
-// @Param id path string true "Category ID"
-// @Param type body UpdateCategoryTypeRequest true "Category type"
-// @Success 200 {object} CategoryResponse
-// @Failure 400 {object} models.ErrorResponse
-// @Failure 500 {object} models.ErrorResponse
-// @Router /api/budget/categories/{id}/type [put]
-func (h *Handler) UpdateCategoryType(c echo.Context) error {
-	userID, err := h.getUserID(c)
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to get user context"})
-	}
-
-	categoryID, err := uuid.Parse(c.Param("id"))
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid category ID"})
-	}
-
-	req, err := validator.BindAndValidate[UpdateCategoryTypeRequest](c)
-	if err != nil {
-		validationErrors := validator.FormatValidationErrors(err)
-		return c.JSON(http.StatusBadRequest, models.ErrorResponse{
-			Error:   "Validation failed",
-			Details: validationErrors,
-		})
-	}
-
-	var categoryType pgtype.Text
-	if req.CategoryType != nil {
-		categoryType = pgtype.Text{String: *req.CategoryType, Valid: true}
-	}
-
-	category, err := h.queries.UpdateCategoryType(c.Request().Context(), sqlc.UpdateCategoryTypeParams{
-		ID:           categoryID,
-		CategoryType: categoryType,
-		UserID:       userID,
-	})
-	if err != nil {
-		h.logger.Error().Err(err).Msg("Failed to update category type")
-		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to update category type"})
-	}
-
-	return c.JSON(http.StatusOK, CategoryResponse{
-		ID:    category.ID,
-		Name:  category.Name,
-		Color: textToStringPtr(category.Color),
-		Icon:  textToStringPtr(category.Icon),
-	})
 }

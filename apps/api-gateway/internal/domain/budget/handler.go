@@ -55,6 +55,34 @@ func (h *Handler) requireUser(c echo.Context) (uuid.UUID, error) {
 	return user.ID, nil
 }
 
+// Priority Groups
+
+// GetPriorityGroups godoc
+// @Summary List all priority groups
+// @Tags budget
+// @Produce json
+// @Success 200 {array} PriorityGroupResponse
+// @Router /api/budget/priority-groups [get]
+func (h *Handler) GetPriorityGroups(c echo.Context) error {
+	groups, err := h.queries.ListPriorityGroups(c.Request().Context())
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to list priority groups")
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to list priority groups"})
+	}
+
+	res := make([]PriorityGroupResponse, len(groups))
+	for i, g := range groups {
+		res[i] = PriorityGroupResponse{
+			ID:           g.ID,
+			Name:         g.Name,
+			Slug:         g.Slug,
+			DisplayOrder: g.DisplayOrder,
+		}
+	}
+
+	return c.JSON(http.StatusOK, res)
+}
+
 // Categories
 
 // CreateCategory godoc
@@ -394,16 +422,17 @@ func (h *Handler) CreateExpense(c echo.Context) error {
 	}
 
 	arg := sqlc.CreateExpenseParams{
-		Description:   req.Description,
-		Amount:        float64ToNumeric(req.Amount),
-		Currency:      stringPtrToText(req.Currency),
-		CategoryID:    uuidPtrToNullUUID(req.CategoryID),
-		ExpenseDate:   stringToDate(req.ExpenseDate),
-		Notes:         stringPtrToText(req.Notes),
-		RecurringType: stringPtrToText(req.RecurringType),
-		StartDate:     stringPtrToDate(req.StartDate),
-		EndDate:       stringPtrToDate(req.EndDate),
-		UserID:        userID,
+		Description:     req.Description,
+		Amount:          float64ToNumeric(req.Amount),
+		Currency:        stringPtrToText(req.Currency),
+		CategoryID:      uuidPtrToNullUUID(req.CategoryID),
+		ExpenseDate:     stringToDate(req.ExpenseDate),
+		Notes:           stringPtrToText(req.Notes),
+		RecurringType:   stringPtrToText(req.RecurringType),
+		StartDate:       stringPtrToDate(req.StartDate),
+		EndDate:         stringPtrToDate(req.EndDate),
+		UserID:          userID,
+		PriorityGroupID: uuidPtrToNullUUID(req.PriorityGroupID),
 	}
 
 	exp, err := h.queries.CreateExpense(c.Request().Context(), arg)
@@ -511,6 +540,15 @@ func (h *Handler) ListExpenses(c echo.Context) error {
 			}
 		}
 
+		var pg *PriorityGroupResponse
+		if row.PriorityGroupID.Valid {
+			pg = &PriorityGroupResponse{
+				ID:   row.PriorityGroupID.Bytes,
+				Name: row.PriorityGroupName.String,
+				Slug: row.PriorityGroupSlug.String,
+			}
+		}
+
 		tags, _ := h.queries.GetExpenseTags(c.Request().Context(), row.ID)
 		tagResps := make([]TagResponse, len(tags))
 		for j, t := range tags {
@@ -527,6 +565,7 @@ func (h *Handler) ListExpenses(c echo.Context) error {
 			Amount:        numericToFloat64(row.Amount),
 			Currency:      getCurrency(row.Currency),
 			Category:      cat,
+			PriorityGroup: pg,
 			ExpenseDate:   dateToString(row.ExpenseDate),
 			Notes:         textToStringPtr(row.Notes),
 			Tags:          tagResps,
@@ -613,15 +652,16 @@ func (h *Handler) UpdateExpense(c echo.Context) error {
 	}
 
 	arg := sqlc.UpdateExpenseParams{
-		ID:            id,
-		UserID:        userID,
-		Description:   stringPtrToText(req.Description),
-		Currency:      stringPtrToText(req.Currency),
-		CategoryID:    uuidPtrToNullUUID(req.CategoryID),
-		ExpenseDate:   stringPtrToDate(req.ExpenseDate),
-		Notes:         stringPtrToText(req.Notes),
-		RecurringType: stringPtrToText(req.RecurringType),
-		StartDate:     stringPtrToDate(req.StartDate),
+		ID:              id,
+		UserID:          userID,
+		Description:     stringPtrToText(req.Description),
+		Currency:        stringPtrToText(req.Currency),
+		CategoryID:      uuidPtrToNullUUID(req.CategoryID),
+		ExpenseDate:     stringPtrToDate(req.ExpenseDate),
+		Notes:           stringPtrToText(req.Notes),
+		RecurringType:   stringPtrToText(req.RecurringType),
+		StartDate:       stringPtrToDate(req.StartDate),
+		PriorityGroupID: uuidPtrToNullUUID(req.PriorityGroupID),
 	}
 	if req.Amount != nil {
 		arg.Amount = float64ToNumeric(*req.Amount)
@@ -773,6 +813,15 @@ func (h *Handler) SearchExpenses(c echo.Context) error {
 			}
 		}
 
+		var pg *PriorityGroupResponse
+		if row.PriorityGroupID.Valid {
+			pg = &PriorityGroupResponse{
+				ID:   row.PriorityGroupID.Bytes,
+				Name: row.PriorityGroupName.String,
+				Slug: row.PriorityGroupSlug.String,
+			}
+		}
+
 		tags, _ := h.queries.GetExpenseTags(c.Request().Context(), row.ID)
 		tagResps := make([]TagResponse, len(tags))
 		for j, t := range tags {
@@ -789,6 +838,7 @@ func (h *Handler) SearchExpenses(c echo.Context) error {
 			Amount:        numericToFloat64(row.Amount),
 			Currency:      getCurrency(row.Currency),
 			Category:      cat,
+			PriorityGroup: pg,
 			ExpenseDate:   dateToString(row.ExpenseDate),
 			Notes:         textToStringPtr(row.Notes),
 			Tags:          tagResps,
@@ -844,6 +894,24 @@ func (h *Handler) getExpenseResponse(c echo.Context, id uuid.UUID, userID uuid.U
 		}
 	}
 
+	var pgResp *PriorityGroupResponse
+	if exp.PriorityGroupID.Valid {
+		pgs, err := h.queries.ListPriorityGroups(c.Request().Context())
+		if err == nil {
+			for _, pg := range pgs {
+				if pg.ID == exp.PriorityGroupID.Bytes {
+					pgResp = &PriorityGroupResponse{
+						ID:           pg.ID,
+						Name:         pg.Name,
+						Slug:         pg.Slug,
+						DisplayOrder: pg.DisplayOrder,
+					}
+					break
+				}
+			}
+		}
+	}
+
 	tags, _ := h.queries.GetExpenseTags(c.Request().Context(), id)
 	tagResps := make([]TagResponse, len(tags))
 	for i, t := range tags {
@@ -860,6 +928,7 @@ func (h *Handler) getExpenseResponse(c echo.Context, id uuid.UUID, userID uuid.U
 		Amount:        numericToFloat64(exp.Amount),
 		Currency:      getCurrency(exp.Currency),
 		Category:      catResp,
+		PriorityGroup: pgResp,
 		ExpenseDate:   dateToString(exp.ExpenseDate),
 		Notes:         textToStringPtr(exp.Notes),
 		Tags:          tagResps,

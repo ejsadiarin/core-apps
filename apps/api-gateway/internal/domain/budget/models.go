@@ -44,29 +44,31 @@ type TagResponse struct {
 // Expenses
 
 type CreateExpenseRequest struct {
-	Description   string      `json:"description" validate:"required"`
-	Amount        float64     `json:"amount" validate:"required"`
-	Currency      *string     `json:"currency,omitempty" validate:"omitempty,len=3"`
-	CategoryID    *uuid.UUID  `json:"category_id,omitempty"`
-	ExpenseDate   string      `json:"expense_date" validate:"required,datetime=2006-01-02"`
-	Notes         *string     `json:"notes,omitempty"`
-	TagIDs        []uuid.UUID `json:"tag_ids,omitempty"`
-	RecurringType *string     `json:"recurring_type,omitempty" validate:"omitempty,oneof=daily weekly monthly yearly"`
-	StartDate     *string     `json:"start_date,omitempty" validate:"omitempty,datetime=2006-01-02"`
-	EndDate       *string     `json:"end_date,omitempty" validate:"omitempty,datetime=2006-01-02"`
+	Description     string      `json:"description" validate:"required"`
+	Amount          float64     `json:"amount" validate:"required"`
+	Currency        *string     `json:"currency,omitempty" validate:"omitempty,len=3"`
+	CategoryID      *uuid.UUID  `json:"category_id,omitempty"`
+	ExpenseDate     string      `json:"expense_date" validate:"required,datetime=2006-01-02"`
+	Notes           *string     `json:"notes,omitempty"`
+	TagIDs          []uuid.UUID `json:"tag_ids,omitempty"`
+	RecurringType   *string     `json:"recurring_type,omitempty" validate:"omitempty,oneof=daily weekly monthly yearly"`
+	StartDate       *string     `json:"start_date,omitempty" validate:"omitempty,datetime=2006-01-02"`
+	EndDate         *string     `json:"end_date,omitempty" validate:"omitempty,datetime=2006-01-02"`
+	PriorityGroupID *uuid.UUID  `json:"priority_group_id,omitempty"`
 }
 
 type UpdateExpenseRequest struct {
-	Description   *string     `json:"description,omitempty"`
-	Amount        *float64    `json:"amount,omitempty"`
-	Currency      *string     `json:"currency,omitempty" validate:"omitempty,len=3"`
-	CategoryID    *uuid.UUID  `json:"category_id,omitempty"`
-	ExpenseDate   *string     `json:"expense_date,omitempty" validate:"omitempty,datetime=2006-01-02"`
-	Notes         *string     `json:"notes,omitempty"`
-	TagIDs        []uuid.UUID `json:"tag_ids,omitempty"`
-	RecurringType *string     `json:"recurring_type,omitempty" validate:"omitempty,oneof=daily weekly monthly yearly"`
-	StartDate     *string     `json:"start_date,omitempty" validate:"omitempty,datetime=2006-01-02"`
-	EndDate       *string     `json:"end_date,omitempty" validate:"omitempty,datetime=2006-01-02"`
+	Description     *string     `json:"description,omitempty"`
+	Amount          *float64    `json:"amount,omitempty"`
+	Currency        *string     `json:"currency,omitempty" validate:"omitempty,len=3"`
+	CategoryID      *uuid.UUID  `json:"category_id,omitempty"`
+	ExpenseDate     *string     `json:"expense_date,omitempty" validate:"omitempty,datetime=2006-01-02"`
+	Notes           *string     `json:"notes,omitempty"`
+	TagIDs          []uuid.UUID `json:"tag_ids,omitempty"`
+	RecurringType   *string     `json:"recurring_type,omitempty" validate:"omitempty,oneof=daily weekly monthly yearly"`
+	StartDate       *string     `json:"start_date,omitempty" validate:"omitempty,datetime=2006-01-02"`
+	EndDate         *string     `json:"end_date,omitempty" validate:"omitempty,datetime=2006-01-02"`
+	PriorityGroupID *uuid.UUID  `json:"priority_group_id,omitempty"`
 }
 
 type ExpenseFilters struct {
@@ -84,19 +86,20 @@ type ExpenseSearchParams struct {
 }
 
 type ExpenseResponse struct {
-	ID            uuid.UUID         `json:"id"`
-	Description   string            `json:"description"`
-	Amount        float64           `json:"amount"`
-	Currency      string            `json:"currency"`
-	Category      *CategoryResponse `json:"category,omitempty"`
-	ExpenseDate   string            `json:"expense_date"`
-	Notes         *string           `json:"notes,omitempty"`
-	Tags          []TagResponse     `json:"tags,omitempty"`
-	RecurringType *string           `json:"recurring_type,omitempty"`
-	StartDate     *string           `json:"start_date,omitempty"`
-	EndDate       *string           `json:"end_date,omitempty"`
-	CreatedAt     string            `json:"created_at"`
-	UpdatedAt     string            `json:"updated_at"`
+	ID            uuid.UUID              `json:"id"`
+	Description   string                 `json:"description"`
+	Amount        float64                `json:"amount"`
+	Currency      string                 `json:"currency"`
+	Category      *CategoryResponse      `json:"category,omitempty"`
+	PriorityGroup *PriorityGroupResponse `json:"priority_group,omitempty"`
+	ExpenseDate   string                 `json:"expense_date"`
+	Notes         *string                `json:"notes,omitempty"`
+	Tags          []TagResponse          `json:"tags,omitempty"`
+	RecurringType *string                `json:"recurring_type,omitempty"`
+	StartDate     *string                `json:"start_date,omitempty"`
+	EndDate       *string                `json:"end_date,omitempty"`
+	CreatedAt     string                 `json:"created_at"`
+	UpdatedAt     string                 `json:"updated_at"`
 }
 
 // Incomes
@@ -206,6 +209,15 @@ type UpcomingBillsResponse struct {
 	Period      int            `json:"period"`
 }
 
+// Priority Groups
+
+type PriorityGroupResponse struct {
+	ID           uuid.UUID `json:"id"`
+	Name         string    `json:"name"`
+	Slug         string    `json:"slug"`
+	DisplayOrder int32     `json:"display_order"`
+}
+
 // Category Budget
 
 type CreateCategoryBudgetRequest struct {
@@ -231,16 +243,11 @@ type CategoryBudgetWithVarianceResponse struct {
 	CategoryID       uuid.UUID `json:"category_id"`
 	CategoryName     string    `json:"category_name"`
 	CategoryColor    *string   `json:"category_color,omitempty"`
-	CategoryType     *string   `json:"category_type,omitempty"`
 	BudgetAmount     float64   `json:"budget_amount"`
 	SpentAmount      float64   `json:"spent_amount"`
 	Variance         *float64  `json:"variance,omitempty"`
 	Percentage       float64   `json:"percentage"`
 	TransactionCount int64     `json:"transaction_count"`
-}
-
-type UpdateCategoryTypeRequest struct {
-	CategoryType *string `json:"category_type,omitempty" validate:"omitempty,oneof=need want savings"`
 }
 
 // Financial Health
@@ -263,10 +270,12 @@ type FiftyThirtyTwentyItem struct {
 }
 
 type FiftyThirtyTwentyResponse struct {
-	Needs       FiftyThirtyTwentyItem `json:"needs"`
-	Wants       FiftyThirtyTwentyItem `json:"wants"`
-	Savings     FiftyThirtyTwentyItem `json:"savings"`
-	TotalIncome float64               `json:"total_income"`
+	Needs              FiftyThirtyTwentyItem `json:"needs"`
+	Wants              FiftyThirtyTwentyItem `json:"wants"`
+	Savings            FiftyThirtyTwentyItem `json:"savings"`
+	TotalIncome        float64               `json:"total_income"`
+	UnclassifiedCount  int64                 `json:"unclassified_count"`
+	UnclassifiedAmount float64               `json:"unclassified_amount"`
 }
 
 type WeekdaySpendingItem struct {

@@ -703,44 +703,51 @@ func (h *Handler) GetFiftyThirtyTwenty(c echo.Context) error {
 
 	now := time.Now()
 	startOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+	startDate := stringToDate(startOfMonth.Format("2006-01-02"))
+	endDate := stringToDate(now.Format("2006-01-02"))
 
-	// Get spending by category type - query returns all types, we need to filter
-	spendingByType, _ := h.queries.GetSpendingByCategoryType(c.Request().Context(), sqlc.GetSpendingByCategoryTypeParams{
+	// get spending by priority group (expense-level classification)
+	spendingByGroup, _ := h.queries.GetSpendingByPriorityGroup(c.Request().Context(), sqlc.GetSpendingByPriorityGroupParams{
 		UserID:    userID,
-		StartDate: stringToDate(startOfMonth.Format("2006-01-02")),
-		EndDate:   stringToDate(now.Format("2006-01-02")),
+		StartDate: startDate,
+		EndDate:   endDate,
 	})
 
 	var needsAmount, wantsAmount, savingsAmount float64
-	for _, item := range spendingByType {
+	for _, item := range spendingByGroup {
 		amount := interfaceToFloat64(item.TotalAmount)
-		if item.CategoryType.Valid {
-			switch item.CategoryType.String {
-			case "need":
-				needsAmount += amount
-			case "want":
-				wantsAmount += amount
-			case "savings":
-				savingsAmount += amount
-			}
+		switch item.PriorityGroupSlug {
+		case "need":
+			needsAmount += amount
+		case "want":
+			wantsAmount += amount
+		case "savings":
+			savingsAmount += amount
 		}
 	}
 
-	// Get total income
+	// get unclassified expense count
+	unclassified, _ := h.queries.GetUnclassifiedExpenseCount(c.Request().Context(), sqlc.GetUnclassifiedExpenseCountParams{
+		UserID:    userID,
+		StartDate: startDate,
+		EndDate:   endDate,
+	})
+
+	// get total income
 	oneTimeIncome, _ := h.queries.GetOneTimeIncomeToDate(c.Request().Context(), sqlc.GetOneTimeIncomeToDateParams{
 		UserID: userID,
-		Date:   stringToDate(now.Format("2006-01-02")),
+		Date:   endDate,
 	})
 
 	recurringRules, _ := h.queries.GetRecurringIncomeRules(c.Request().Context(), sqlc.GetRecurringIncomeRulesParams{
 		UserID:    userID,
-		StartDate: stringToDate(now.Format("2006-01-02")),
+		StartDate: endDate,
 	})
 
 	recurringIncome := calculateRecurringIncome(recurringRules, now)
 	totalIncome := interfaceToFloat64(oneTimeIncome) + recurringIncome
 
-	// Calculate percentages
+	// calculate percentages
 	var needsPct, wantsPct, savingsPct float64
 	if totalIncome > 0 {
 		needsPct = (needsAmount / totalIncome) * 100
@@ -770,7 +777,9 @@ func (h *Handler) GetFiftyThirtyTwenty(c echo.Context) error {
 			Actual:   savingsPct,
 			Status:   get503020Status(savingsPct, 20),
 		},
-		TotalIncome: totalIncome,
+		TotalIncome:        totalIncome,
+		UnclassifiedCount:  unclassified.UnclassifiedCount,
+		UnclassifiedAmount: interfaceToFloat64(unclassified.UnclassifiedAmount),
 	})
 }
 

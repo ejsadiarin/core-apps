@@ -81,13 +81,23 @@ RETURNING *;
 DELETE FROM budget_tags
 WHERE id = $1 AND user_id = $2;
 
+-- Priority Groups
+
+-- name: ListPriorityGroups :many
+SELECT * FROM budget_priority_groups
+ORDER BY display_order;
+
+-- name: GetPriorityGroupBySlug :one
+SELECT * FROM budget_priority_groups
+WHERE slug = $1 LIMIT 1;
+
 -- Expenses
 
 -- name: CreateExpense :one
 INSERT INTO budget_expenses (
-    description, amount, currency, category_id, expense_date, notes, user_id, recurring_type, start_date, end_date
+    description, amount, currency, category_id, expense_date, notes, user_id, recurring_type, start_date, end_date, priority_group_id
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, sqlc.narg('priority_group_id')
 )
 RETURNING *;
 
@@ -100,9 +110,11 @@ SELECT * FROM budget_expenses
 WHERE id = $1 LIMIT 1;
 
 -- name: ListExpenses :many
-SELECT e.*, c.name as category_name, c.color as category_color, c.icon as category_icon
+SELECT e.*, c.name as category_name, c.color as category_color, c.icon as category_icon,
+    pg.name as priority_group_name, pg.slug as priority_group_slug
 FROM budget_expenses e
 LEFT JOIN budget_categories c ON e.category_id = c.id
+LEFT JOIN budget_priority_groups pg ON e.priority_group_id = pg.id
 WHERE
     e.user_id = $1
     AND (sqlc.narg('category_id')::uuid IS NULL OR e.category_id = sqlc.narg('category_id'))
@@ -122,9 +134,11 @@ WHERE
     AND (sqlc.narg('recurring_type')::text IS NULL OR e.recurring_type = sqlc.narg('recurring_type'));
 
 -- name: SearchExpenses :many
-SELECT e.*, c.name as category_name, c.color as category_color, c.icon as category_icon
+SELECT e.*, c.name as category_name, c.color as category_color, c.icon as category_icon,
+    pg.name as priority_group_name, pg.slug as priority_group_slug
 FROM budget_expenses e
 LEFT JOIN budget_categories c ON e.category_id = c.id
+LEFT JOIN budget_priority_groups pg ON e.priority_group_id = pg.id
 WHERE
     e.user_id = $1
     AND e.description ILIKE '%' || $2 || '%'
@@ -144,10 +158,12 @@ WHERE
     AND (sqlc.narg('end_date')::date IS NULL OR e.expense_date <= sqlc.narg('end_date')::date);
 
 -- name: ListAllExpenses :many
-SELECT e.*, c.name as category_name, c.color as category_color, c.icon as category_icon, u.email as user_email
+SELECT e.*, c.name as category_name, c.color as category_color, c.icon as category_icon, u.email as user_email,
+    pg.name as priority_group_name, pg.slug as priority_group_slug
 FROM budget_expenses e
 LEFT JOIN budget_categories c ON e.category_id = c.id
 JOIN users u ON e.user_id = u.id
+LEFT JOIN budget_priority_groups pg ON e.priority_group_id = pg.id
 WHERE
     (sqlc.narg('user_id')::uuid IS NULL OR e.user_id = sqlc.narg('user_id'))
     AND (sqlc.narg('category_id')::uuid IS NULL OR e.category_id = sqlc.narg('category_id'))
@@ -167,6 +183,7 @@ SET
     recurring_type = COALESCE(sqlc.narg('recurring_type'), recurring_type),
     start_date = COALESCE(sqlc.narg('start_date'), start_date),
     end_date = sqlc.narg('end_date'),
+    priority_group_id = sqlc.narg('priority_group_id'),
     updated_at = NOW()
 WHERE id = $1 AND user_id = $2
 RETURNING *;
@@ -322,7 +339,6 @@ SELECT
     c.id as category_id,
     c.name as category_name,
     c.color as category_color,
-    c.category_type,
     COALESCE(cb.budget_amount, 0::numeric) as budget_amount,
     COALESCE(SUM(e.amount), 0::numeric) as spent_amount,
     COUNT(e.id) as transaction_count
@@ -335,37 +351,36 @@ LEFT JOIN budget_expenses e ON c.id = e.category_id
     AND (sqlc.narg('start_date')::date IS NULL OR e.expense_date >= sqlc.narg('start_date')::date)
     AND (sqlc.narg('end_date')::date IS NULL OR e.expense_date <= sqlc.narg('end_date')::date)
 WHERE c.user_id = $1
-GROUP BY c.id, c.name, c.color, c.category_type, cb.budget_amount
+GROUP BY c.id, c.name, c.color, cb.budget_amount
 ORDER BY c.name;
-
--- Category Type Management
-
--- name: UpdateCategoryType :one
-UPDATE budget_categories
-SET category_type = $2
-WHERE id = $1 AND user_id = $3
-RETURNING *;
-
--- name: GetCategoriesByType :many
-SELECT * FROM budget_categories
-WHERE user_id = $1 AND category_type = $2
-ORDER BY name;
 
 -- 50/30/20 Analysis
 
--- name: GetSpendingByCategoryType :many
+-- name: GetSpendingByPriorityGroup :many
 SELECT 
-    c.category_type,
+    pg.id as priority_group_id,
+    pg.name as priority_group_name,
+    pg.slug as priority_group_slug,
+    pg.display_order,
     COALESCE(SUM(e.amount), 0::numeric) as total_amount,
     COUNT(e.id) as transaction_count
-FROM budget_categories c
-LEFT JOIN budget_expenses e ON c.id = e.category_id 
-    AND e.user_id = c.user_id
+FROM budget_priority_groups pg
+LEFT JOIN budget_expenses e ON e.priority_group_id = pg.id
+    AND e.user_id = $1
     AND (sqlc.narg('start_date')::date IS NULL OR e.expense_date >= sqlc.narg('start_date')::date)
     AND (sqlc.narg('end_date')::date IS NULL OR e.expense_date <= sqlc.narg('end_date')::date)
-WHERE c.user_id = $1 AND c.category_type IS NOT NULL
-GROUP BY c.category_type
-ORDER BY total_amount DESC;
+GROUP BY pg.id, pg.name, pg.slug, pg.display_order
+ORDER BY pg.display_order;
+
+-- name: GetUnclassifiedExpenseCount :one
+SELECT 
+    COUNT(id) as unclassified_count,
+    COALESCE(SUM(amount), 0::numeric) as unclassified_amount
+FROM budget_expenses
+WHERE user_id = $1
+    AND priority_group_id IS NULL
+    AND (sqlc.narg('start_date')::date IS NULL OR expense_date >= sqlc.narg('start_date')::date)
+    AND (sqlc.narg('end_date')::date IS NULL OR expense_date <= sqlc.narg('end_date')::date);
 
 -- Spending Velocity & Trends
 

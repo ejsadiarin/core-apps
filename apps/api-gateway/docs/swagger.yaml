@@ -232,8 +232,6 @@ definitions:
         type: string
       category_name:
         type: string
-      category_type:
-        type: string
       percentage:
         type: number
       spent_amount:
@@ -296,6 +294,8 @@ definitions:
       expense_date:
         type: string
       notes:
+        type: string
+      priority_group_id:
         type: string
       recurring_type:
         enum:
@@ -370,6 +370,8 @@ definitions:
         type: string
       notes:
         type: string
+      priority_group:
+        $ref: '#/definitions/internal_domain_budget.PriorityGroupResponse'
       recurring_type:
         type: string
       start_date:
@@ -402,6 +404,10 @@ definitions:
         $ref: '#/definitions/internal_domain_budget.FiftyThirtyTwentyItem'
       total_income:
         type: number
+      unclassified_amount:
+        type: number
+      unclassified_count:
+        type: integer
       wants:
         $ref: '#/definitions/internal_domain_budget.FiftyThirtyTwentyItem'
     type: object
@@ -494,6 +500,17 @@ definitions:
         items:
           $ref: '#/definitions/internal_domain_budget.MonthOverMonthItem'
         type: array
+    type: object
+  internal_domain_budget.PriorityGroupResponse:
+    properties:
+      display_order:
+        type: integer
+      id:
+        type: string
+      name:
+        type: string
+      slug:
+        type: string
     type: object
   internal_domain_budget.SavingsRateResponse:
     properties:
@@ -629,15 +646,6 @@ definitions:
         minLength: 1
         type: string
     type: object
-  internal_domain_budget.UpdateCategoryTypeRequest:
-    properties:
-      category_type:
-        enum:
-        - need
-        - want
-        - savings
-        type: string
-    type: object
   internal_domain_budget.UpdateExpenseRequest:
     properties:
       amount:
@@ -653,6 +661,8 @@ definitions:
       expense_date:
         type: string
       notes:
+        type: string
+      priority_group_id:
         type: string
       recurring_type:
         enum:
@@ -1139,40 +1149,6 @@ paths:
       summary: Update a budget category
       tags:
       - budget
-  /api/budget/categories/{id}/type:
-    put:
-      consumes:
-      - application/json
-      parameters:
-      - description: Category ID
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: Category type
-        in: body
-        name: type
-        required: true
-        schema:
-          $ref: '#/definitions/internal_domain_budget.UpdateCategoryTypeRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/internal_domain_budget.CategoryResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
-      summary: Update category type (need/want/savings)
-      tags:
-      - budget
   /api/budget/category-budgets:
     get:
       parameters:
@@ -1596,6 +1572,20 @@ paths:
           schema:
             $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
       summary: Update an income
+      tags:
+      - budget
+  /api/budget/priority-groups:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/internal_domain_budget.PriorityGroupResponse'
+            type: array
+      summary: List all priority groups
       tags:
       - budget
   /api/budget/remaining:
