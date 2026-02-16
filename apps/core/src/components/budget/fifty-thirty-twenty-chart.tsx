@@ -79,7 +79,7 @@ export function FiftyThirtyTwentyChart({ startDate, endDate, className }: FiftyT
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">50/30/20 Budget</CardTitle>
         <CardDescription className="text-xs">
-          Income: ${data.total_income.toLocaleString()}
+          Income: ₱{data.total_income.toLocaleString()}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -115,7 +115,7 @@ export function FiftyThirtyTwentyChart({ startDate, endDate, className }: FiftyT
                 </span>
               </div>
               <div className="flex justify-between text-xs text-muted-foreground">
-                <span>${c.data.amount.toLocaleString()}</span>
+                <span>₱{c.data.amount.toLocaleString()}</span>
                 <span className="capitalize">{c.data.status.replace('_', ' ')}</span>
               </div>
             </div>

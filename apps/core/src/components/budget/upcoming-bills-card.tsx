@@ -67,7 +67,7 @@ export function UpcomingBillsCard({ days = 30, className }: UpcomingBillsCardPro
             </CardDescription>
           </div>
           <div className="text-right">
-            <div className="text-2xl font-bold">${Math.round(data.total_amount).toLocaleString()}</div>
+            <div className="text-2xl font-bold">₱{Math.round(data.total_amount).toLocaleString()}</div>
             <div className="text-xs text-muted-foreground">Total due</div>
           </div>
         </div>
@@ -99,7 +99,7 @@ export function UpcomingBillsCard({ days = 30, className }: UpcomingBillsCardPro
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm font-medium">${bill.amount.toLocaleString()}</div>
+                    <div className="text-sm font-medium">₱{bill.amount.toLocaleString()}</div>
                     <Badge variant="outline" className={cn('text-xs mt-1', status.color)}>
                       {status.label}
                     </Badge>

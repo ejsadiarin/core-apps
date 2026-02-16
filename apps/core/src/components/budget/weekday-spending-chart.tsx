@@ -61,7 +61,7 @@ export function WeekdaySpendingChart({ startDate, endDate, className }: WeekdayS
             return (
               <div key={day.day} className="flex-1 flex flex-col items-center gap-1">
                 <div className="text-[10px] text-muted-foreground font-medium">
-                  ${Math.round(day.total_amount).toLocaleString()}
+                  ₱{Math.round(day.total_amount).toLocaleString()}
                 </div>
                 <div className="w-full relative" style={{ height: '80px' }}>
                   <div
@@ -81,12 +81,12 @@ export function WeekdaySpendingChart({ startDate, endDate, className }: WeekdayS
         <div className="mt-4 pt-3 border-t border-border grid grid-cols-2 gap-2">
           <div className="text-xs text-muted-foreground">
             Avg highest: <span className="font-medium text-foreground">
-              ${data.weekdays.find((d) => d.day === data.highest_spending_day)?.average_amount.toFixed(0) || '0'}
+              ₱{data.weekdays.find((d) => d.day === data.highest_spending_day)?.average_amount.toFixed(0) || '0'}
             </span>
           </div>
           <div className="text-xs text-muted-foreground">
             Avg lowest: <span className="font-medium text-foreground">
-              ${data.weekdays.find((d) => d.day === data.lowest_spending_day)?.average_amount.toFixed(0) || '0'}
+              ₱{data.weekdays.find((d) => d.day === data.lowest_spending_day)?.average_amount.toFixed(0) || '0'}
             </span>
           </div>
         </div>

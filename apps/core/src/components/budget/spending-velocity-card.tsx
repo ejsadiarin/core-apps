@@ -103,7 +103,7 @@ export function SpendingVelocityCard({ className }: SpendingVelocityCardProps) {
         <div className="flex items-center justify-between">
           <div>
             <div className={cn('text-3xl font-bold', config.color)}>
-              ${Math.round(data.projected_spend).toLocaleString()}
+              ₱{Math.round(data.projected_spend).toLocaleString()}
             </div>
             <div className="text-xs text-muted-foreground mt-1">
               Projected spend
@@ -125,8 +125,8 @@ export function SpendingVelocityCard({ className }: SpendingVelocityCardProps) {
               className="h-2"
             />
             <div className="flex justify-between text-xs mt-1 text-muted-foreground">
-              <span>${data.amount_spent.toLocaleString()} spent</span>
-              <span>${data.total_budget.toLocaleString()} budget</span>
+              <span>₱{data.amount_spent.toLocaleString()} spent</span>
+              <span>₱{data.total_budget.toLocaleString()} budget</span>
             </div>
           </div>
         )}

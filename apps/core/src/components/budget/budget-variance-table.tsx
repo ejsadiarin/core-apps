@@ -155,7 +155,7 @@ export function BudgetVarianceTable({ month, className }: BudgetVarianceTablePro
                     />
                     <div className="flex justify-between text-xs text-muted-foreground">
                       <span>
-                        ${budget.spent_amount.toLocaleString()} of ${budget.budget_amount.toLocaleString()}
+                        ₱{budget.spent_amount.toLocaleString()} of ₱{budget.budget_amount.toLocaleString()}
                       </span>
                       <span className={status.color}>{percentage.toFixed(0)}%</span>
                     </div>
@@ -166,7 +166,7 @@ export function BudgetVarianceTable({ month, className }: BudgetVarianceTablePro
                       'text-xs',
                       budget.variance >= 0 ? 'text-green-500' : 'text-red-500'
                     )}>
-                      {budget.variance >= 0 ? '+' : ''}${budget.variance.toLocaleString()} remaining
+                      {budget.variance >= 0 ? '+' : ''}₱{budget.variance.toLocaleString()} remaining
                     </div>
                   )}
                 </div>

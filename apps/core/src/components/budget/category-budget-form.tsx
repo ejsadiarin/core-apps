@@ -139,7 +139,7 @@ export function CategoryBudgetForm({
 
             {categoryBudget && categoryBudget.spent_amount > 0 && (
               <div className="text-sm text-muted-foreground">
-                Current spending: ${categoryBudget.spent_amount.toLocaleString()}
+                Current spending: ₱{categoryBudget.spent_amount.toLocaleString()}
               </div>
             )}
           </div>

@@ -108,11 +108,11 @@ export function SpendingTrendCard({ className }: SpendingTrendCardProps) {
               <div className="space-y-1 pt-3 border-t border-border">
                 <div className="flex justify-between text-xs">
                   <span className="text-muted-foreground">Income</span>
-                  <span className="font-medium">${latest.income.toLocaleString()}</span>
+                  <span className="font-medium">₱{latest.income.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-muted-foreground">Expenses</span>
-                  <span className="font-medium">${latest.expenses.toLocaleString()}</span>
+                  <span className="font-medium">₱{latest.expenses.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-muted-foreground">Savings Rate</span>

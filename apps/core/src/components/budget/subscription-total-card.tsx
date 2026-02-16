@@ -55,13 +55,13 @@ export function SubscriptionTotalCard({ className }: SubscriptionTotalCardProps)
         </div>
       </CardHeader>
       <CardContent>
-        <div className="text-3xl font-bold">${data.total_monthly.toLocaleString()}</div>
+        <div className="text-3xl font-bold">₱{data.total_monthly.toLocaleString()}</div>
         <div className="text-xs text-muted-foreground mt-1">per month</div>
 
         <div className="mt-4 pt-3 border-t border-border space-y-1">
           <div className="flex justify-between text-xs">
             <span className="text-muted-foreground">Yearly estimate</span>
-            <span className="font-medium">${yearlyEstimate.toLocaleString()}</span>
+            <span className="font-medium">₱{yearlyEstimate.toLocaleString()}</span>
           </div>
           <div className="flex justify-between text-xs">
             <span className="text-muted-foreground">Active subscriptions</span>

@@ -8,6 +8,8 @@ import {
   BarChart3,
   FileText,
   Users,
+  Heart,
+  Store,
   type LucideIcon,
 } from "lucide-react";
 
@@ -58,6 +60,18 @@ export const navItems: NavItem[] = [
     label: "Settings",
     icon: SlidersHorizontal,
     path: "/dashboard/budget/settings",
+    section: "finance",
+  },
+  {
+    label: "Health",
+    icon: Heart,
+    path: "/dashboard/budget/health",
+    section: "finance",
+  },
+  {
+    label: "Subscriptions",
+    icon: Store,
+    path: "/dashboard/budget/subscriptions",
     section: "finance",
   },
   {

@@ -51,7 +51,7 @@ export function TopMerchantsTable({ limit = 10, startDate, endDate, className }:
           <div>
             <CardTitle className="text-sm font-medium text-muted-foreground">Top Merchants</CardTitle>
             <CardDescription className="text-xs">
-              {data.unique_merchant_count} unique merchants · ${data.total_spent.toLocaleString()} total
+              {data.unique_merchant_count} unique merchants · ₱{data.total_spent.toLocaleString()} total
             </CardDescription>
           </div>
           <Store className="h-4 w-4 text-muted-foreground" />
@@ -71,7 +71,7 @@ export function TopMerchantsTable({ limit = 10, startDate, endDate, className }:
                     <span className="text-xs text-muted-foreground w-5 text-right">{i + 1}.</span>
                     <span className="text-sm font-medium truncate max-w-[200px]">{merchant.name}</span>
                   </div>
-                  <span className="text-sm font-medium">${merchant.total_spent.toLocaleString()}</span>
+                  <span className="text-sm font-medium">₱{merchant.total_spent.toLocaleString()}</span>
                 </div>
                 <div className="flex items-center gap-2 ml-7">
                   <div className="flex-1 bg-muted rounded-full h-1.5">
@@ -86,7 +86,7 @@ export function TopMerchantsTable({ limit = 10, startDate, endDate, className }:
                 </div>
                 <div className="flex justify-between text-[10px] text-muted-foreground ml-7">
                   <span>{merchant.count} transactions</span>
-                  <span>avg ${merchant.average_amount.toFixed(0)}</span>
+                  <span>avg ₱{merchant.average_amount.toFixed(0)}</span>
                 </div>
               </div>
             ))}

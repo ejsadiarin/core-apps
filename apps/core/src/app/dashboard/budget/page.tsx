@@ -28,7 +28,7 @@ import { GuestBlockedError } from "@/hooks/use-budget";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, ArrowRight, Receipt, Settings, Wallet, Target, Heart, RefreshCw } from "lucide-react";
+import { Plus, ArrowRight } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -228,7 +228,7 @@ export default function BudgetDashboard() {
               budgetRemainingData.budget_remaining_status === 'green' ? 'text-green-600' :
               'text-gray-600'
             }`}>
-              Budget Remaining: PHP {budgetRemainingData.budget_remaining.toFixed(2)}
+              Budget Remaining: ₱{budgetRemainingData.budget_remaining.toFixed(2)}
               {budgetRemainingData.budget_remaining_status === 'red' && ' ⚠️ Over Budget'}
               {budgetRemainingData.budget_remaining_status === 'green' && ' ✓ On Track'}
             </div>
@@ -455,75 +455,6 @@ export default function BudgetDashboard() {
                 ))}
               </div>
             )}
-          </CardContent>
-        </Card>
-      </motion.div>
-
-      {/* Quick Actions */}
-      <motion.div
-        className="mt-6 grid gap-6 lg:grid-cols-3"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.3 }}
-      >
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>Manage your budget</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              onClick={() => { handleActionClick(); if (!isGuest) setShowIncomeForm(true); }}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add New Income
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              onClick={() => { handleActionClick(); if (!isGuest) setShowExpenseDialog(true); }}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add New Expense
-            </Button>
-            <Link href="/dashboard/budget/expenses" className="block" onClick={handleActionClick}>
-              <Button variant="outline" className="w-full justify-start">
-                <Receipt className="mr-2 h-4 w-4" />
-                View All Expenses
-              </Button>
-            </Link>
-            <Link href="/dashboard/budget/incomes" className="block" onClick={handleActionClick}>
-              <Button variant="outline" className="w-full justify-start">
-                <Wallet className="mr-2 h-4 w-4" />
-                View All Incomes
-              </Button>
-            </Link>
-            <Link href="/dashboard/budget/settings" className="block" onClick={handleActionClick}>
-              <Button variant="outline" className="w-full justify-start">
-                <Settings className="mr-2 h-4 w-4" />
-                Manage Categories & Tags
-              </Button>
-            </Link>
-            <Link href="/dashboard/budget/settings#budgets" className="block" onClick={handleActionClick}>
-              <Button variant="outline" className="w-full justify-start">
-                <Target className="mr-2 h-4 w-4" />
-                Set Budget Goals
-              </Button>
-            </Link>
-            <Link href="/dashboard/budget/health" className="block">
-              <Button variant="outline" className="w-full justify-start">
-                <Heart className="mr-2 h-4 w-4" />
-                Financial Health
-              </Button>
-            </Link>
-            <Link href="/dashboard/budget/subscriptions" className="block">
-              <Button variant="outline" className="w-full justify-start">
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Subscriptions & Merchants
-              </Button>
-            </Link>
           </CardContent>
         </Card>
       </motion.div>

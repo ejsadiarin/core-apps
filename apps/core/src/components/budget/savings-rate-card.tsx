@@ -77,16 +77,16 @@ export function SavingsRateCard({ startDate, endDate, className }: SavingsRateCa
         <div className="mt-4 space-y-1">
           <div className="flex justify-between text-xs">
             <span className="text-muted-foreground">Income</span>
-            <span className="font-medium">${data.income.toLocaleString()}</span>
+            <span className="font-medium">₱{data.income.toLocaleString()}</span>
           </div>
           <div className="flex justify-between text-xs">
             <span className="text-muted-foreground">Expenses</span>
-            <span className="font-medium">${data.expenses.toLocaleString()}</span>
+            <span className="font-medium">₱{data.expenses.toLocaleString()}</span>
           </div>
           <div className="flex justify-between text-xs">
             <span className="text-muted-foreground">Savings</span>
             <span className={cn('font-medium', data.savings >= 0 ? 'text-green-500' : 'text-red-500')}>
-              ${data.savings.toLocaleString()}
+              ₱{data.savings.toLocaleString()}
             </span>
           </div>
         </div>
