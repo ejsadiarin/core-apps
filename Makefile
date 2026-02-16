@@ -167,7 +167,7 @@ sqlc-check:
 # Swagger Documentation
 # ==============================================================================
 
-swagger-gen:
+swagger:
 	@echo -e "${YELLOW}Generating Swagger documentation...${NC}"
 	@cd apps/api-gateway && swag init -g cmd/server/main.go -o docs --parseDependency --parseInternal
 
