@@ -15,6 +15,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Trash2, Edit, Repeat, Calendar } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Income } from "@/types/api";
 import { format } from "date-fns";
 
@@ -92,6 +93,18 @@ export function IncomeCard({ income, onView, onEdit, onDelete, disabled, showToa
                   {isRecurring && <Repeat className="h-3 w-3 mr-1" />}
                   {getRecurringLabel(income.recurring_type)}
                 </Badge>
+                {income.exclude_from_calculations && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge variant="secondary" className="text-xs text-muted-foreground">
+                        Historical
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Excluded from budget calculations (before tracking start date)</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
               </div>
 
               {isRecurring && (

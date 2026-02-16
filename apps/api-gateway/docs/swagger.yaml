@@ -419,6 +419,8 @@ definitions:
         $ref: '#/definitions/internal_domain_budget.FiftyThirtyTwentyItem'
       total_income:
         type: number
+      tracking_period_start:
+        type: string
       unclassified_amount:
         type: number
       unclassified_count:
@@ -540,6 +542,8 @@ definitions:
       savings_rate:
         type: number
       status:
+        type: string
+      tracking_period_start:
         type: string
     type: object
   internal_domain_budget.SpendingVelocityResponse:

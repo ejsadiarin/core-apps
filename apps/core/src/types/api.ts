@@ -210,6 +210,7 @@ export interface Income {
     recurring_type?: "daily" | "weekly" | "monthly" | null;
     start_date?: string;
     end_date?: string;
+    exclude_from_calculations?: boolean;
     created_at: string;
     updated_at: string;
 }
@@ -305,6 +306,7 @@ export interface SavingsRateResponse {
     savings_rate: number;
     status: "excellent" | "good" | "fair" | "poor" | "negative";
     period: string;
+    tracking_period_start?: string;
 }
 
 export interface SpendingVelocityResponse {
@@ -392,6 +394,7 @@ export interface FiftyThirtyTwentyResponse {
     total_income: number;
     unclassified_count: number;
     unclassified_amount: number;
+    tracking_period_start?: string;
 }
 
 export interface WeekdaySpendingItem {

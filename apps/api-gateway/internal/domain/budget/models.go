@@ -176,12 +176,13 @@ type TrendItem struct {
 // Budget Analytics
 
 type SavingsRateResponse struct {
-	Income      float64 `json:"income"`
-	Expenses    float64 `json:"expenses"`
-	Savings     float64 `json:"savings"`
-	SavingsRate float64 `json:"savings_rate"`
-	Status      string  `json:"status"`
-	Period      string  `json:"period"`
+	Income              float64 `json:"income"`
+	Expenses            float64 `json:"expenses"`
+	Savings             float64 `json:"savings"`
+	SavingsRate         float64 `json:"savings_rate"`
+	Status              string  `json:"status"`
+	Period              string  `json:"period"`
+	TrackingPeriodStart string  `json:"tracking_period_start,omitempty"`
 }
 
 type CurrentTotalMoneyResponse struct {
@@ -279,12 +280,13 @@ type FiftyThirtyTwentyItem struct {
 }
 
 type FiftyThirtyTwentyResponse struct {
-	Needs              FiftyThirtyTwentyItem `json:"needs"`
-	Wants              FiftyThirtyTwentyItem `json:"wants"`
-	Savings            FiftyThirtyTwentyItem `json:"savings"`
-	TotalIncome        float64               `json:"total_income"`
-	UnclassifiedCount  int64                 `json:"unclassified_count"`
-	UnclassifiedAmount float64               `json:"unclassified_amount"`
+	Needs               FiftyThirtyTwentyItem `json:"needs"`
+	Wants               FiftyThirtyTwentyItem `json:"wants"`
+	Savings             FiftyThirtyTwentyItem `json:"savings"`
+	TotalIncome         float64               `json:"total_income"`
+	UnclassifiedCount   int64                 `json:"unclassified_count"`
+	UnclassifiedAmount  float64               `json:"unclassified_amount"`
+	TrackingPeriodStart string                `json:"tracking_period_start,omitempty"`
 }
 
 type WeekdaySpendingItem struct {

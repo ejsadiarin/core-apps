@@ -1,8 +1,9 @@
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useCurrentTotalMoney } from '@/hooks/use-budget';
-import { TrendingUp, TrendingDown, Wallet } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface CurrentTotalMoneyCardProps {
@@ -44,6 +45,8 @@ export function CurrentTotalMoneyCard({ className }: CurrentTotalMoneyCardProps)
   const Icon = isPositiveChange ? TrendingUp : TrendingDown;
 
   return (
+      <TooltipProvider>
+     
     <Card className={className}>
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">Total Money</CardTitle>
@@ -69,7 +72,17 @@ export function CurrentTotalMoneyCard({ className }: CurrentTotalMoneyCardProps)
 
         <div className="mt-4 space-y-1">
           <div className="flex justify-between text-xs">
-            <span className="text-muted-foreground">Starting Baseline</span>
+            <span className="text-muted-foreground flex items-center gap-1">
+              Starting Baseline
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-3 w-3 text-muted-foreground/50 cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-[200px]">
+                  <p>Your total money at the tracking start date, calculated backwards from your current balance.</p>
+                </TooltipContent>
+              </Tooltip>
+            </span>
             <span className="font-medium">₱{data.money_baseline.toLocaleString()}</span>
           </div>
           <div className="flex justify-between text-xs">
@@ -91,5 +104,6 @@ export function CurrentTotalMoneyCard({ className }: CurrentTotalMoneyCardProps)
         </div>
       </CardContent>
     </Card>
+ </TooltipProvider>
   );
 }

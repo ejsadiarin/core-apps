@@ -2781,6 +2781,9 @@ const docTemplate = `{
                 "total_income": {
                     "type": "number"
                 },
+                "tracking_period_start": {
+                    "type": "string"
+                },
                 "unclassified_amount": {
                     "type": "number"
                 },
@@ -2966,6 +2969,9 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "status": {
+                    "type": "string"
+                },
+                "tracking_period_start": {
                     "type": "string"
                 }
             }

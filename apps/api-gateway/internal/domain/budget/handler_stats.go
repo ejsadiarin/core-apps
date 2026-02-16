@@ -366,12 +366,13 @@ func (h *Handler) GetSavingsRate(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, SavingsRateResponse{
-		Income:      totalIncome,
-		Expenses:    totalExpenses,
-		Savings:     savings,
-		SavingsRate: savingsRate,
-		Status:      status,
-		Period:      startDate.Format("2006-01-02") + " to " + endDate.Format("2006-01-02"),
+		Income:              totalIncome,
+		Expenses:            totalExpenses,
+		Savings:             savings,
+		SavingsRate:         savingsRate,
+		Status:              status,
+		Period:              startDate.Format("2006-01-02") + " to " + endDate.Format("2006-01-02"),
+		TrackingPeriodStart: startDate.Format("2006-01-02"),
 	})
 }
 
@@ -695,25 +696,45 @@ func (h *Handler) GetHealthScore(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to get user context"})
 	}
 
+	// get user to fetch tracking_start_date
+	user, err := h.queries.GetUser(c.Request().Context(), userID)
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to get user")
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to get user"})
+	}
+
 	now := time.Now()
 
-	// Calculate savings rate
-	oneTimeIncome, _ := h.queries.GetOneTimeIncomeToDate(c.Request().Context(), sqlc.GetOneTimeIncomeToDateParams{
+	// default start to tracking_start_date or first of current month
+	var startDate time.Time
+	if user.TrackingStartDate.Valid {
+		startDate = user.TrackingStartDate.Time
+	} else {
+		startDate = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+	}
+	endDate := now
+
+	// calculate income for tracking period only (one-time + recurring, excluding pre-tracking)
+	oneTimeIncome, _ := h.queries.GetIncomeForPeriod(c.Request().Context(), sqlc.GetIncomeForPeriodParams{
 		UserID: userID,
-		Date:   stringToDate(now.Format("2006-01-02")),
+		Date:   stringToDate(startDate.Format("2006-01-02")),
+		Date_2: stringToDate(endDate.Format("2006-01-02")),
 	})
 
-	recurringRules, _ := h.queries.GetRecurringIncomeRules(c.Request().Context(), sqlc.GetRecurringIncomeRulesParams{
+	recurringRules, _ := h.queries.GetRecurringIncomeForPeriod(c.Request().Context(), sqlc.GetRecurringIncomeForPeriodParams{
 		UserID:    userID,
-		StartDate: stringToDate(now.Format("2006-01-02")),
+		StartDate: stringToDate(endDate.Format("2006-01-02")),
+		EndDate:   stringToDate(startDate.Format("2006-01-02")),
 	})
 
-	recurringIncome := calculateRecurringIncome(recurringRules, now)
+	recurringIncome := calculateRecurringIncomeForPeriod(recurringRules, startDate, endDate)
 	totalIncome := interfaceToFloat64(oneTimeIncome) + recurringIncome
 
-	totalExpenses, _ := h.queries.GetTotalExpensesToDate(c.Request().Context(), sqlc.GetTotalExpensesToDateParams{
-		UserID:      userID,
-		ExpenseDate: stringToDate(now.Format("2006-01-02")),
+	// calculate expenses for tracking period only
+	totalExpenses, _ := h.queries.GetExpensesForPeriod(c.Request().Context(), sqlc.GetExpensesForPeriodParams{
+		UserID:        userID,
+		ExpenseDate:   stringToDate(startDate.Format("2006-01-02")),
+		ExpenseDate_2: stringToDate(endDate.Format("2006-01-02")),
 	})
 	totalExpensesVal := interfaceToFloat64(totalExpenses)
 
@@ -723,7 +744,7 @@ func (h *Handler) GetHealthScore(c echo.Context) error {
 		savingsRate = (savings / totalIncome) * 100
 	}
 
-	// Calculate health score (0-100)
+	// calculate health score (0-100)
 	score := 50
 	if savingsRate >= 20 {
 		score += 30
@@ -865,9 +886,10 @@ func (h *Handler) GetFiftyThirtyTwenty(c echo.Context) error {
 			Actual:   savingsPct,
 			Status:   get503020Status(savingsPct, 20),
 		},
-		TotalIncome:        totalIncome,
-		UnclassifiedCount:  unclassified.UnclassifiedCount,
-		UnclassifiedAmount: interfaceToFloat64(unclassified.UnclassifiedAmount),
+		TotalIncome:         totalIncome,
+		UnclassifiedCount:   unclassified.UnclassifiedCount,
+		UnclassifiedAmount:  interfaceToFloat64(unclassified.UnclassifiedAmount),
+		TrackingPeriodStart: startOfMonth.Format("2006-01-02"),
 	})
 }
 
