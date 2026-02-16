@@ -72,7 +72,8 @@ FROM budget_incomes
 WHERE
     user_id = $1
     AND recurring_type IS NULL
-    AND date <= $2;
+    AND date <= $2
+    AND exclude_from_calculations = false;
 
 -- name: GetAllOneTimeIncomeToDate :one
 SELECT COALESCE(SUM(amount), 0::numeric) as total_amount
@@ -121,7 +122,17 @@ SELECT COALESCE(SUM(amount), 0::numeric) as total_amount
 FROM budget_incomes
 WHERE user_id = $1
     AND date >= $2
-    AND date <= $3;
+    AND date <= $3
+    AND exclude_from_calculations = false;
+
+-- name: GetRecurringIncomeForPeriod :many
+SELECT * FROM budget_incomes
+WHERE user_id = $1
+    AND recurring_type IN ('daily', 'weekly', 'monthly')
+    AND start_date <= $2
+    AND (end_date IS NULL OR end_date >= $3)
+    AND exclude_from_calculations = false
+ORDER BY start_date;
 
 -- name: GetExpensesForPeriod :one
 SELECT COALESCE(SUM(amount), 0::numeric) as total_amount

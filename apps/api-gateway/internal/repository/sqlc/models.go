@@ -41,17 +41,18 @@ type BudgetExpenseTag struct {
 }
 
 type BudgetIncome struct {
-	ID            uuid.UUID        `json:"id"`
-	UserID        uuid.UUID        `json:"user_id"`
-	Amount        pgtype.Numeric   `json:"amount"`
-	Currency      pgtype.Text      `json:"currency"`
-	Date          pgtype.Date      `json:"date"`
-	Description   pgtype.Text      `json:"description"`
-	RecurringType pgtype.Text      `json:"recurring_type"`
-	StartDate     pgtype.Date      `json:"start_date"`
-	CreatedAt     pgtype.Timestamp `json:"created_at"`
-	UpdatedAt     pgtype.Timestamp `json:"updated_at"`
-	EndDate       pgtype.Date      `json:"end_date"`
+	ID                      uuid.UUID        `json:"id"`
+	UserID                  uuid.UUID        `json:"user_id"`
+	Amount                  pgtype.Numeric   `json:"amount"`
+	Currency                pgtype.Text      `json:"currency"`
+	Date                    pgtype.Date      `json:"date"`
+	Description             pgtype.Text      `json:"description"`
+	RecurringType           pgtype.Text      `json:"recurring_type"`
+	StartDate               pgtype.Date      `json:"start_date"`
+	CreatedAt               pgtype.Timestamp `json:"created_at"`
+	UpdatedAt               pgtype.Timestamp `json:"updated_at"`
+	EndDate                 pgtype.Date      `json:"end_date"`
+	ExcludeFromCalculations pgtype.Bool      `json:"exclude_from_calculations"`
 }
 
 type BudgetPriorityGroup struct {
@@ -128,10 +129,12 @@ type Session struct {
 }
 
 type User struct {
-	ID           uuid.UUID        `json:"id"`
-	Email        string           `json:"email"`
-	PasswordHash pgtype.Text      `json:"password_hash"`
-	Role         string           `json:"role"`
-	CreatedAt    pgtype.Timestamp `json:"created_at"`
-	UpdatedAt    pgtype.Timestamp `json:"updated_at"`
+	ID                uuid.UUID        `json:"id"`
+	Email             string           `json:"email"`
+	PasswordHash      pgtype.Text      `json:"password_hash"`
+	Role              string           `json:"role"`
+	CreatedAt         pgtype.Timestamp `json:"created_at"`
+	UpdatedAt         pgtype.Timestamp `json:"updated_at"`
+	TrackingStartDate pgtype.Date      `json:"tracking_start_date"`
+	MoneyBaseline     pgtype.Numeric   `json:"money_baseline"`
 }

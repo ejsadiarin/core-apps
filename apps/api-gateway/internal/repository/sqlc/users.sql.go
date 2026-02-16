@@ -71,7 +71,7 @@ INSERT INTO users (
 ) VALUES (
     $1, $2, $3
 )
-RETURNING id, email, password_hash, role, created_at, updated_at
+RETURNING id, email, password_hash, role, created_at, updated_at, tracking_start_date, money_baseline
 `
 
 type CreateUserParams struct {
@@ -91,6 +91,8 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.Role,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TrackingStartDate,
+		&i.MoneyBaseline,
 	)
 	return i, err
 }
@@ -179,7 +181,7 @@ func (q *Queries) GetSessionByTokenHash(ctx context.Context, tokenHash string) (
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, email, password_hash, role, created_at, updated_at FROM users
+SELECT id, email, password_hash, role, created_at, updated_at, tracking_start_date, money_baseline FROM users
 WHERE id = $1 LIMIT 1
 `
 
@@ -193,12 +195,14 @@ func (q *Queries) GetUser(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.Role,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TrackingStartDate,
+		&i.MoneyBaseline,
 	)
 	return i, err
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, email, password_hash, role, created_at, updated_at FROM users
+SELECT id, email, password_hash, role, created_at, updated_at, tracking_start_date, money_baseline FROM users
 WHERE email = $1 LIMIT 1
 `
 
@@ -212,12 +216,14 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.Role,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TrackingStartDate,
+		&i.MoneyBaseline,
 	)
 	return i, err
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, email, password_hash, role, created_at, updated_at FROM users
+SELECT id, email, password_hash, role, created_at, updated_at, tracking_start_date, money_baseline FROM users
 ORDER BY created_at DESC
 `
 
@@ -237,6 +243,8 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 			&i.Role,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.TrackingStartDate,
+			&i.MoneyBaseline,
 		); err != nil {
 			return nil, err
 		}
@@ -256,7 +264,7 @@ SET
     role = COALESCE($4, role),
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, email, password_hash, role, created_at, updated_at
+RETURNING id, email, password_hash, role, created_at, updated_at, tracking_start_date, money_baseline
 `
 
 type UpdateUserParams struct {
@@ -281,6 +289,8 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.Role,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TrackingStartDate,
+		&i.MoneyBaseline,
 	)
 	return i, err
 }

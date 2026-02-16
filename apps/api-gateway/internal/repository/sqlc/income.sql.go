@@ -47,7 +47,7 @@ INSERT INTO budget_incomes (
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8
 )
-RETURNING id, user_id, amount, currency, date, description, recurring_type, start_date, created_at, updated_at, end_date
+RETURNING id, user_id, amount, currency, date, description, recurring_type, start_date, created_at, updated_at, end_date, exclude_from_calculations
 `
 
 type CreateIncomeParams struct {
@@ -86,6 +86,7 @@ func (q *Queries) CreateIncome(ctx context.Context, arg CreateIncomeParams) (Bud
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.EndDate,
+		&i.ExcludeFromCalculations,
 	)
 	return i, err
 }
@@ -127,7 +128,7 @@ func (q *Queries) GetAllOneTimeIncomeToDate(ctx context.Context, arg GetAllOneTi
 }
 
 const getAllRecurringIncomeRules = `-- name: GetAllRecurringIncomeRules :many
-SELECT id, user_id, amount, currency, date, description, recurring_type, start_date, created_at, updated_at, end_date FROM budget_incomes
+SELECT id, user_id, amount, currency, date, description, recurring_type, start_date, created_at, updated_at, end_date, exclude_from_calculations FROM budget_incomes
 WHERE
     ($1::uuid IS NULL OR user_id = $1)
     AND recurring_type IN ('daily', 'weekly', 'monthly')
@@ -162,6 +163,7 @@ func (q *Queries) GetAllRecurringIncomeRules(ctx context.Context, arg GetAllRecu
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.EndDate,
+			&i.ExcludeFromCalculations,
 		); err != nil {
 			return nil, err
 		}
@@ -215,7 +217,7 @@ func (q *Queries) GetExpensesForPeriod(ctx context.Context, arg GetExpensesForPe
 }
 
 const getIncome = `-- name: GetIncome :one
-SELECT id, user_id, amount, currency, date, description, recurring_type, start_date, created_at, updated_at, end_date FROM budget_incomes
+SELECT id, user_id, amount, currency, date, description, recurring_type, start_date, created_at, updated_at, end_date, exclude_from_calculations FROM budget_incomes
 WHERE id = $1 AND user_id = $2 LIMIT 1
 `
 
@@ -239,12 +241,13 @@ func (q *Queries) GetIncome(ctx context.Context, arg GetIncomeParams) (BudgetInc
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.EndDate,
+		&i.ExcludeFromCalculations,
 	)
 	return i, err
 }
 
 const getIncomeByID = `-- name: GetIncomeByID :one
-SELECT id, user_id, amount, currency, date, description, recurring_type, start_date, created_at, updated_at, end_date FROM budget_incomes
+SELECT id, user_id, amount, currency, date, description, recurring_type, start_date, created_at, updated_at, end_date, exclude_from_calculations FROM budget_incomes
 WHERE id = $1 LIMIT 1
 `
 
@@ -263,6 +266,7 @@ func (q *Queries) GetIncomeByID(ctx context.Context, id uuid.UUID) (BudgetIncome
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.EndDate,
+		&i.ExcludeFromCalculations,
 	)
 	return i, err
 }
@@ -274,6 +278,7 @@ FROM budget_incomes
 WHERE user_id = $1
     AND date >= $2
     AND date <= $3
+    AND exclude_from_calculations = false
 `
 
 type GetIncomeForPeriodParams struct {
@@ -298,6 +303,7 @@ WHERE
     user_id = $1
     AND recurring_type IS NULL
     AND date <= $2
+    AND exclude_from_calculations = false
 `
 
 type GetOneTimeIncomeToDateParams struct {
@@ -314,8 +320,57 @@ func (q *Queries) GetOneTimeIncomeToDate(ctx context.Context, arg GetOneTimeInco
 	return total_amount, err
 }
 
+const getRecurringIncomeForPeriod = `-- name: GetRecurringIncomeForPeriod :many
+SELECT id, user_id, amount, currency, date, description, recurring_type, start_date, created_at, updated_at, end_date, exclude_from_calculations FROM budget_incomes
+WHERE user_id = $1
+    AND recurring_type IN ('daily', 'weekly', 'monthly')
+    AND start_date <= $2
+    AND (end_date IS NULL OR end_date >= $3)
+    AND exclude_from_calculations = false
+ORDER BY start_date
+`
+
+type GetRecurringIncomeForPeriodParams struct {
+	UserID    uuid.UUID   `json:"user_id"`
+	StartDate pgtype.Date `json:"start_date"`
+	EndDate   pgtype.Date `json:"end_date"`
+}
+
+func (q *Queries) GetRecurringIncomeForPeriod(ctx context.Context, arg GetRecurringIncomeForPeriodParams) ([]BudgetIncome, error) {
+	rows, err := q.db.Query(ctx, getRecurringIncomeForPeriod, arg.UserID, arg.StartDate, arg.EndDate)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []BudgetIncome{}
+	for rows.Next() {
+		var i BudgetIncome
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Amount,
+			&i.Currency,
+			&i.Date,
+			&i.Description,
+			&i.RecurringType,
+			&i.StartDate,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.EndDate,
+			&i.ExcludeFromCalculations,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getRecurringIncomeRules = `-- name: GetRecurringIncomeRules :many
-SELECT id, user_id, amount, currency, date, description, recurring_type, start_date, created_at, updated_at, end_date FROM budget_incomes
+SELECT id, user_id, amount, currency, date, description, recurring_type, start_date, created_at, updated_at, end_date, exclude_from_calculations FROM budget_incomes
 WHERE
     user_id = $1
     AND recurring_type IN ('daily', 'weekly', 'monthly')
@@ -350,6 +405,7 @@ func (q *Queries) GetRecurringIncomeRules(ctx context.Context, arg GetRecurringI
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.EndDate,
+			&i.ExcludeFromCalculations,
 		); err != nil {
 			return nil, err
 		}
@@ -382,7 +438,7 @@ func (q *Queries) GetTotalExpensesToDate(ctx context.Context, arg GetTotalExpens
 }
 
 const listAllIncomes = `-- name: ListAllIncomes :many
-SELECT i.id, i.user_id, i.amount, i.currency, i.date, i.description, i.recurring_type, i.start_date, i.created_at, i.updated_at, i.end_date, u.email as user_email
+SELECT i.id, i.user_id, i.amount, i.currency, i.date, i.description, i.recurring_type, i.start_date, i.created_at, i.updated_at, i.end_date, i.exclude_from_calculations, u.email as user_email
 FROM budget_incomes i
 JOIN users u ON i.user_id = u.id
 WHERE
@@ -401,18 +457,19 @@ type ListAllIncomesParams struct {
 }
 
 type ListAllIncomesRow struct {
-	ID            uuid.UUID        `json:"id"`
-	UserID        uuid.UUID        `json:"user_id"`
-	Amount        pgtype.Numeric   `json:"amount"`
-	Currency      pgtype.Text      `json:"currency"`
-	Date          pgtype.Date      `json:"date"`
-	Description   pgtype.Text      `json:"description"`
-	RecurringType pgtype.Text      `json:"recurring_type"`
-	StartDate     pgtype.Date      `json:"start_date"`
-	CreatedAt     pgtype.Timestamp `json:"created_at"`
-	UpdatedAt     pgtype.Timestamp `json:"updated_at"`
-	EndDate       pgtype.Date      `json:"end_date"`
-	UserEmail     string           `json:"user_email"`
+	ID                      uuid.UUID        `json:"id"`
+	UserID                  uuid.UUID        `json:"user_id"`
+	Amount                  pgtype.Numeric   `json:"amount"`
+	Currency                pgtype.Text      `json:"currency"`
+	Date                    pgtype.Date      `json:"date"`
+	Description             pgtype.Text      `json:"description"`
+	RecurringType           pgtype.Text      `json:"recurring_type"`
+	StartDate               pgtype.Date      `json:"start_date"`
+	CreatedAt               pgtype.Timestamp `json:"created_at"`
+	UpdatedAt               pgtype.Timestamp `json:"updated_at"`
+	EndDate                 pgtype.Date      `json:"end_date"`
+	ExcludeFromCalculations pgtype.Bool      `json:"exclude_from_calculations"`
+	UserEmail               string           `json:"user_email"`
 }
 
 func (q *Queries) ListAllIncomes(ctx context.Context, arg ListAllIncomesParams) ([]ListAllIncomesRow, error) {
@@ -441,6 +498,7 @@ func (q *Queries) ListAllIncomes(ctx context.Context, arg ListAllIncomesParams) 
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.EndDate,
+			&i.ExcludeFromCalculations,
 			&i.UserEmail,
 		); err != nil {
 			return nil, err
@@ -454,7 +512,7 @@ func (q *Queries) ListAllIncomes(ctx context.Context, arg ListAllIncomesParams) 
 }
 
 const listIncomes = `-- name: ListIncomes :many
-SELECT id, user_id, amount, currency, date, description, recurring_type, start_date, created_at, updated_at, end_date FROM budget_incomes
+SELECT id, user_id, amount, currency, date, description, recurring_type, start_date, created_at, updated_at, end_date, exclude_from_calculations FROM budget_incomes
 WHERE
     user_id = $1
     AND ($4::text IS NULL OR recurring_type = $4::text)
@@ -501,6 +559,7 @@ func (q *Queries) ListIncomes(ctx context.Context, arg ListIncomesParams) ([]Bud
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.EndDate,
+			&i.ExcludeFromCalculations,
 		); err != nil {
 			return nil, err
 		}
@@ -524,7 +583,7 @@ SET
     end_date = COALESCE($9, end_date),
     updated_at = NOW()
 WHERE id = $1 AND user_id = $2
-RETURNING id, user_id, amount, currency, date, description, recurring_type, start_date, created_at, updated_at, end_date
+RETURNING id, user_id, amount, currency, date, description, recurring_type, start_date, created_at, updated_at, end_date, exclude_from_calculations
 `
 
 type UpdateIncomeParams struct {
@@ -564,6 +623,7 @@ func (q *Queries) UpdateIncome(ctx context.Context, arg UpdateIncomeParams) (Bud
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.EndDate,
+		&i.ExcludeFromCalculations,
 	)
 	return i, err
 }

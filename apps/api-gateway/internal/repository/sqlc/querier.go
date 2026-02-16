@@ -81,6 +81,7 @@ type Querier interface {
 	// These queries fetch raw data; proration logic is handled in the application layer
 	GetOneTimeIncomeToDate(ctx context.Context, arg GetOneTimeIncomeToDateParams) (interface{}, error)
 	GetPriorityGroupBySlug(ctx context.Context, slug string) (BudgetPriorityGroup, error)
+	GetRecurringIncomeForPeriod(ctx context.Context, arg GetRecurringIncomeForPeriodParams) ([]BudgetIncome, error)
 	GetRecurringIncomeRules(ctx context.Context, arg GetRecurringIncomeRulesParams) ([]BudgetIncome, error)
 	GetSavingsGoal(ctx context.Context, arg GetSavingsGoalParams) (SavingsGoal, error)
 	GetSavingsGoalsSummary(ctx context.Context, userID uuid.UUID) (GetSavingsGoalsSummaryRow, error)

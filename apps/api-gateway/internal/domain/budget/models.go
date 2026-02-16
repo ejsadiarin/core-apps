@@ -184,6 +184,15 @@ type SavingsRateResponse struct {
 	Period      string  `json:"period"`
 }
 
+type CurrentTotalMoneyResponse struct {
+	CurrentTotal       float64 `json:"current_total"`
+	MoneyBaseline      float64 `json:"money_baseline"`
+	IncomeSinceStart   float64 `json:"income_since_start"`
+	ExpensesSinceStart float64 `json:"expenses_since_start"`
+	NetChange          float64 `json:"net_change"`
+	TrackingStartDate  string  `json:"tracking_start_date"`
+}
+
 type SpendingVelocityResponse struct {
 	AmountSpent    float64 `json:"amount_spent"`
 	DaysElapsed    int32   `json:"days_elapsed"`

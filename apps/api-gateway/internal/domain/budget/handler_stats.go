@@ -271,16 +271,35 @@ func (h *Handler) GetSavingsRate(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to get user context"})
 	}
 
-	now := time.Now()
-	startOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+	// get user to fetch tracking_start_date
+	user, err := h.queries.GetUser(c.Request().Context(), userID)
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to get user")
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to get user"})
+	}
 
-	startDate := startOfMonth
+	now := time.Now()
+
+	// default to tracking start date or first of current month
+	var defaultStart time.Time
+	if user.TrackingStartDate.Valid {
+		defaultStart = user.TrackingStartDate.Time
+	} else {
+		defaultStart = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+	}
+
+	startDate := defaultStart
 	if startParam := c.QueryParam("start_date"); startParam != "" {
 		parsed, err := time.Parse("2006-01-02", startParam)
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid start_date format, use YYYY-MM-DD"})
 		}
 		startDate = parsed
+	}
+
+	// enforce tracking start date
+	if user.TrackingStartDate.Valid && startDate.Before(user.TrackingStartDate.Time) {
+		startDate = user.TrackingStartDate.Time
 	}
 
 	endDate := now
@@ -292,44 +311,47 @@ func (h *Handler) GetSavingsRate(c echo.Context) error {
 		endDate = parsed
 	}
 
-	// Calculate total income (including recurring)
-	oneTimeIncome, err := h.queries.GetOneTimeIncomeToDate(c.Request().Context(), sqlc.GetOneTimeIncomeToDateParams{
+	// calculate total income for period (one-time + recurring)
+	oneTimeIncome, err := h.queries.GetIncomeForPeriod(c.Request().Context(), sqlc.GetIncomeForPeriodParams{
 		UserID: userID,
-		Date:   stringToDate(endDate.Format("2006-01-02")),
+		Date:   stringToDate(startDate.Format("2006-01-02")),
+		Date_2: stringToDate(endDate.Format("2006-01-02")),
 	})
 	if err != nil {
-		h.logger.Error().Err(err).Msg("Failed to get one-time income")
+		h.logger.Error().Err(err).Msg("Failed to get income for period")
 	}
 
-	recurringRules, err := h.queries.GetRecurringIncomeRules(c.Request().Context(), sqlc.GetRecurringIncomeRulesParams{
+	recurringRules, err := h.queries.GetRecurringIncomeForPeriod(c.Request().Context(), sqlc.GetRecurringIncomeForPeriodParams{
 		UserID:    userID,
 		StartDate: stringToDate(endDate.Format("2006-01-02")),
+		EndDate:   stringToDate(startDate.Format("2006-01-02")),
 	})
 	if err != nil {
 		h.logger.Error().Err(err).Msg("Failed to get recurring income rules")
 	}
 
-	recurringIncome := calculateRecurringIncome(recurringRules, endDate)
+	recurringIncome := calculateRecurringIncomeForPeriod(recurringRules, startDate, endDate)
 	totalIncome := interfaceToFloat64(oneTimeIncome) + recurringIncome
 
-	// Calculate total expenses
-	totalExpensesResult, err := h.queries.GetTotalExpensesToDate(c.Request().Context(), sqlc.GetTotalExpensesToDateParams{
-		UserID:      userID,
-		ExpenseDate: stringToDate(endDate.Format("2006-01-02")),
+	// calculate total expenses for period
+	totalExpensesResult, err := h.queries.GetExpensesForPeriod(c.Request().Context(), sqlc.GetExpensesForPeriodParams{
+		UserID:        userID,
+		ExpenseDate:   stringToDate(startDate.Format("2006-01-02")),
+		ExpenseDate_2: stringToDate(endDate.Format("2006-01-02")),
 	})
 	if err != nil {
-		h.logger.Error().Err(err).Msg("Failed to get total expenses")
+		h.logger.Error().Err(err).Msg("Failed to get expenses for period")
 	}
 	totalExpenses := interfaceToFloat64(totalExpensesResult)
 
-	// Calculate savings rate
+	// calculate savings rate
 	savings := totalIncome - totalExpenses
 	var savingsRate float64
 	if totalIncome > 0 {
 		savingsRate = (savings / totalIncome) * 100
 	}
 
-	// Determine health status
+	// determine health status
 	var status string
 	if savingsRate >= 20 {
 		status = "excellent"
@@ -585,6 +607,57 @@ func calculateRecurringIncome(recurringRules []sqlc.BudgetIncome, targetDate tim
 	return recurringIncome
 }
 
+// calculateRecurringIncomeForPeriod calculates recurring income within a specific period
+// handles partial periods where rule starts/ends mid-period
+func calculateRecurringIncomeForPeriod(recurringRules []sqlc.BudgetIncome, periodStart, periodEnd time.Time) float64 {
+	recurringIncome := 0.0
+
+	for _, rule := range recurringRules {
+		// determine the overlap between rule period and query period
+		effectiveStart := rule.StartDate.Time
+		if effectiveStart.Before(periodStart) {
+			effectiveStart = periodStart
+		}
+
+		effectiveEnd := periodEnd
+		if rule.EndDate.Valid && rule.EndDate.Time.Before(periodEnd) {
+			effectiveEnd = rule.EndDate.Time
+		}
+
+		// skip if no overlap
+		if effectiveStart.After(effectiveEnd) {
+			continue
+		}
+
+		var periods float64
+
+		switch rule.RecurringType.String {
+		case "daily":
+			// calculate number of days in overlap period (inclusive)
+			diff := effectiveEnd.Sub(effectiveStart)
+			days := int(diff.Hours()/24) + 1
+			periods = float64(days)
+
+		case "weekly":
+			// calculate number of weeks in overlap period (inclusive)
+			diff := effectiveEnd.Sub(effectiveStart)
+			weeks := int(diff.Hours()/(24*7)) + 1
+			periods = float64(weeks)
+
+		case "monthly":
+			// calculate number of months in overlap period (inclusive)
+			yearDiff := effectiveEnd.Year() - effectiveStart.Year()
+			monthDiff := int(effectiveEnd.Month()) - int(effectiveStart.Month())
+			months := yearDiff*12 + monthDiff + 1
+			periods = float64(months)
+		}
+
+		recurringIncome += numericToFloat64(rule.Amount) * periods
+	}
+
+	return recurringIncome
+}
+
 // calculateOccurrencesRow determines how many times a recurring expense occurs between start and end dates
 func calculateOccurrencesRow(expense sqlc.GetUpcomingRecurringExpensesRow, startDate, endDate time.Time) []time.Time {
 	var occurrences []time.Time
@@ -701,8 +774,21 @@ func (h *Handler) GetFiftyThirtyTwenty(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to get user context"})
 	}
 
+	// get user to fetch tracking_start_date
+	user, err := h.queries.GetUser(c.Request().Context(), userID)
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to get user")
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to get user"})
+	}
+
 	now := time.Now()
 	startOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+
+	// enforce tracking start date
+	if user.TrackingStartDate.Valid && startOfMonth.Before(user.TrackingStartDate.Time) {
+		startOfMonth = user.TrackingStartDate.Time
+	}
+
 	startDate := stringToDate(startOfMonth.Format("2006-01-02"))
 	endDate := stringToDate(now.Format("2006-01-02"))
 
@@ -733,18 +819,20 @@ func (h *Handler) GetFiftyThirtyTwenty(c echo.Context) error {
 		EndDate:   endDate,
 	})
 
-	// get total income
-	oneTimeIncome, _ := h.queries.GetOneTimeIncomeToDate(c.Request().Context(), sqlc.GetOneTimeIncomeToDateParams{
+	// get total income for the current month period (not cumulative!)
+	oneTimeIncome, _ := h.queries.GetIncomeForPeriod(c.Request().Context(), sqlc.GetIncomeForPeriodParams{
 		UserID: userID,
-		Date:   endDate,
+		Date:   startDate,
+		Date_2: endDate,
 	})
 
-	recurringRules, _ := h.queries.GetRecurringIncomeRules(c.Request().Context(), sqlc.GetRecurringIncomeRulesParams{
+	recurringRules, _ := h.queries.GetRecurringIncomeForPeriod(c.Request().Context(), sqlc.GetRecurringIncomeForPeriodParams{
 		UserID:    userID,
 		StartDate: endDate,
+		EndDate:   startDate,
 	})
 
-	recurringIncome := calculateRecurringIncome(recurringRules, now)
+	recurringIncome := calculateRecurringIncomeForPeriod(recurringRules, startOfMonth, now)
 	totalIncome := interfaceToFloat64(oneTimeIncome) + recurringIncome
 
 	// calculate percentages
@@ -1079,5 +1167,79 @@ func (h *Handler) GetSubscriptions(c echo.Context) error {
 		Subscriptions: subItems,
 		TotalMonthly:  totalMonthly,
 		Count:         len(subItems),
+	})
+}
+
+// GetCurrentTotalMoney godoc
+// @Summary Get current total money across all accounts
+// @Description Calculates current total money as baseline + (income - expenses) since tracking start date
+// @Tags budget
+// @Produce json
+// @Success 200 {object} CurrentTotalMoneyResponse
+// @Router /api/budget/current-total-money [get]
+func (h *Handler) GetCurrentTotalMoney(c echo.Context) error {
+	userID, err := h.getUserID(c)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to get user context"})
+	}
+
+	// get user to fetch baseline and tracking_start_date
+	user, err := h.queries.GetUser(c.Request().Context(), userID)
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to get user")
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to get user"})
+	}
+
+	// default tracking start date if not set
+	trackingStartDate := "2026-01-15"
+	if user.TrackingStartDate.Valid {
+		trackingStartDate = user.TrackingStartDate.Time.Format("2006-01-02")
+	}
+
+	now := time.Now()
+
+	// calculate total income since tracking start (exclude_from_calculations = false)
+	oneTimeIncome, _ := h.queries.GetIncomeForPeriod(c.Request().Context(), sqlc.GetIncomeForPeriodParams{
+		UserID: userID,
+		Date:   stringToDate(trackingStartDate),
+		Date_2: stringToDate(now.Format("2006-01-02")),
+	})
+
+	recurringRules, _ := h.queries.GetRecurringIncomeForPeriod(c.Request().Context(), sqlc.GetRecurringIncomeForPeriodParams{
+		UserID:    userID,
+		StartDate: stringToDate(now.Format("2006-01-02")),
+		EndDate:   stringToDate(trackingStartDate),
+	})
+
+	var recurringIncome float64
+	if user.TrackingStartDate.Valid {
+		recurringIncome = calculateRecurringIncomeForPeriod(recurringRules, user.TrackingStartDate.Time, now)
+	} else {
+		recurringIncome = calculateRecurringIncomeForPeriod(recurringRules, time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC), now)
+	}
+
+	totalIncome := interfaceToFloat64(oneTimeIncome) + recurringIncome
+
+	// calculate total expenses since tracking start
+	totalExpenses, _ := h.queries.GetExpensesForPeriod(c.Request().Context(), sqlc.GetExpensesForPeriodParams{
+		UserID:        userID,
+		ExpenseDate:   stringToDate(trackingStartDate),
+		ExpenseDate_2: stringToDate(now.Format("2006-01-02")),
+	})
+
+	totalExpensesVal := interfaceToFloat64(totalExpenses)
+
+	// calculate current total
+	baseline := numericToFloat64(user.MoneyBaseline)
+	netChange := totalIncome - totalExpensesVal
+	currentTotal := baseline + netChange
+
+	return c.JSON(http.StatusOK, CurrentTotalMoneyResponse{
+		CurrentTotal:       currentTotal,
+		MoneyBaseline:      baseline,
+		IncomeSinceStart:   totalIncome,
+		ExpensesSinceStart: totalExpensesVal,
+		NetChange:          netChange,
+		TrackingStartDate:  trackingStartDate,
 	})
 }

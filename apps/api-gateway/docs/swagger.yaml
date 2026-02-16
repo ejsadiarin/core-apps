@@ -350,6 +350,21 @@ definitions:
     required:
     - name
     type: object
+  internal_domain_budget.CurrentTotalMoneyResponse:
+    properties:
+      current_total:
+        type: number
+      expenses_since_start:
+        type: number
+      income_since_start:
+        type: number
+      money_baseline:
+        type: number
+      net_change:
+        type: number
+      tracking_start_date:
+        type: string
+    type: object
   internal_domain_budget.ExpenseResponse:
     properties:
       amount:
@@ -1253,6 +1268,20 @@ paths:
           schema:
             $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
       summary: Update a category budget
+      tags:
+      - budget
+  /api/budget/current-total-money:
+    get:
+      description: Calculates current total money as baseline + (income - expenses)
+        since tracking start date
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_domain_budget.CurrentTotalMoneyResponse'
+      summary: Get current total money across all accounts
       tags:
       - budget
   /api/budget/expenses:

@@ -130,6 +130,7 @@ func (a *Application) RegisterRoutes() {
 			// New budget analytics endpoints
 			budget.GET("/velocity", a.BudgetHandler.GetSpendingVelocity)
 			budget.GET("/forecast/upcoming", a.BudgetHandler.GetUpcomingBills)
+			budget.GET("/current-total-money", a.BudgetHandler.GetCurrentTotalMoney)
 
 			// Financial Health Analysis
 			budget.GET("/analysis/503020", a.BudgetHandler.GetFiftyThirtyTwenty)

@@ -567,6 +567,26 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/budget/current-total-money": {
+            "get": {
+                "description": "Calculates current total money as baseline + (income - expenses) since tracking start date",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budget"
+                ],
+                "summary": "Get current total money across all accounts",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_domain_budget.CurrentTotalMoneyResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/budget/expenses": {
             "get": {
                 "tags": [
@@ -2653,6 +2673,29 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 100,
                     "minLength": 1
+                }
+            }
+        },
+        "internal_domain_budget.CurrentTotalMoneyResponse": {
+            "type": "object",
+            "properties": {
+                "current_total": {
+                    "type": "number"
+                },
+                "expenses_since_start": {
+                    "type": "number"
+                },
+                "income_since_start": {
+                    "type": "number"
+                },
+                "money_baseline": {
+                    "type": "number"
+                },
+                "net_change": {
+                    "type": "number"
+                },
+                "tracking_start_date": {
+                    "type": "string"
                 }
             }
         },
