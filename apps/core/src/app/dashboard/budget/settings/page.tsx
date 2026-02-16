@@ -18,7 +18,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, Trash2, Edit2, Save, X, ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { CategoryTypeSelector, CategoryTypeBadge } from "@/components/budget";
 import type { Category, Tag } from "@/types/api";
 import Link from "next/link";
 import { useToast } from "@/components/ui/toast";
@@ -276,10 +275,8 @@ export default function SettingsPage() {
                               {category.icon && <span className="mr-1">{category.icon}</span>}
                               {category.name}
                             </Badge>
-                            <CategoryTypeBadge type={category.category_type} />
                           </div>
                           <div className="flex items-center gap-2">
-                            <CategoryTypeSelector category={category} />
                             <Button
                               size="sm"
                               variant="ghost"

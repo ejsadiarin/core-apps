@@ -3,7 +3,6 @@ export { SpendingVelocityCard } from './spending-velocity-card';
 export { UpcomingBillsCard } from './upcoming-bills-card';
 export { CategoryBudgetForm } from './category-budget-form';
 export { BudgetVarianceTable } from './budget-variance-table';
-export { CategoryTypeSelector, CategoryTypeBadge } from './category-type-selector';
 export { HealthScoreCard } from './health-score-card';
 export { FiftyThirtyTwentyChart } from './fifty-thirty-twenty-chart';
 export { WeekdaySpendingChart } from './weekday-spending-chart';

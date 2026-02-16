@@ -120,6 +120,24 @@ export function FiftyThirtyTwentyChart({ startDate, endDate, className }: FiftyT
               </div>
             </div>
           ))}
+
+          {data.unclassified_count > 0 && (
+            <div className="space-y-1 pt-2 border-t">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-muted-foreground/30" />
+                  <span className="text-sm font-medium text-muted-foreground">Unclassified</span>
+                </div>
+                <span className="text-xs font-medium text-muted-foreground">
+                  {data.unclassified_count} expense{data.unclassified_count !== 1 ? 's' : ''}
+                </span>
+              </div>
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>₱{data.unclassified_amount.toLocaleString()}</span>
+                <span>Not assigned to a priority group</span>
+              </div>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

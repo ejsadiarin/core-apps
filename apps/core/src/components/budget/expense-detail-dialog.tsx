@@ -95,7 +95,7 @@ export function ExpenseDetailDialog({
           </DialogHeader>
 
           <div className="space-y-5 mt-2">
-            {/* Category & Recurring */}
+            {/* Category, Priority Group & Recurring */}
             <div className="flex flex-wrap gap-2">
               {expense.category && (
                 <Badge
@@ -111,6 +111,11 @@ export function ExpenseDetailDialog({
                 >
                   {expense.category.icon && <span className="mr-1">{expense.category.icon}</span>}
                   {expense.category.name}
+                </Badge>
+              )}
+              {expense.priority_group && (
+                <Badge variant="outline" className="text-sm">
+                  {expense.priority_group.name}
                 </Badge>
               )}
               <Badge

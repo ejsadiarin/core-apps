@@ -87,12 +87,18 @@ export interface UpdateServiceRequest {
 
 // Budget Types
 
+export interface PriorityGroup {
+    id: string;
+    name: string;
+    slug: string;
+    display_order: number;
+}
+
 export interface Category {
     id: string;
     name: string;
     color?: string;
     icon?: string;
-    category_type?: "need" | "want" | "savings";
 }
 
 export interface Tag {
@@ -107,6 +113,7 @@ export interface Expense {
     amount: number;
     currency: string;
     category?: Category;
+    priority_group?: PriorityGroup;
     expense_date: string;
     notes?: string;
     tags?: Tag[];
@@ -144,6 +151,7 @@ export interface CreateExpenseRequest {
     amount: number;
     currency?: string;
     category_id?: string;
+    priority_group_id?: string;
     expense_date: string;
     notes?: string;
     tag_ids?: string[];
@@ -157,6 +165,7 @@ export interface UpdateExpenseRequest {
     amount?: number;
     currency?: string;
     category_id?: string;
+    priority_group_id?: string;
     expense_date?: string;
     notes?: string;
     tag_ids?: string[];
@@ -338,7 +347,6 @@ export interface CategoryBudgetWithVariance {
     category_id: string;
     category_name: string;
     category_color?: string;
-    category_type?: "need" | "want" | "savings";
     budget_amount: number;
     spent_amount: number;
     variance?: number;
@@ -356,40 +364,7 @@ export interface UpdateCategoryBudgetRequest {
     budget_amount?: number;
 }
 
-export interface UpdateCategoryTypeRequest {
-    category_type?: "need" | "want" | "savings";
-}
-
 // Financial Health Types
-
-export interface CategoryTypeSpending {
-    category_type: "need" | "want" | "savings";
-    total_amount: number;
-    transaction_count: number;
-}
-
-export interface FiftyThirtyTwentyData {
-    needs_percentage: number;
-    wants_percentage: number;
-    savings_percentage: number;
-    needs_amount: number;
-    wants_amount: number;
-    savings_amount: number;
-}
-
-export interface DayOfWeekSpending {
-    day_of_week: number;
-    total_amount: number;
-    transaction_count: number;
-    avg_amount: number;
-}
-
-export interface MerchantSpending {
-    description: string;
-    total_amount: number;
-    transaction_count: number;
-    avg_amount: number;
-}
 
 // Financial Health Response Types
 
@@ -415,6 +390,8 @@ export interface FiftyThirtyTwentyResponse {
     wants: FiftyThirtyTwentyItem;
     savings: FiftyThirtyTwentyItem;
     total_income: number;
+    unclassified_count: number;
+    unclassified_amount: number;
 }
 
 export interface WeekdaySpendingItem {

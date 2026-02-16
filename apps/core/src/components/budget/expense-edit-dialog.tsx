@@ -26,6 +26,7 @@ export function EditExpenseDialog({ expense, open, onOpenChange, onSubmit, isLoa
     amount: expense.amount,
     currency: expense.currency,
     category_id: expense.category?.id,
+    priority_group_id: expense.priority_group?.id,
     expense_date: expense.expense_date,
     notes: expense.notes,
     tag_ids: expense.tags?.map((t) => t.id) || [],

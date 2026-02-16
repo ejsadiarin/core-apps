@@ -64,6 +64,8 @@ export const budgetKeys = {
   categoriesList: () => [...budgetKeys.categories(), 'list'] as const,
   categoryDetail: (id: string) => [...budgetKeys.categories(), 'detail', id] as const,
 
+  priorityGroups: () => [...budgetKeys.all, 'priorityGroups'] as const,
+
   tags: () => [...budgetKeys.all, 'tags'] as const,
   tagsList: () => [...budgetKeys.tags(), 'list'] as const,
   tagDetail: (id: string) => [...budgetKeys.tags(), 'detail', id] as const,
@@ -528,7 +530,7 @@ import {
   fetchCategoryBudgets,
   updateCategoryBudget,
   deleteCategoryBudget,
-  updateCategoryType,
+  fetchPriorityGroups,
   fetchHealthScore,
   fetchFiftyThirtyTwenty,
   fetchSubscriptions,
@@ -538,13 +540,13 @@ import {
 } from '@/lib/api';
 
 import type {
+  PriorityGroup,
   SavingsRateResponse,
   SpendingVelocityResponse,
   UpcomingBillsResponse,
   CategoryBudgetWithVariance,
   CreateCategoryBudgetRequest,
   UpdateCategoryBudgetRequest,
-  UpdateCategoryTypeRequest,
   HealthScoreResponse,
   FiftyThirtyTwentyResponse,
   SubscriptionsResponse,
@@ -655,26 +657,11 @@ export function useDeleteCategoryBudget() {
   });
 }
 
-export function useUpdateCategoryType() {
-  const queryClient = useQueryClient();
-  const { isGuest } = useAuth();
-
-  return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateCategoryTypeRequest }) => {
-      if (isGuest) {
-        throw new GuestBlockedError();
-      }
-      return updateCategoryType(id, data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: budgetKeys.categories() });
-      queryClient.invalidateQueries({ queryKey: budgetKeys.categoryBudgets() });
-    },
-    onError: (error: Error) => {
-      if (!(error instanceof GuestBlockedError)) {
-        console.error("Failed to update category type:", error);
-      }
-    }
+export function usePriorityGroups() {
+  return useQuery<PriorityGroup[]>({
+    queryKey: budgetKeys.priorityGroups(),
+    queryFn: fetchPriorityGroups,
+    staleTime: 300000 // 5 minutes - priority groups are static reference data
   });
 }
 

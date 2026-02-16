@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useCategories, useTags } from "@/hooks/use-budget";
+import { useCategories, useTags, usePriorityGroups } from "@/hooks/use-budget";
 import type { CreateExpenseRequest, UpdateExpenseRequest } from "@/types/api";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
@@ -21,12 +21,14 @@ interface ExpenseFormProps {
 export function ExpenseForm({ initialData, onSubmit, onCancel, isLoading }: ExpenseFormProps) {
   const { data: categories } = useCategories();
   const { data: tags } = useTags();
+  const { data: priorityGroups } = usePriorityGroups();
 
   const [formData, setFormData] = useState<CreateExpenseRequest>({
     description: initialData?.description || "",
     amount: initialData?.amount || 0,
     currency: initialData?.currency || "PHP",
     category_id: initialData?.category_id,
+    priority_group_id: initialData?.priority_group_id,
     expense_date: initialData?.expense_date || new Date().toISOString().split('T')[0],
     notes: initialData?.notes,
     tag_ids: initialData?.tag_ids || [],
@@ -117,6 +119,29 @@ export function ExpenseForm({ initialData, onSubmit, onCancel, isLoading }: Expe
               <SelectItem key={category.id} value={category.id}>
                 {category.icon && <span className="mr-2">{category.icon}</span>}
                 {category.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Priority Group (Need/Want/Savings) */}
+      <div className="space-y-2">
+        <Label htmlFor="priority_group">Priority (50/30/20)</Label>
+        <Select
+          value={formData.priority_group_id || "none"}
+          onValueChange={(value) =>
+            setFormData({ ...formData, priority_group_id: value === "none" ? undefined : value })
+          }
+        >
+          <SelectTrigger id="priority_group">
+            <SelectValue placeholder="Select priority" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">Unclassified</SelectItem>
+            {priorityGroups?.map((pg) => (
+              <SelectItem key={pg.id} value={pg.id}>
+                {pg.name}
               </SelectItem>
             ))}
           </SelectContent>

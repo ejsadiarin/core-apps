@@ -5,6 +5,7 @@ import type {
   ServiceHealthHistory,
   ServiceStats,
   Category,
+  PriorityGroup,
   Tag,
   Expense,
   CreateCategoryRequest,
@@ -35,10 +36,6 @@ import type {
   CategoryBudgetWithVariance,
   CreateCategoryBudgetRequest,
   UpdateCategoryBudgetRequest,
-  UpdateCategoryTypeRequest,
-  CategoryTypeSpending,
-  DayOfWeekSpending,
-  MerchantSpending,
   HealthScoreResponse,
   FiftyThirtyTwentyResponse,
   WeekdayPatternResponse,
@@ -250,6 +247,18 @@ export async function deleteCategory(id: string): Promise<void> {
   if (!res.ok) {
     throw new Error(`Error deleting category: ${res.status}`);
   }
+}
+
+// Priority Groups
+
+export async function fetchPriorityGroups(): Promise<PriorityGroup[]> {
+  const res = await fetch(url + '/api/budget/priority-groups', {
+    credentials: 'include'
+  });
+  if (!res.ok) {
+    throw new Error(`Error fetching priority groups: ${res.status}`);
+  }
+  return res.json();
 }
 
 // Tags
@@ -742,75 +751,7 @@ export async function deleteCategoryBudget(id: string): Promise<void> {
   }
 }
 
-export async function updateCategoryType(id: string, data: UpdateCategoryTypeRequest): Promise<Category> {
-  const res = await fetch(url + `/api/budget/categories/${id}/type`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    credentials: 'include',
-    body: JSON.stringify(data)
-  });
-  if (!res.ok) {
-    throw new Error(`Error updating category type: ${res.status}`);
-  }
-  return res.json();
-}
-
 // Financial Health API
-
-export async function fetchCategoryTypeSpending(startDate?: string, endDate?: string): Promise<CategoryTypeSpending[]> {
-  const params = new URLSearchParams();
-  if (startDate) params.append('start_date', startDate);
-  if (endDate) params.append('end_date', endDate);
-
-  const queryString = params.toString();
-  const endpoint = queryString
-    ? `/api/budget/analysis/503020?${queryString}`
-    : '/api/budget/analysis/503020';
-
-  const res = await fetch(url + endpoint, {
-    credentials: 'include'
-  });
-  if (!res.ok) {
-    throw new Error(`Error fetching 50/30/20 analysis: ${res.status}`);
-  }
-  return res.json();
-}
-
-export async function fetchDayOfWeekSpending(startDate?: string, endDate?: string): Promise<DayOfWeekSpending[]> {
-  const params = new URLSearchParams();
-  if (startDate) params.append('start_date', startDate);
-  if (endDate) params.append('end_date', endDate);
-
-  const queryString = params.toString();
-  const endpoint = queryString
-    ? `/api/budget/analysis/weekday-pattern?${queryString}`
-    : '/api/budget/analysis/weekday-pattern';
-
-  const res = await fetch(url + endpoint, {
-    credentials: 'include'
-  });
-  if (!res.ok) {
-    throw new Error(`Error fetching weekday pattern: ${res.status}`);
-  }
-  return res.json();
-}
-
-export async function fetchTopMerchants(limit: number = 10, startDate?: string, endDate?: string): Promise<MerchantSpending[]> {
-  const params = new URLSearchParams();
-  params.append('limit', limit.toString());
-  if (startDate) params.append('start_date', startDate);
-  if (endDate) params.append('end_date', endDate);
-
-  const res = await fetch(url + `/api/budget/analysis/merchants?${params.toString()}`, {
-    credentials: 'include'
-  });
-  if (!res.ok) {
-    throw new Error(`Error fetching top merchants: ${res.status}`);
-  }
-  return res.json();
-}
 
 export async function fetchHealthScore(): Promise<HealthScoreResponse> {
   const res = await fetch(url + '/api/budget/stats/health-score', {
