@@ -181,6 +181,71 @@
                 }
             }
         },
+        "/api/budget/analysis/503020": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budget"
+                ],
+                "summary": "Get 50/30/20 budget breakdown",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_domain_budget.FiftyThirtyTwentyResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/budget/analysis/merchants": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budget"
+                ],
+                "summary": "Get top merchants by spending",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Number of merchants to return (default 10)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_domain_budget.MerchantAnalysisResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/budget/analysis/weekday-pattern": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budget"
+                ],
+                "summary": "Get spending patterns by day of week",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_domain_budget.WeekdayPatternResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/budget/categories": {
             "get": {
                 "produces": [
@@ -329,6 +394,221 @@
                     },
                     "403": {
                         "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/budget/categories/{id}/type": {
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budget"
+                ],
+                "summary": "Update category type (need/want/savings)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Category ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Category type",
+                        "name": "type",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_domain_budget.UpdateCategoryTypeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_domain_budget.CategoryResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/budget/category-budgets": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budget"
+                ],
+                "summary": "Get category budgets for a month",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Month (YYYY-MM-DD), defaults to current month",
+                        "name": "month",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/internal_domain_budget.CategoryBudgetWithVarianceResponse"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budget"
+                ],
+                "summary": "Create a new category budget",
+                "parameters": [
+                    {
+                        "description": "Category budget to create",
+                        "name": "budget",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_domain_budget.CreateCategoryBudgetRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/internal_domain_budget.CategoryBudgetResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/budget/category-budgets/{id}": {
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budget"
+                ],
+                "summary": "Update a category budget",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Category Budget ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Budget updates",
+                        "name": "budget",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_domain_budget.UpdateCategoryBudgetRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_domain_budget.CategoryBudgetResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "budget"
+                ],
+                "summary": "Delete a category budget",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Category Budget ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
                         }
@@ -598,6 +878,33 @@
                 }
             }
         },
+        "/api/budget/forecast/upcoming": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budget"
+                ],
+                "summary": "Get upcoming recurring expenses forecast",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Number of days to forecast (7 or 30), defaults to 30",
+                        "name": "days",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_domain_budget.UpcomingBillsResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/budget/incomes": {
             "get": {
                 "tags": [
@@ -862,6 +1169,58 @@
                 }
             }
         },
+        "/api/budget/stats/health-score": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budget"
+                ],
+                "summary": "Get financial health score",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_domain_budget.HealthScoreResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/budget/stats/savings-rate": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budget"
+                ],
+                "summary": "Get savings rate for a period",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Start date (YYYY-MM-DD), defaults to first day of current month",
+                        "name": "start_date",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (YYYY-MM-DD), defaults to today",
+                        "name": "end_date",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_domain_budget.SavingsRateResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/budget/stats/summary": {
             "get": {
                 "produces": [
@@ -926,6 +1285,25 @@
                             "items": {
                                 "$ref": "#/definitions/internal_domain_budget.TrendItem"
                             }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/budget/subscriptions": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budget"
+                ],
+                "summary": "Get recurring subscriptions",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_domain_budget.SubscriptionsResponse"
                         }
                     }
                 }
@@ -1075,6 +1453,52 @@
                         "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/core-gateway_internal_shared_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/budget/trends/month-over-month": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budget"
+                ],
+                "summary": "Get month-over-month spending trends",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Number of months to compare (default 6)",
+                        "name": "months",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_domain_budget.MonthOverMonthResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/budget/velocity": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budget"
+                ],
+                "summary": "Get spending velocity and projection",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_domain_budget.SpendingVelocityResponse"
                         }
                     }
                 }
@@ -2048,6 +2472,61 @@
                 }
             }
         },
+        "internal_domain_budget.CategoryBudgetResponse": {
+            "type": "object",
+            "properties": {
+                "budget_amount": {
+                    "type": "number"
+                },
+                "category_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "month": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_domain_budget.CategoryBudgetWithVarianceResponse": {
+            "type": "object",
+            "properties": {
+                "budget_amount": {
+                    "type": "number"
+                },
+                "category_color": {
+                    "type": "string"
+                },
+                "category_id": {
+                    "type": "string"
+                },
+                "category_name": {
+                    "type": "string"
+                },
+                "category_type": {
+                    "type": "string"
+                },
+                "percentage": {
+                    "type": "number"
+                },
+                "spent_amount": {
+                    "type": "number"
+                },
+                "transaction_count": {
+                    "type": "integer"
+                },
+                "variance": {
+                    "type": "number"
+                }
+            }
+        },
         "internal_domain_budget.CategoryResponse": {
             "type": "object",
             "properties": {
@@ -2061,6 +2540,25 @@
                     "type": "string"
                 },
                 "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_domain_budget.CreateCategoryBudgetRequest": {
+            "type": "object",
+            "required": [
+                "budget_amount",
+                "category_id",
+                "month"
+            ],
+            "properties": {
+                "budget_amount": {
+                    "type": "number"
+                },
+                "category_id": {
+                    "type": "string"
+                },
+                "month": {
                     "type": "string"
                 }
             }
@@ -2232,6 +2730,69 @@
                 }
             }
         },
+        "internal_domain_budget.FiftyThirtyTwentyItem": {
+            "type": "object",
+            "properties": {
+                "actual_percentage": {
+                    "type": "number"
+                },
+                "amount": {
+                    "type": "number"
+                },
+                "category": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "target_percentage": {
+                    "type": "number"
+                }
+            }
+        },
+        "internal_domain_budget.FiftyThirtyTwentyResponse": {
+            "type": "object",
+            "properties": {
+                "needs": {
+                    "$ref": "#/definitions/internal_domain_budget.FiftyThirtyTwentyItem"
+                },
+                "savings": {
+                    "$ref": "#/definitions/internal_domain_budget.FiftyThirtyTwentyItem"
+                },
+                "total_income": {
+                    "type": "number"
+                },
+                "wants": {
+                    "$ref": "#/definitions/internal_domain_budget.FiftyThirtyTwentyItem"
+                }
+            }
+        },
+        "internal_domain_budget.HealthScoreResponse": {
+            "type": "object",
+            "properties": {
+                "debt_to_income": {
+                    "type": "number"
+                },
+                "emergency_fund_months": {
+                    "type": "number"
+                },
+                "recommendations": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "savings_rate": {
+                    "type": "number"
+                },
+                "score": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_domain_budget.IncomeResponse": {
             "type": "object",
             "properties": {
@@ -2264,6 +2825,172 @@
                 },
                 "updated_at": {
                     "type": "string"
+                }
+            }
+        },
+        "internal_domain_budget.MerchantAnalysisResponse": {
+            "type": "object",
+            "properties": {
+                "merchants": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_domain_budget.MerchantItem"
+                    }
+                },
+                "total_spent": {
+                    "type": "number"
+                },
+                "unique_merchant_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_domain_budget.MerchantItem": {
+            "type": "object",
+            "properties": {
+                "average_amount": {
+                    "type": "number"
+                },
+                "category_name": {
+                    "type": "string"
+                },
+                "count": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "percentage": {
+                    "type": "number"
+                },
+                "total_spent": {
+                    "type": "number"
+                }
+            }
+        },
+        "internal_domain_budget.MonthOverMonthItem": {
+            "type": "object",
+            "properties": {
+                "expense_change_percent": {
+                    "type": "number"
+                },
+                "expenses": {
+                    "type": "number"
+                },
+                "income": {
+                    "type": "number"
+                },
+                "month": {
+                    "type": "string"
+                },
+                "savings": {
+                    "type": "number"
+                },
+                "savings_rate": {
+                    "type": "number"
+                }
+            }
+        },
+        "internal_domain_budget.MonthOverMonthResponse": {
+            "type": "object",
+            "properties": {
+                "average_savings_rate": {
+                    "type": "number"
+                },
+                "trends": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_domain_budget.MonthOverMonthItem"
+                    }
+                }
+            }
+        },
+        "internal_domain_budget.SavingsRateResponse": {
+            "type": "object",
+            "properties": {
+                "expenses": {
+                    "type": "number"
+                },
+                "income": {
+                    "type": "number"
+                },
+                "period": {
+                    "type": "string"
+                },
+                "savings": {
+                    "type": "number"
+                },
+                "savings_rate": {
+                    "type": "number"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_domain_budget.SpendingVelocityResponse": {
+            "type": "object",
+            "properties": {
+                "amount_spent": {
+                    "type": "number"
+                },
+                "days_elapsed": {
+                    "type": "integer"
+                },
+                "days_in_month": {
+                    "type": "integer"
+                },
+                "projected_spend": {
+                    "type": "number"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "total_budget": {
+                    "type": "number"
+                }
+            }
+        },
+        "internal_domain_budget.SubscriptionItem": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "category_name": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "next_due_date": {
+                    "type": "string"
+                },
+                "recurring_type": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_domain_budget.SubscriptionsResponse": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "subscriptions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_domain_budget.SubscriptionItem"
+                    }
+                },
+                "total_monthly": {
+                    "type": "number"
                 }
             }
         },
@@ -2315,6 +3042,57 @@
                 }
             }
         },
+        "internal_domain_budget.UpcomingBill": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "category_id": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "due_date": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "recurring_type": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_domain_budget.UpcomingBillsResponse": {
+            "type": "object",
+            "properties": {
+                "bills": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_domain_budget.UpcomingBill"
+                    }
+                },
+                "period": {
+                    "type": "integer"
+                },
+                "total_amount": {
+                    "type": "number"
+                }
+            }
+        },
+        "internal_domain_budget.UpdateCategoryBudgetRequest": {
+            "type": "object",
+            "properties": {
+                "budget_amount": {
+                    "type": "number"
+                }
+            }
+        },
         "internal_domain_budget.UpdateCategoryRequest": {
             "type": "object",
             "properties": {
@@ -2329,6 +3107,19 @@
                     "type": "string",
                     "maxLength": 100,
                     "minLength": 1
+                }
+            }
+        },
+        "internal_domain_budget.UpdateCategoryTypeRequest": {
+            "type": "object",
+            "properties": {
+                "category_type": {
+                    "type": "string",
+                    "enum": [
+                        "need",
+                        "want",
+                        "savings"
+                    ]
                 }
             }
         },
@@ -2417,6 +3208,40 @@
                     "type": "string",
                     "maxLength": 100,
                     "minLength": 1
+                }
+            }
+        },
+        "internal_domain_budget.WeekdayPatternResponse": {
+            "type": "object",
+            "properties": {
+                "highest_spending_day": {
+                    "type": "string"
+                },
+                "lowest_spending_day": {
+                    "type": "string"
+                },
+                "weekdays": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_domain_budget.WeekdaySpendingItem"
+                    }
+                }
+            }
+        },
+        "internal_domain_budget.WeekdaySpendingItem": {
+            "type": "object",
+            "properties": {
+                "average_amount": {
+                    "type": "number"
+                },
+                "count": {
+                    "type": "integer"
+                },
+                "day": {
+                    "type": "string"
+                },
+                "total_amount": {
+                    "type": "number"
                 }
             }
         },

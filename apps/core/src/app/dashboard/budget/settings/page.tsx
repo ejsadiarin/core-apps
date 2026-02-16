@@ -16,7 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, Edit2, Save, X, ArrowLeft, Target } from "lucide-react";
+import { Plus, Trash2, Edit2, Save, X, ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { CategoryTypeSelector, CategoryTypeBadge } from "@/components/budget";
 import type { Category, Tag } from "@/types/api";

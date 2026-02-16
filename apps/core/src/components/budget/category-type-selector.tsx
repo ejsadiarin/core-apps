@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
-import { useUpdateCategoryType, useCategories } from '@/hooks/use-budget';
+import { useUpdateCategoryType } from '@/hooks/use-budget';
 import type { Category } from '@/types/api';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';

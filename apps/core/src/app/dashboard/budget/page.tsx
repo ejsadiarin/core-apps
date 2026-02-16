@@ -28,7 +28,7 @@ import { GuestBlockedError } from "@/hooks/use-budget";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, ArrowRight, Receipt, Settings, Wallet, Target, TrendingUp, Calendar, Heart, RefreshCw } from "lucide-react";
+import { Plus, ArrowRight, Receipt, Settings, Wallet, Target, Heart, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -37,7 +37,6 @@ import { formatDistanceToNow } from "date-fns";
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/components/ui/toast";
 import { ExpenseDetailDialog } from "@/components/budget/expense-detail-dialog";
-import { formatAmount } from "@/lib/utils";
 import type { Expense, Income, CreateIncomeRequest, UpdateIncomeRequest, CreateExpenseRequest, UpdateExpenseRequest } from "@/types/api";
 
 export default function BudgetDashboard() {

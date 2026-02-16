@@ -1,7 +1,6 @@
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { useHealthScore } from '@/hooks/use-budget';
 import { Heart, ShieldCheck, AlertTriangle, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';

@@ -49,7 +49,7 @@ export function BudgetVarianceTable({ month, className }: BudgetVarianceTablePro
     );
   }
 
-  const getStatusConfig = (percentage: number, variance?: number) => {
+  const getStatusConfig = (percentage: number) => {
     if (percentage >= 100) {
       return {
         icon: AlertTriangle,
@@ -106,7 +106,7 @@ export function BudgetVarianceTable({ month, className }: BudgetVarianceTablePro
           <div className="space-y-4">
             {categoriesWithBudgets.map((budget) => {
               const percentage = budget.percentage;
-              const status = getStatusConfig(percentage, budget.variance);
+              const status = getStatusConfig(percentage);
               const Icon = status.icon;
 
               return (

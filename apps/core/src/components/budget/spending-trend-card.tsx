@@ -42,7 +42,6 @@ export function SpendingTrendCard({ className }: SpendingTrendCardProps) {
 
   const trends = data.trends || [];
   const latest = trends[trends.length - 1];
-  const previous = trends.length >= 2 ? trends[trends.length - 2] : null;
 
   const expenseChange = latest?.expense_change_percent || 0;
   const changeIcon = expenseChange > 0 ? TrendingUp : expenseChange < 0 ? TrendingDown : Minus;

@@ -3,7 +3,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useSubscriptions } from '@/hooks/use-budget';
 import { CreditCard } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 interface SubscriptionTotalCardProps {
   className?: string;

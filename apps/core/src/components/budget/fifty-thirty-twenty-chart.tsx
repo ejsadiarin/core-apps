@@ -74,15 +74,6 @@ export function FiftyThirtyTwentyChart({ startDate, endDate, className }: FiftyT
     }
   };
 
-  // donut chart using CSS conic-gradient
-  const total = categories.reduce((sum, c) => sum + c.data.actual_percentage, 0) || 1;
-  let cumulativePercent = 0;
-  const gradientStops = categories.map((c) => {
-    const start = cumulativePercent;
-    cumulativePercent += (c.data.actual_percentage / total) * 100;
-    return `${c.color.replace('bg-', 'var(--color-')} ${start}% ${cumulativePercent}%`;
-  });
-
   return (
     <Card className={className}>
       <CardHeader className="pb-2">

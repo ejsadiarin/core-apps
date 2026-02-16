@@ -207,6 +207,42 @@ definitions:
       total_amount:
         type: number
     type: object
+  internal_domain_budget.CategoryBudgetResponse:
+    properties:
+      budget_amount:
+        type: number
+      category_id:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      month:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  internal_domain_budget.CategoryBudgetWithVarianceResponse:
+    properties:
+      budget_amount:
+        type: number
+      category_color:
+        type: string
+      category_id:
+        type: string
+      category_name:
+        type: string
+      category_type:
+        type: string
+      percentage:
+        type: number
+      spent_amount:
+        type: number
+      transaction_count:
+        type: integer
+      variance:
+        type: number
+    type: object
   internal_domain_budget.CategoryResponse:
     properties:
       color:
@@ -217,6 +253,19 @@ definitions:
         type: string
       name:
         type: string
+    type: object
+  internal_domain_budget.CreateCategoryBudgetRequest:
+    properties:
+      budget_amount:
+        type: number
+      category_id:
+        type: string
+      month:
+        type: string
+    required:
+    - budget_amount
+    - category_id
+    - month
     type: object
   internal_domain_budget.CreateCategoryRequest:
     properties:
@@ -332,6 +381,47 @@ definitions:
       updated_at:
         type: string
     type: object
+  internal_domain_budget.FiftyThirtyTwentyItem:
+    properties:
+      actual_percentage:
+        type: number
+      amount:
+        type: number
+      category:
+        type: string
+      status:
+        type: string
+      target_percentage:
+        type: number
+    type: object
+  internal_domain_budget.FiftyThirtyTwentyResponse:
+    properties:
+      needs:
+        $ref: '#/definitions/internal_domain_budget.FiftyThirtyTwentyItem'
+      savings:
+        $ref: '#/definitions/internal_domain_budget.FiftyThirtyTwentyItem'
+      total_income:
+        type: number
+      wants:
+        $ref: '#/definitions/internal_domain_budget.FiftyThirtyTwentyItem'
+    type: object
+  internal_domain_budget.HealthScoreResponse:
+    properties:
+      debt_to_income:
+        type: number
+      emergency_fund_months:
+        type: number
+      recommendations:
+        items:
+          type: string
+        type: array
+      savings_rate:
+        type: number
+      score:
+        type: integer
+      status:
+        type: string
+    type: object
   internal_domain_budget.IncomeResponse:
     properties:
       amount:
@@ -354,6 +444,114 @@ definitions:
         type: string
       updated_at:
         type: string
+    type: object
+  internal_domain_budget.MerchantAnalysisResponse:
+    properties:
+      merchants:
+        items:
+          $ref: '#/definitions/internal_domain_budget.MerchantItem'
+        type: array
+      total_spent:
+        type: number
+      unique_merchant_count:
+        type: integer
+    type: object
+  internal_domain_budget.MerchantItem:
+    properties:
+      average_amount:
+        type: number
+      category_name:
+        type: string
+      count:
+        type: integer
+      name:
+        type: string
+      percentage:
+        type: number
+      total_spent:
+        type: number
+    type: object
+  internal_domain_budget.MonthOverMonthItem:
+    properties:
+      expense_change_percent:
+        type: number
+      expenses:
+        type: number
+      income:
+        type: number
+      month:
+        type: string
+      savings:
+        type: number
+      savings_rate:
+        type: number
+    type: object
+  internal_domain_budget.MonthOverMonthResponse:
+    properties:
+      average_savings_rate:
+        type: number
+      trends:
+        items:
+          $ref: '#/definitions/internal_domain_budget.MonthOverMonthItem'
+        type: array
+    type: object
+  internal_domain_budget.SavingsRateResponse:
+    properties:
+      expenses:
+        type: number
+      income:
+        type: number
+      period:
+        type: string
+      savings:
+        type: number
+      savings_rate:
+        type: number
+      status:
+        type: string
+    type: object
+  internal_domain_budget.SpendingVelocityResponse:
+    properties:
+      amount_spent:
+        type: number
+      days_elapsed:
+        type: integer
+      days_in_month:
+        type: integer
+      projected_spend:
+        type: number
+      status:
+        type: string
+      total_budget:
+        type: number
+    type: object
+  internal_domain_budget.SubscriptionItem:
+    properties:
+      amount:
+        type: number
+      category_name:
+        type: string
+      currency:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      next_due_date:
+        type: string
+      recurring_type:
+        type: string
+    type: object
+  internal_domain_budget.SubscriptionsResponse:
+    properties:
+      count:
+        type: integer
+      subscriptions:
+        items:
+          $ref: '#/definitions/internal_domain_budget.SubscriptionItem'
+        type: array
+      total_monthly:
+        type: number
     type: object
   internal_domain_budget.SummaryStatsResponse:
     properties:
@@ -386,6 +584,39 @@ definitions:
       total_amount:
         type: number
     type: object
+  internal_domain_budget.UpcomingBill:
+    properties:
+      amount:
+        type: number
+      category_id:
+        type: string
+      currency:
+        type: string
+      description:
+        type: string
+      due_date:
+        type: string
+      id:
+        type: string
+      recurring_type:
+        type: string
+    type: object
+  internal_domain_budget.UpcomingBillsResponse:
+    properties:
+      bills:
+        items:
+          $ref: '#/definitions/internal_domain_budget.UpcomingBill'
+        type: array
+      period:
+        type: integer
+      total_amount:
+        type: number
+    type: object
+  internal_domain_budget.UpdateCategoryBudgetRequest:
+    properties:
+      budget_amount:
+        type: number
+    type: object
   internal_domain_budget.UpdateCategoryRequest:
     properties:
       color:
@@ -396,6 +627,15 @@ definitions:
       name:
         maxLength: 100
         minLength: 1
+        type: string
+    type: object
+  internal_domain_budget.UpdateCategoryTypeRequest:
+    properties:
+      category_type:
+        enum:
+        - need
+        - want
+        - savings
         type: string
     type: object
   internal_domain_budget.UpdateExpenseRequest:
@@ -457,6 +697,28 @@ definitions:
         maxLength: 100
         minLength: 1
         type: string
+    type: object
+  internal_domain_budget.WeekdayPatternResponse:
+    properties:
+      highest_spending_day:
+        type: string
+      lowest_spending_day:
+        type: string
+      weekdays:
+        items:
+          $ref: '#/definitions/internal_domain_budget.WeekdaySpendingItem'
+        type: array
+    type: object
+  internal_domain_budget.WeekdaySpendingItem:
+    properties:
+      average_amount:
+        type: number
+      count:
+        type: integer
+      day:
+        type: string
+      total_amount:
+        type: number
     type: object
   internal_domain_services.CreateServiceRequest:
     properties:
@@ -735,6 +997,47 @@ paths:
       summary: Register a new user
       tags:
       - auth
+  /api/budget/analysis/503020:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_domain_budget.FiftyThirtyTwentyResponse'
+      summary: Get 50/30/20 budget breakdown
+      tags:
+      - budget
+  /api/budget/analysis/merchants:
+    get:
+      parameters:
+      - description: Number of merchants to return (default 10)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_domain_budget.MerchantAnalysisResponse'
+      summary: Get top merchants by spending
+      tags:
+      - budget
+  /api/budget/analysis/weekday-pattern:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_domain_budget.WeekdayPatternResponse'
+      summary: Get spending patterns by day of week
+      tags:
+      - budget
   /api/budget/categories:
     get:
       produces:
@@ -834,6 +1137,146 @@ paths:
           schema:
             $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
       summary: Update a budget category
+      tags:
+      - budget
+  /api/budget/categories/{id}/type:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Category ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Category type
+        in: body
+        name: type
+        required: true
+        schema:
+          $ref: '#/definitions/internal_domain_budget.UpdateCategoryTypeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_domain_budget.CategoryResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
+      summary: Update category type (need/want/savings)
+      tags:
+      - budget
+  /api/budget/category-budgets:
+    get:
+      parameters:
+      - description: Month (YYYY-MM-DD), defaults to current month
+        in: query
+        name: month
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/internal_domain_budget.CategoryBudgetWithVarianceResponse'
+            type: array
+      summary: Get category budgets for a month
+      tags:
+      - budget
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Category budget to create
+        in: body
+        name: budget
+        required: true
+        schema:
+          $ref: '#/definitions/internal_domain_budget.CreateCategoryBudgetRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_domain_budget.CategoryBudgetResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
+      summary: Create a new category budget
+      tags:
+      - budget
+  /api/budget/category-budgets/{id}:
+    delete:
+      parameters:
+      - description: Category Budget ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
+      summary: Delete a category budget
+      tags:
+      - budget
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Category Budget ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Budget updates
+        in: body
+        name: budget
+        required: true
+        schema:
+          $ref: '#/definitions/internal_domain_budget.UpdateCategoryBudgetRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_domain_budget.CategoryBudgetResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
+      summary: Update a category budget
       tags:
       - budget
   /api/budget/expenses:
@@ -1007,6 +1450,23 @@ paths:
       summary: Search expenses by description
       tags:
       - budget
+  /api/budget/forecast/upcoming:
+    get:
+      parameters:
+      - description: Number of days to forecast (7 or 30), defaults to 30
+        in: query
+        name: days
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_domain_budget.UpcomingBillsResponse'
+      summary: Get upcoming recurring expenses forecast
+      tags:
+      - budget
   /api/budget/incomes:
     get:
       parameters:
@@ -1178,6 +1638,39 @@ paths:
       summary: Get spending by category
       tags:
       - budget
+  /api/budget/stats/health-score:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_domain_budget.HealthScoreResponse'
+      summary: Get financial health score
+      tags:
+      - budget
+  /api/budget/stats/savings-rate:
+    get:
+      parameters:
+      - description: Start date (YYYY-MM-DD), defaults to first day of current month
+        in: query
+        name: start_date
+        type: string
+      - description: End date (YYYY-MM-DD), defaults to today
+        in: query
+        name: end_date
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_domain_budget.SavingsRateResponse'
+      summary: Get savings rate for a period
+      tags:
+      - budget
   /api/budget/stats/summary:
     get:
       parameters:
@@ -1220,6 +1713,18 @@ paths:
               $ref: '#/definitions/internal_domain_budget.TrendItem'
             type: array
       summary: Get spending trends
+      tags:
+      - budget
+  /api/budget/subscriptions:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_domain_budget.SubscriptionsResponse'
+      summary: Get recurring subscriptions
       tags:
       - budget
   /api/budget/tags:
@@ -1317,6 +1822,35 @@ paths:
           schema:
             $ref: '#/definitions/core-gateway_internal_shared_models.ErrorResponse'
       summary: Update a budget tag
+      tags:
+      - budget
+  /api/budget/trends/month-over-month:
+    get:
+      parameters:
+      - description: Number of months to compare (default 6)
+        in: query
+        name: months
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_domain_budget.MonthOverMonthResponse'
+      summary: Get month-over-month spending trends
+      tags:
+      - budget
+  /api/budget/velocity:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_domain_budget.SpendingVelocityResponse'
+      summary: Get spending velocity and projection
       tags:
       - budget
   /api/services:

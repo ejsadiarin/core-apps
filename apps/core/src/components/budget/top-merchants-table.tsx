@@ -3,7 +3,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useMerchantAnalysis } from '@/hooks/use-budget';
 import { Store } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 interface TopMerchantsTableProps {
   limit?: number;
