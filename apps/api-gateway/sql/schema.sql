@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 8mdiFCMJlBmDdYVflBFCFgBU6ayuRjR0E9CSpEZ0aRIBUrqbaFtT9N0cCefzpto
+\restrict 6DXKJnZfJSJQLqWcz0CfNbrbjPrB1r8yhP5SKmt8iev8LapF5T9eCh8Og0BOJh1
 
 -- Dumped from database version 17.7 (bdd1736)
 -- Dumped by pg_dump version 17.6
@@ -19,12 +19,81 @@ SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
+ALTER TABLE IF EXISTS ONLY public.sessions DROP CONSTRAINT IF EXISTS sessions_user_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.service_health_history DROP CONSTRAINT IF EXISTS service_health_history_service_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.savings_goals DROP CONSTRAINT IF EXISTS savings_goals_user_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.category_budgets DROP CONSTRAINT IF EXISTS category_budgets_user_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.category_budgets DROP CONSTRAINT IF EXISTS category_budgets_category_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.budget_tags DROP CONSTRAINT IF EXISTS budget_tags_user_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.budget_incomes DROP CONSTRAINT IF EXISTS budget_incomes_user_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.budget_expenses DROP CONSTRAINT IF EXISTS budget_expenses_user_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.budget_expenses DROP CONSTRAINT IF EXISTS budget_expenses_priority_group_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.budget_expenses DROP CONSTRAINT IF EXISTS budget_expenses_category_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.budget_expense_tags DROP CONSTRAINT IF EXISTS budget_expense_tags_tag_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.budget_expense_tags DROP CONSTRAINT IF EXISTS budget_expense_tags_expense_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.budget_categories DROP CONSTRAINT IF EXISTS budget_categories_user_id_fkey;
+DROP INDEX IF EXISTS public.idx_users_role;
+DROP INDEX IF EXISTS public.idx_users_email;
+DROP INDEX IF EXISTS public.idx_sessions_user;
+DROP INDEX IF EXISTS public.idx_sessions_token;
+DROP INDEX IF EXISTS public.idx_sessions_expires;
+DROP INDEX IF EXISTS public.idx_services_is_active;
+DROP INDEX IF EXISTS public.idx_service_health_service_id;
+DROP INDEX IF EXISTS public.idx_service_health_checked_at;
+DROP INDEX IF EXISTS public.idx_savings_goals_user;
+DROP INDEX IF EXISTS public.idx_savings_goals_deadline;
+DROP INDEX IF EXISTS public.idx_incomes_user_date;
+DROP INDEX IF EXISTS public.idx_incomes_recurring;
+DROP INDEX IF EXISTS public.idx_incomes_pagination;
+DROP INDEX IF EXISTS public.idx_expenses_pagination;
+DROP INDEX IF EXISTS public.idx_expenses_date;
+DROP INDEX IF EXISTS public.idx_expenses_category;
+DROP INDEX IF EXISTS public.idx_expense_tags_tag;
+DROP INDEX IF EXISTS public.idx_expense_tags_expense;
+DROP INDEX IF EXISTS public.idx_category_budgets_user_month;
+DROP INDEX IF EXISTS public.idx_category_budgets_category;
+DROP INDEX IF EXISTS public.idx_budget_tags_user;
+DROP INDEX IF EXISTS public.idx_budget_incomes_exclude;
+DROP INDEX IF EXISTS public.idx_budget_expenses_user;
+DROP INDEX IF EXISTS public.idx_budget_expenses_priority_group;
+DROP INDEX IF EXISTS public.idx_budget_categories_user;
+ALTER TABLE IF EXISTS ONLY public.users DROP CONSTRAINT IF EXISTS users_pkey;
+ALTER TABLE IF EXISTS ONLY public.users DROP CONSTRAINT IF EXISTS users_email_key;
+ALTER TABLE IF EXISTS ONLY public.sessions DROP CONSTRAINT IF EXISTS sessions_token_hash_key;
+ALTER TABLE IF EXISTS ONLY public.sessions DROP CONSTRAINT IF EXISTS sessions_pkey;
+ALTER TABLE IF EXISTS ONLY public.services DROP CONSTRAINT IF EXISTS services_pkey;
+ALTER TABLE IF EXISTS ONLY public.service_health_history DROP CONSTRAINT IF EXISTS service_health_history_pkey;
+ALTER TABLE IF EXISTS ONLY public.savings_goals DROP CONSTRAINT IF EXISTS savings_goals_pkey;
+ALTER TABLE IF EXISTS ONLY public.goose_db_version DROP CONSTRAINT IF EXISTS goose_db_version_pkey;
+ALTER TABLE IF EXISTS ONLY public.category_budgets DROP CONSTRAINT IF EXISTS category_budgets_user_id_category_id_month_key;
+ALTER TABLE IF EXISTS ONLY public.category_budgets DROP CONSTRAINT IF EXISTS category_budgets_pkey;
+ALTER TABLE IF EXISTS ONLY public.budget_tags DROP CONSTRAINT IF EXISTS budget_tags_pkey;
+ALTER TABLE IF EXISTS ONLY public.budget_tags DROP CONSTRAINT IF EXISTS budget_tags_name_user_unique;
+ALTER TABLE IF EXISTS ONLY public.budget_priority_groups DROP CONSTRAINT IF EXISTS budget_priority_groups_slug_key;
+ALTER TABLE IF EXISTS ONLY public.budget_priority_groups DROP CONSTRAINT IF EXISTS budget_priority_groups_pkey;
+ALTER TABLE IF EXISTS ONLY public.budget_incomes DROP CONSTRAINT IF EXISTS budget_incomes_pkey;
+ALTER TABLE IF EXISTS ONLY public.budget_expenses DROP CONSTRAINT IF EXISTS budget_expenses_pkey;
+ALTER TABLE IF EXISTS ONLY public.budget_expense_tags DROP CONSTRAINT IF EXISTS budget_expense_tags_pkey;
+ALTER TABLE IF EXISTS ONLY public.budget_categories DROP CONSTRAINT IF EXISTS budget_categories_pkey;
+DROP TABLE IF EXISTS public.users;
+DROP TABLE IF EXISTS public.sessions;
+DROP TABLE IF EXISTS public.services;
+DROP TABLE IF EXISTS public.service_health_history;
+DROP TABLE IF EXISTS public.savings_goals;
+DROP TABLE IF EXISTS public.goose_db_version;
+DROP TABLE IF EXISTS public.category_budgets;
+DROP TABLE IF EXISTS public.budget_tags;
+DROP TABLE IF EXISTS public.budget_priority_groups;
+DROP TABLE IF EXISTS public.budget_incomes;
+DROP TABLE IF EXISTS public.budget_expenses;
+DROP TABLE IF EXISTS public.budget_expense_tags;
+DROP TABLE IF EXISTS public.budget_categories;
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
 
 --
--- Name: budget_categories; Type: TABLE; Schema: public; Owner: neondb_owner
+-- Name: budget_categories; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.budget_categories (
@@ -37,10 +106,8 @@ CREATE TABLE public.budget_categories (
 );
 
 
-ALTER TABLE public.budget_categories OWNER TO neondb_owner;
-
 --
--- Name: budget_expense_tags; Type: TABLE; Schema: public; Owner: neondb_owner
+-- Name: budget_expense_tags; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.budget_expense_tags (
@@ -49,10 +116,8 @@ CREATE TABLE public.budget_expense_tags (
 );
 
 
-ALTER TABLE public.budget_expense_tags OWNER TO neondb_owner;
-
 --
--- Name: budget_expenses; Type: TABLE; Schema: public; Owner: neondb_owner
+-- Name: budget_expenses; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.budget_expenses (
@@ -75,10 +140,8 @@ CREATE TABLE public.budget_expenses (
 );
 
 
-ALTER TABLE public.budget_expenses OWNER TO neondb_owner;
-
 --
--- Name: budget_incomes; Type: TABLE; Schema: public; Owner: neondb_owner
+-- Name: budget_incomes; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.budget_incomes (
@@ -99,10 +162,8 @@ CREATE TABLE public.budget_incomes (
 );
 
 
-ALTER TABLE public.budget_incomes OWNER TO neondb_owner;
-
 --
--- Name: budget_priority_groups; Type: TABLE; Schema: public; Owner: neondb_owner
+-- Name: budget_priority_groups; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.budget_priority_groups (
@@ -114,10 +175,8 @@ CREATE TABLE public.budget_priority_groups (
 );
 
 
-ALTER TABLE public.budget_priority_groups OWNER TO neondb_owner;
-
 --
--- Name: budget_tags; Type: TABLE; Schema: public; Owner: neondb_owner
+-- Name: budget_tags; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.budget_tags (
@@ -129,10 +188,8 @@ CREATE TABLE public.budget_tags (
 );
 
 
-ALTER TABLE public.budget_tags OWNER TO neondb_owner;
-
 --
--- Name: category_budgets; Type: TABLE; Schema: public; Owner: neondb_owner
+-- Name: category_budgets; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.category_budgets (
@@ -146,10 +203,8 @@ CREATE TABLE public.category_budgets (
 );
 
 
-ALTER TABLE public.category_budgets OWNER TO neondb_owner;
-
 --
--- Name: goose_db_version; Type: TABLE; Schema: public; Owner: neondb_owner
+-- Name: goose_db_version; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.goose_db_version (
@@ -160,10 +215,8 @@ CREATE TABLE public.goose_db_version (
 );
 
 
-ALTER TABLE public.goose_db_version OWNER TO neondb_owner;
-
 --
--- Name: goose_db_version_id_seq; Type: SEQUENCE; Schema: public; Owner: neondb_owner
+-- Name: goose_db_version_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 ALTER TABLE public.goose_db_version ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
@@ -177,7 +230,7 @@ ALTER TABLE public.goose_db_version ALTER COLUMN id ADD GENERATED BY DEFAULT AS 
 
 
 --
--- Name: savings_goals; Type: TABLE; Schema: public; Owner: neondb_owner
+-- Name: savings_goals; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.savings_goals (
@@ -194,10 +247,8 @@ CREATE TABLE public.savings_goals (
 );
 
 
-ALTER TABLE public.savings_goals OWNER TO neondb_owner;
-
 --
--- Name: service_health_history; Type: TABLE; Schema: public; Owner: neondb_owner
+-- Name: service_health_history; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.service_health_history (
@@ -211,10 +262,8 @@ CREATE TABLE public.service_health_history (
 );
 
 
-ALTER TABLE public.service_health_history OWNER TO neondb_owner;
-
 --
--- Name: services; Type: TABLE; Schema: public; Owner: neondb_owner
+-- Name: services; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.services (
@@ -234,10 +283,8 @@ CREATE TABLE public.services (
 );
 
 
-ALTER TABLE public.services OWNER TO neondb_owner;
-
 --
--- Name: sessions; Type: TABLE; Schema: public; Owner: neondb_owner
+-- Name: sessions; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.sessions (
@@ -249,10 +296,8 @@ CREATE TABLE public.sessions (
 );
 
 
-ALTER TABLE public.sessions OWNER TO neondb_owner;
-
 --
--- Name: users; Type: TABLE; Schema: public; Owner: neondb_owner
+-- Name: users; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.users (
@@ -268,10 +313,8 @@ CREATE TABLE public.users (
 );
 
 
-ALTER TABLE public.users OWNER TO neondb_owner;
-
 --
--- Name: budget_categories budget_categories_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+-- Name: budget_categories budget_categories_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.budget_categories
@@ -279,7 +322,7 @@ ALTER TABLE ONLY public.budget_categories
 
 
 --
--- Name: budget_expense_tags budget_expense_tags_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+-- Name: budget_expense_tags budget_expense_tags_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.budget_expense_tags
@@ -287,7 +330,7 @@ ALTER TABLE ONLY public.budget_expense_tags
 
 
 --
--- Name: budget_expenses budget_expenses_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+-- Name: budget_expenses budget_expenses_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.budget_expenses
@@ -295,7 +338,7 @@ ALTER TABLE ONLY public.budget_expenses
 
 
 --
--- Name: budget_incomes budget_incomes_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+-- Name: budget_incomes budget_incomes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.budget_incomes
@@ -303,7 +346,7 @@ ALTER TABLE ONLY public.budget_incomes
 
 
 --
--- Name: budget_priority_groups budget_priority_groups_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+-- Name: budget_priority_groups budget_priority_groups_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.budget_priority_groups
@@ -311,7 +354,7 @@ ALTER TABLE ONLY public.budget_priority_groups
 
 
 --
--- Name: budget_priority_groups budget_priority_groups_slug_key; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+-- Name: budget_priority_groups budget_priority_groups_slug_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.budget_priority_groups
@@ -319,7 +362,7 @@ ALTER TABLE ONLY public.budget_priority_groups
 
 
 --
--- Name: budget_tags budget_tags_name_user_unique; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+-- Name: budget_tags budget_tags_name_user_unique; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.budget_tags
@@ -327,7 +370,7 @@ ALTER TABLE ONLY public.budget_tags
 
 
 --
--- Name: budget_tags budget_tags_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+-- Name: budget_tags budget_tags_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.budget_tags
@@ -335,7 +378,7 @@ ALTER TABLE ONLY public.budget_tags
 
 
 --
--- Name: category_budgets category_budgets_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+-- Name: category_budgets category_budgets_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.category_budgets
@@ -343,7 +386,7 @@ ALTER TABLE ONLY public.category_budgets
 
 
 --
--- Name: category_budgets category_budgets_user_id_category_id_month_key; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+-- Name: category_budgets category_budgets_user_id_category_id_month_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.category_budgets
@@ -351,7 +394,7 @@ ALTER TABLE ONLY public.category_budgets
 
 
 --
--- Name: goose_db_version goose_db_version_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+-- Name: goose_db_version goose_db_version_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.goose_db_version
@@ -359,7 +402,7 @@ ALTER TABLE ONLY public.goose_db_version
 
 
 --
--- Name: savings_goals savings_goals_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+-- Name: savings_goals savings_goals_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.savings_goals
@@ -367,7 +410,7 @@ ALTER TABLE ONLY public.savings_goals
 
 
 --
--- Name: service_health_history service_health_history_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+-- Name: service_health_history service_health_history_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.service_health_history
@@ -375,7 +418,7 @@ ALTER TABLE ONLY public.service_health_history
 
 
 --
--- Name: services services_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+-- Name: services services_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.services
@@ -383,7 +426,7 @@ ALTER TABLE ONLY public.services
 
 
 --
--- Name: sessions sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+-- Name: sessions sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.sessions
@@ -391,7 +434,7 @@ ALTER TABLE ONLY public.sessions
 
 
 --
--- Name: sessions sessions_token_hash_key; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+-- Name: sessions sessions_token_hash_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.sessions
@@ -399,7 +442,7 @@ ALTER TABLE ONLY public.sessions
 
 
 --
--- Name: users users_email_key; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+-- Name: users users_email_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.users
@@ -407,7 +450,7 @@ ALTER TABLE ONLY public.users
 
 
 --
--- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+-- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.users
@@ -415,182 +458,182 @@ ALTER TABLE ONLY public.users
 
 
 --
--- Name: idx_budget_categories_user; Type: INDEX; Schema: public; Owner: neondb_owner
+-- Name: idx_budget_categories_user; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_budget_categories_user ON public.budget_categories USING btree (user_id);
 
 
 --
--- Name: idx_budget_expenses_priority_group; Type: INDEX; Schema: public; Owner: neondb_owner
+-- Name: idx_budget_expenses_priority_group; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_budget_expenses_priority_group ON public.budget_expenses USING btree (priority_group_id);
 
 
 --
--- Name: idx_budget_expenses_user; Type: INDEX; Schema: public; Owner: neondb_owner
+-- Name: idx_budget_expenses_user; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_budget_expenses_user ON public.budget_expenses USING btree (user_id);
 
 
 --
--- Name: idx_budget_incomes_exclude; Type: INDEX; Schema: public; Owner: neondb_owner
+-- Name: idx_budget_incomes_exclude; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_budget_incomes_exclude ON public.budget_incomes USING btree (exclude_from_calculations) WHERE (exclude_from_calculations = true);
 
 
 --
--- Name: idx_budget_tags_user; Type: INDEX; Schema: public; Owner: neondb_owner
+-- Name: idx_budget_tags_user; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_budget_tags_user ON public.budget_tags USING btree (user_id);
 
 
 --
--- Name: idx_category_budgets_category; Type: INDEX; Schema: public; Owner: neondb_owner
+-- Name: idx_category_budgets_category; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_category_budgets_category ON public.category_budgets USING btree (category_id);
 
 
 --
--- Name: idx_category_budgets_user_month; Type: INDEX; Schema: public; Owner: neondb_owner
+-- Name: idx_category_budgets_user_month; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_category_budgets_user_month ON public.category_budgets USING btree (user_id, month);
 
 
 --
--- Name: idx_expense_tags_expense; Type: INDEX; Schema: public; Owner: neondb_owner
+-- Name: idx_expense_tags_expense; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_expense_tags_expense ON public.budget_expense_tags USING btree (expense_id);
 
 
 --
--- Name: idx_expense_tags_tag; Type: INDEX; Schema: public; Owner: neondb_owner
+-- Name: idx_expense_tags_tag; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_expense_tags_tag ON public.budget_expense_tags USING btree (tag_id);
 
 
 --
--- Name: idx_expenses_category; Type: INDEX; Schema: public; Owner: neondb_owner
+-- Name: idx_expenses_category; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_expenses_category ON public.budget_expenses USING btree (category_id);
 
 
 --
--- Name: idx_expenses_date; Type: INDEX; Schema: public; Owner: neondb_owner
+-- Name: idx_expenses_date; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_expenses_date ON public.budget_expenses USING btree (expense_date DESC);
 
 
 --
--- Name: idx_expenses_pagination; Type: INDEX; Schema: public; Owner: neondb_owner
+-- Name: idx_expenses_pagination; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_expenses_pagination ON public.budget_expenses USING btree (user_id, expense_date DESC, id);
 
 
 --
--- Name: idx_incomes_pagination; Type: INDEX; Schema: public; Owner: neondb_owner
+-- Name: idx_incomes_pagination; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_incomes_pagination ON public.budget_incomes USING btree (user_id, created_at DESC);
 
 
 --
--- Name: idx_incomes_recurring; Type: INDEX; Schema: public; Owner: neondb_owner
+-- Name: idx_incomes_recurring; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_incomes_recurring ON public.budget_incomes USING btree (user_id) WHERE (recurring_type IS NOT NULL);
 
 
 --
--- Name: idx_incomes_user_date; Type: INDEX; Schema: public; Owner: neondb_owner
+-- Name: idx_incomes_user_date; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_incomes_user_date ON public.budget_incomes USING btree (user_id, date DESC);
 
 
 --
--- Name: idx_savings_goals_deadline; Type: INDEX; Schema: public; Owner: neondb_owner
+-- Name: idx_savings_goals_deadline; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_savings_goals_deadline ON public.savings_goals USING btree (deadline) WHERE (deadline IS NOT NULL);
 
 
 --
--- Name: idx_savings_goals_user; Type: INDEX; Schema: public; Owner: neondb_owner
+-- Name: idx_savings_goals_user; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_savings_goals_user ON public.savings_goals USING btree (user_id);
 
 
 --
--- Name: idx_service_health_checked_at; Type: INDEX; Schema: public; Owner: neondb_owner
+-- Name: idx_service_health_checked_at; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_service_health_checked_at ON public.service_health_history USING btree (checked_at DESC);
 
 
 --
--- Name: idx_service_health_service_id; Type: INDEX; Schema: public; Owner: neondb_owner
+-- Name: idx_service_health_service_id; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_service_health_service_id ON public.service_health_history USING btree (service_id);
 
 
 --
--- Name: idx_services_is_active; Type: INDEX; Schema: public; Owner: neondb_owner
+-- Name: idx_services_is_active; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_services_is_active ON public.services USING btree (is_active);
 
 
 --
--- Name: idx_sessions_expires; Type: INDEX; Schema: public; Owner: neondb_owner
+-- Name: idx_sessions_expires; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_sessions_expires ON public.sessions USING btree (expires_at);
 
 
 --
--- Name: idx_sessions_token; Type: INDEX; Schema: public; Owner: neondb_owner
+-- Name: idx_sessions_token; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_sessions_token ON public.sessions USING btree (token_hash);
 
 
 --
--- Name: idx_sessions_user; Type: INDEX; Schema: public; Owner: neondb_owner
+-- Name: idx_sessions_user; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_sessions_user ON public.sessions USING btree (user_id);
 
 
 --
--- Name: idx_users_email; Type: INDEX; Schema: public; Owner: neondb_owner
+-- Name: idx_users_email; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_users_email ON public.users USING btree (email);
 
 
 --
--- Name: idx_users_role; Type: INDEX; Schema: public; Owner: neondb_owner
+-- Name: idx_users_role; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_users_role ON public.users USING btree (role);
 
 
 --
--- Name: budget_categories budget_categories_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+-- Name: budget_categories budget_categories_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.budget_categories
@@ -598,7 +641,7 @@ ALTER TABLE ONLY public.budget_categories
 
 
 --
--- Name: budget_expense_tags budget_expense_tags_expense_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+-- Name: budget_expense_tags budget_expense_tags_expense_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.budget_expense_tags
@@ -606,7 +649,7 @@ ALTER TABLE ONLY public.budget_expense_tags
 
 
 --
--- Name: budget_expense_tags budget_expense_tags_tag_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+-- Name: budget_expense_tags budget_expense_tags_tag_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.budget_expense_tags
@@ -614,7 +657,7 @@ ALTER TABLE ONLY public.budget_expense_tags
 
 
 --
--- Name: budget_expenses budget_expenses_category_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+-- Name: budget_expenses budget_expenses_category_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.budget_expenses
@@ -622,7 +665,7 @@ ALTER TABLE ONLY public.budget_expenses
 
 
 --
--- Name: budget_expenses budget_expenses_priority_group_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+-- Name: budget_expenses budget_expenses_priority_group_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.budget_expenses
@@ -630,7 +673,7 @@ ALTER TABLE ONLY public.budget_expenses
 
 
 --
--- Name: budget_expenses budget_expenses_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+-- Name: budget_expenses budget_expenses_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.budget_expenses
@@ -638,7 +681,7 @@ ALTER TABLE ONLY public.budget_expenses
 
 
 --
--- Name: budget_incomes budget_incomes_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+-- Name: budget_incomes budget_incomes_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.budget_incomes
@@ -646,7 +689,7 @@ ALTER TABLE ONLY public.budget_incomes
 
 
 --
--- Name: budget_tags budget_tags_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+-- Name: budget_tags budget_tags_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.budget_tags
@@ -654,7 +697,7 @@ ALTER TABLE ONLY public.budget_tags
 
 
 --
--- Name: category_budgets category_budgets_category_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+-- Name: category_budgets category_budgets_category_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.category_budgets
@@ -662,7 +705,7 @@ ALTER TABLE ONLY public.category_budgets
 
 
 --
--- Name: category_budgets category_budgets_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+-- Name: category_budgets category_budgets_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.category_budgets
@@ -670,7 +713,7 @@ ALTER TABLE ONLY public.category_budgets
 
 
 --
--- Name: savings_goals savings_goals_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+-- Name: savings_goals savings_goals_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.savings_goals
@@ -678,7 +721,7 @@ ALTER TABLE ONLY public.savings_goals
 
 
 --
--- Name: service_health_history service_health_history_service_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+-- Name: service_health_history service_health_history_service_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.service_health_history
@@ -686,7 +729,7 @@ ALTER TABLE ONLY public.service_health_history
 
 
 --
--- Name: sessions sessions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+-- Name: sessions sessions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.sessions
@@ -694,14 +737,14 @@ ALTER TABLE ONLY public.sessions
 
 
 --
--- Name: DEFAULT PRIVILEGES FOR SEQUENCES; Type: DEFAULT ACL; Schema: public; Owner: cloud_admin
+-- Name: DEFAULT PRIVILEGES FOR SEQUENCES; Type: DEFAULT ACL; Schema: public; Owner: -
 --
 
 ALTER DEFAULT PRIVILEGES FOR ROLE cloud_admin IN SCHEMA public GRANT ALL ON SEQUENCES TO neon_superuser WITH GRANT OPTION;
 
 
 --
--- Name: DEFAULT PRIVILEGES FOR TABLES; Type: DEFAULT ACL; Schema: public; Owner: cloud_admin
+-- Name: DEFAULT PRIVILEGES FOR TABLES; Type: DEFAULT ACL; Schema: public; Owner: -
 --
 
 ALTER DEFAULT PRIVILEGES FOR ROLE cloud_admin IN SCHEMA public GRANT ALL ON TABLES TO neon_superuser WITH GRANT OPTION;
@@ -711,5 +754,5 @@ ALTER DEFAULT PRIVILEGES FOR ROLE cloud_admin IN SCHEMA public GRANT ALL ON TABL
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 8mdiFCMJlBmDdYVflBFCFgBU6ayuRjR0E9CSpEZ0aRIBUrqbaFtT9N0cCefzpto
+\unrestrict 6DXKJnZfJSJQLqWcz0CfNbrbjPrB1r8yhP5SKmt8iev8LapF5T9eCh8Og0BOJh1
 
