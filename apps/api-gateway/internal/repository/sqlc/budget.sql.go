@@ -1966,8 +1966,8 @@ SET
     notes = COALESCE($8, notes),
     recurring_type = COALESCE($9, recurring_type),
     start_date = COALESCE($10, start_date),
-    end_date = $11,
-    priority_group_id = $12,
+    end_date = COALESCE($11, end_date),
+    priority_group_id = COALESCE($12, priority_group_id),
     updated_at = NOW()
 WHERE id = $1 AND user_id = $2
 RETURNING id, description, amount, currency, category_id, expense_date, created_at, updated_at, notes, user_id, recurring_type, start_date, end_date, priority_group_id

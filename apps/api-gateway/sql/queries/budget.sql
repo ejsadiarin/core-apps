@@ -182,8 +182,8 @@ SET
     notes = COALESCE(sqlc.narg('notes'), notes),
     recurring_type = COALESCE(sqlc.narg('recurring_type'), recurring_type),
     start_date = COALESCE(sqlc.narg('start_date'), start_date),
-    end_date = sqlc.narg('end_date'),
-    priority_group_id = sqlc.narg('priority_group_id'),
+    end_date = COALESCE(sqlc.narg('end_date'), end_date),
+    priority_group_id = COALESCE(sqlc.narg('priority_group_id'), priority_group_id),
     updated_at = NOW()
 WHERE id = $1 AND user_id = $2
 RETURNING *;

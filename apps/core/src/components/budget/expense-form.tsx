@@ -13,12 +13,11 @@ import { X } from "lucide-react";
 
 interface ExpenseFormProps {
   initialData?: UpdateExpenseRequest & { id?: string };
-  onSubmit: (data: CreateExpenseRequest | UpdateExpenseRequest) => Promise<void>;
+  onSubmit: (data: CreateExpenseRequest | UpdateExpenseRequest) => void | Promise<void>;
   onCancel?: () => void;
-  isLoading?: boolean;
 }
 
-export function ExpenseForm({ initialData, onSubmit, onCancel, isLoading }: ExpenseFormProps) {
+export function ExpenseForm({ initialData, onSubmit, onCancel }: ExpenseFormProps) {
   const { data: categories } = useCategories();
   const { data: tags } = useTags();
   const { data: priorityGroups } = usePriorityGroups();
@@ -283,8 +282,8 @@ export function ExpenseForm({ initialData, onSubmit, onCancel, isLoading }: Expe
             Cancel
           </Button>
         )}
-        <Button type="submit" disabled={isLoading}>
-          {isLoading ? "Saving..." : initialData?.id ? "Update" : "Create"} Expense
+        <Button type="submit">
+          {initialData?.id ? "Update" : "Create"} Expense
         </Button>
       </div>
     </form>

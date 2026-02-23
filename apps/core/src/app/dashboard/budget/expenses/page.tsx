@@ -131,7 +131,6 @@ export default function ExpensesPage() {
     try {
       await createExpense.mutateAsync(data as CreateExpenseRequest);
       showToast("Expense created successfully", "success");
-      setShowExpenseDialog(false);
     } catch (error) {
       if (error instanceof GuestBlockedError) {
         showToast(error.message, "warning");
@@ -346,7 +345,6 @@ export default function ExpensesPage() {
         open={!!editingExpense}
         onOpenChange={(open) => !open && setEditingExpense(null)}
         onSubmit={handleUpdate}
-        isLoading={updateExpense.isPending}
       />
 
       {/* Detail Dialog */}
@@ -358,8 +356,8 @@ export default function ExpensesPage() {
             setViewingExpense(null);
           }
         }}
-        onEdit={async (data) => {
-          await handleUpdate(data);
+        onEdit={(data) => {
+          handleUpdate(data);
           setViewingExpense(null);
         }}
         onDelete={handleDelete}
@@ -372,7 +370,6 @@ export default function ExpensesPage() {
         open={showExpenseDialog}
         onOpenChange={setShowExpenseDialog}
         onSubmit={handleCreateExpense}
-        isLoading={createExpense.isPending}
       />
     </div>
   );

@@ -7,20 +7,17 @@ import type { CreateExpenseRequest, UpdateExpenseRequest } from "@/types/api";
 interface ExpenseFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: CreateExpenseRequest | UpdateExpenseRequest) => Promise<void>;
-  isLoading?: boolean;
+  onSubmit: (data: CreateExpenseRequest | UpdateExpenseRequest) => void | Promise<void>;
 }
 
 export function ExpenseFormDialog({
   open,
   onOpenChange,
   onSubmit,
-  isLoading,
 }: ExpenseFormDialogProps) {
   const handleSubmit = async (data: CreateExpenseRequest | UpdateExpenseRequest) => {
-    await onSubmit(data);
-    // close dialog on success
     onOpenChange(false);
+    await onSubmit(data);
   };
 
   const handleCancel = () => {
@@ -36,7 +33,6 @@ export function ExpenseFormDialog({
         <ExpenseForm
           onSubmit={handleSubmit}
           onCancel={handleCancel}
-          isLoading={isLoading}
         />
       </DialogContent>
     </Dialog>

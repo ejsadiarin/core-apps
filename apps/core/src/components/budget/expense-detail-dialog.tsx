@@ -23,7 +23,7 @@ interface ExpenseDetailDialogProps {
   expense: Expense | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onEdit?: (data: any) => Promise<void>;
+  onEdit?: (data: any) => void | Promise<void>;
   onDelete?: (id: string) => void;
   showToast?: (message: string, type?: "info" | "warning" | "error" | "success") => void;
   isGuest?: boolean;
@@ -245,7 +245,6 @@ export function ExpenseDetailDialog({
           setEditDialogOpen(false);
           onOpenChange(false);
         }}
-        isLoading={false}
       />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

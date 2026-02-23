@@ -159,7 +159,6 @@ export default function BudgetDashboard() {
     try {
       await createExpense.mutateAsync(data as CreateExpenseRequest);
       showToast("Expense created successfully", "success");
-      setShowExpenseDialog(false);
     } catch (error) {
       if (error instanceof GuestBlockedError) {
         showToast(error.message, "warning");
@@ -541,7 +540,6 @@ export default function BudgetDashboard() {
         open={showExpenseDialog}
         onOpenChange={setShowExpenseDialog}
         onSubmit={handleCreateExpense}
-        isLoading={createExpense.isPending}
       />
     </div>
   );

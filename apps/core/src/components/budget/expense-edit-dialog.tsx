@@ -8,14 +8,13 @@ interface EditExpenseDialogProps {
   expense: Expense | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: CreateExpenseRequest | UpdateExpenseRequest) => Promise<void>;
-  isLoading?: boolean;
+  onSubmit: (data: CreateExpenseRequest | UpdateExpenseRequest) => void | Promise<void>;
 }
 
-export function EditExpenseDialog({ expense, open, onOpenChange, onSubmit, isLoading }: EditExpenseDialogProps) {
+export function EditExpenseDialog({ expense, open, onOpenChange, onSubmit }: EditExpenseDialogProps) {
   const handleSubmit = async (data: CreateExpenseRequest | UpdateExpenseRequest) => {
-    await onSubmit(data);
     onOpenChange(false);
+    await onSubmit(data);
   };
 
   if (!expense) return null;
@@ -48,7 +47,6 @@ export function EditExpenseDialog({ expense, open, onOpenChange, onSubmit, isLoa
           initialData={initialData}
           onSubmit={handleSubmit}
           onCancel={() => onOpenChange(false)}
-          isLoading={isLoading}
         />
       </DialogContent>
     </Dialog>
