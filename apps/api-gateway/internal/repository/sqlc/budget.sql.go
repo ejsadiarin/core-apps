@@ -30,6 +30,29 @@ func (q *Queries) AddExpenseTag(ctx context.Context, arg AddExpenseTagParams) er
 	return err
 }
 
+const checkSkippedExpense = `-- name: CheckSkippedExpense :one
+SELECT EXISTS(
+    SELECT 1 FROM budget_expenses
+    WHERE user_id = $1
+    AND expense_date = $2
+    AND amount < 0
+    AND recurring_type IS NULL
+    AND description LIKE 'Skipped:%'
+)
+`
+
+type CheckSkippedExpenseParams struct {
+	UserID      uuid.UUID   `json:"user_id"`
+	ExpenseDate pgtype.Date `json:"expense_date"`
+}
+
+func (q *Queries) CheckSkippedExpense(ctx context.Context, arg CheckSkippedExpenseParams) (bool, error) {
+	row := q.db.QueryRow(ctx, checkSkippedExpense, arg.UserID, arg.ExpenseDate)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const countExpenses = `-- name: CountExpenses :one
 SELECT COUNT(*) FROM budget_expenses e
 WHERE

@@ -12,6 +12,29 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const checkSkippedIncome = `-- name: CheckSkippedIncome :one
+SELECT EXISTS(
+    SELECT 1 FROM budget_incomes
+    WHERE user_id = $1
+    AND date = $2
+    AND amount < 0
+    AND recurring_type IS NULL
+    AND description LIKE 'Skipped:%'
+)
+`
+
+type CheckSkippedIncomeParams struct {
+	UserID uuid.UUID   `json:"user_id"`
+	Date   pgtype.Date `json:"date"`
+}
+
+func (q *Queries) CheckSkippedIncome(ctx context.Context, arg CheckSkippedIncomeParams) (bool, error) {
+	row := q.db.QueryRow(ctx, checkSkippedIncome, arg.UserID, arg.Date)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const countIncomes = `-- name: CountIncomes :one
 SELECT COUNT(*) FROM budget_incomes
 WHERE

@@ -14,6 +14,8 @@ import (
 type Querier interface {
 	// Expense Tags
 	AddExpenseTag(ctx context.Context, arg AddExpenseTagParams) error
+	CheckSkippedExpense(ctx context.Context, arg CheckSkippedExpenseParams) (bool, error)
+	CheckSkippedIncome(ctx context.Context, arg CheckSkippedIncomeParams) (bool, error)
 	CountActiveSessions(ctx context.Context) (int64, error)
 	CountAdmins(ctx context.Context) (int64, error)
 	CountExpenses(ctx context.Context, arg CountExpensesParams) (int64, error)
