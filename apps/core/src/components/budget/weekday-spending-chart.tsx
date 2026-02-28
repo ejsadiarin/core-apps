@@ -1,7 +1,7 @@
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useWeekdayPattern } from '@/hooks/use-budget';
+import { useTrends } from '@/hooks/use-budget';
 import { cn } from '@/lib/utils';
 
 interface WeekdaySpendingChartProps {
@@ -11,7 +11,7 @@ interface WeekdaySpendingChartProps {
 }
 
 export function WeekdaySpendingChart({ startDate, endDate, className }: WeekdaySpendingChartProps) {
-  const { data, isLoading, error } = useWeekdayPattern(startDate, endDate);
+  const { data, isLoading, error } = useTrends('day', startDate, endDate);
 
   if (isLoading) {
     return (
@@ -41,25 +41,33 @@ export function WeekdaySpendingChart({ startDate, endDate, className }: WeekdayS
     );
   }
 
-  const maxAmount = Math.max(...data.weekdays.map((d) => d.total_amount), 1);
+  const maxAmount = Math.max(...data.map((d) => d.total_amount), 1);
+  const minAmountItem = data.reduce((min, item) => item.total_amount < min.total_amount ? item : min, data[0]);
+  const maxAmountItem = data.reduce((max, item) => item.total_amount > max.total_amount ? item : max, data[0]);
+
+  // Helper to format date for display
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
 
   return (
     <Card className={className}>
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">Spending by Day</CardTitle>
         <CardDescription className="text-xs">
-          Highest: {data.highest_spending_day} · Lowest: {data.lowest_spending_day}
+          {startDate && endDate ? `${formatDate(startDate)} - ${formatDate(endDate)}` : 'This Month'}
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="flex items-end gap-2 h-32">
-          {data.weekdays.map((day) => {
+        <div className="flex items-end gap-1 h-32">
+          {data.map((day) => {
             const heightPct = (day.total_amount / maxAmount) * 100;
-            const isHighest = day.day === data.highest_spending_day;
-            const isLowest = day.day === data.lowest_spending_day;
+            const isHighest = day.date === maxAmountItem?.date;
+            const isLowest = day.date === minAmountItem?.date;
 
             return (
-              <div key={day.day} className="flex-1 flex flex-col items-center gap-1">
+              <div key={day.date} className="flex-1 flex flex-col items-center gap-1">
                 <div className="text-[10px] text-muted-foreground font-medium">
                   ₱{Math.round(day.total_amount).toLocaleString()}
                 </div>
@@ -72,7 +80,7 @@ export function WeekdaySpendingChart({ startDate, endDate, className }: WeekdayS
                     style={{ height: `${Math.max(heightPct, 4)}%` }}
                   />
                 </div>
-                <div className="text-[10px] text-muted-foreground">{day.day.slice(0, 3)}</div>
+                <div className="text-[10px] text-muted-foreground">{new Date(day.date).getDate()}</div>
               </div>
             );
           })}
@@ -80,13 +88,13 @@ export function WeekdaySpendingChart({ startDate, endDate, className }: WeekdayS
 
         <div className="mt-4 pt-3 border-t border-border grid grid-cols-2 gap-2">
           <div className="text-xs text-muted-foreground">
-            Avg highest: <span className="font-medium text-foreground">
-              ₱{data.weekdays.find((d) => d.day === data.highest_spending_day)?.average_amount.toFixed(0) || '0'}
+            Highest: <span className="font-medium text-foreground">
+              ₱{maxAmountItem?.total_amount.toLocaleString()}
             </span>
           </div>
           <div className="text-xs text-muted-foreground">
-            Avg lowest: <span className="font-medium text-foreground">
-              ₱{data.weekdays.find((d) => d.day === data.lowest_spending_day)?.average_amount.toFixed(0) || '0'}
+            Lowest: <span className="font-medium text-foreground">
+              ₱{minAmountItem?.total_amount.toLocaleString()}
             </span>
           </div>
         </div>
