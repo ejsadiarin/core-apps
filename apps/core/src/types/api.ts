@@ -215,11 +215,33 @@ export interface Income {
     updated_at: string;
 }
 
+export interface RecurringIncomeWithNextDate {
+    id: string;
+    amount: number;
+    currency: string;
+    date: string;
+    description?: string;
+    recurring_type?: "daily" | "weekly" | "monthly" | null;
+    start_date?: string;
+    end_date?: string;
+    next_occurrence: string;
+    monthly_equivalent: number;
+}
+
+export interface RecurringSummary {
+    total_recurring_income: number;
+    total_recurring_expenses: number;
+    net_recurring_cash_flow: number;
+    recurring_income_count: number;
+    recurring_expense_count: number;
+}
+
 export interface CreateIncomeRequest {
     amount: number;
     currency?: string;
     date: string;
     description?: string;
+    notes?: string;
     recurring_type?: "daily" | "weekly" | "monthly" | null;
     start_date?: string;
     end_date?: string;

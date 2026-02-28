@@ -21,6 +21,7 @@ import {
   createIncome,
   updateIncome,
   deleteIncome,
+  fetchRecurringIncomes,
   fetchBudgetRemaining,
   fetchSummaryStats,
   fetchCategoryBreakdown,
@@ -39,6 +40,7 @@ import type {
   UpdateExpenseRequest,
   ExpenseFilters,
   Income,
+  RecurringIncomeWithNextDate,
   CreateIncomeRequest,
   UpdateIncomeRequest,
   BudgetRemainingResponse,
@@ -80,6 +82,7 @@ export const budgetKeys = {
   incomesList: (startDate?: string, endDate?: string, recurringType?: 'daily') => 
     [...budgetKeys.incomes(), 'list', { startDate, endDate, recurringType }] as const,
   incomeDetail: (id: string) => [...budgetKeys.incomes(), 'detail', id] as const,
+  recurringIncomes: () => [...budgetKeys.all, 'recurringIncomes'] as const,
 
   budgetRemaining: (date?: string) => [...budgetKeys.all, 'budgetRemaining', date] as const,
 
@@ -413,6 +416,14 @@ export function useIncome(id: string | null) {
     queryKey: budgetKeys.incomeDetail(id ?? ''),
     queryFn: () => fetchIncome(id!),
     enabled: !!id
+  });
+}
+
+export function useRecurringIncomes() {
+  return useQuery<RecurringIncomeWithNextDate[]>({
+    queryKey: budgetKeys.recurringIncomes(),
+    queryFn: fetchRecurringIncomes,
+    staleTime: 300000 // 5 minutes
   });
 }
 

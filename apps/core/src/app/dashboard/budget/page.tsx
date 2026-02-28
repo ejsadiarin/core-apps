@@ -10,6 +10,8 @@ import {
   SavingsRateCard,
   SpendingVelocityCard,
   UpcomingBillsCard,
+  RecurringSummaryCard,
+  RecurringIncomeList,
   BudgetVarianceTable,
   CurrentTotalMoneyCard
 } from "@/components/budget";
@@ -256,7 +258,7 @@ export default function BudgetDashboard() {
         <CurrentTotalMoneyCard />
         <SavingsRateCard />
         <SpendingVelocityCard />
-        <UpcomingBillsCard days={7} />
+        <RecurringSummaryCard />
       </motion.div>
 
       {/* Budget Variance Table */}
@@ -267,6 +269,17 @@ export default function BudgetDashboard() {
         transition={{ duration: 0.5, delay: 0.25 }}
       >
         <BudgetVarianceTable />
+      </motion.div>
+
+      {/* Recurring Income and Bills */}
+      <motion.div
+        className="mb-8 grid gap-6 lg:grid-cols-2"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.3 }}
+      >
+        <RecurringIncomeList />
+        <UpcomingBillsCard days={7} />
       </motion.div>
 
       {/* Recent Transactions */}
@@ -321,32 +334,40 @@ export default function BudgetDashboard() {
               </div>
             ) : (
               <div className="space-y-4">
-                {displayIncomes.map((income) => (
-                  <div
-                    key={income.id}
-                    className="flex items-center justify-between p-3 rounded-lg border border-border/50 hover:border-border transition-colors cursor-pointer hover:bg-accent/50"
-                    onClick={() => setEditingIncome(income)}
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">
-                        {income.description || "Income"}
-                        {income.recurring_type && (
-                          <Badge variant="secondary" className="ml-2 text-xs">
-                            {income.recurring_type}
-                          </Badge>
-                        )}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatDistanceToNow(new Date(income.date), { addSuffix: true })}
-                      </p>
+                {displayIncomes.map((income) => {
+                  const isSkipped = income.amount < 0;
+                  return (
+                    <div
+                      key={income.id}
+                      className={`flex items-center justify-between p-3 rounded-lg border border-border/50 hover:border-border transition-colors cursor-pointer hover:bg-accent/50 ${isSkipped ? 'bg-red-500/5' : ''}`}
+                      onClick={() => setEditingIncome(income)}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className={`font-medium truncate ${isSkipped ? 'line-through text-muted-foreground' : ''}`}>
+                          {income.description || (isSkipped ? "Skipped Income" : "Income")}
+                          {income.recurring_type && !isSkipped && (
+                            <Badge variant="secondary" className="ml-2 text-xs">
+                              {income.recurring_type}
+                            </Badge>
+                          )}
+                          {isSkipped && (
+                            <Badge variant="destructive" className="ml-2 text-xs">
+                              Skipped
+                            </Badge>
+                          )}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatDistanceToNow(new Date(income.date), { addSuffix: true })}
+                        </p>
+                      </div>
+                      <div className="text-right ml-4">
+                        <p className={`font-semibold shrink-0 ${isSkipped ? 'text-red-600' : 'text-green-600'}`}>
+                          {isSkipped ? '' : '+'}{income.currency} {Math.abs(income.amount).toFixed(2)}
+                        </p>
+                      </div>
                     </div>
-                    <div className="text-right ml-4">
-                      <p className="font-semibold shrink-0 text-green-600">
-                        +{income.currency} {income.amount.toFixed(2)}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CardContent>

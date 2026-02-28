@@ -348,3 +348,31 @@ type SubscriptionsResponse struct {
 	TotalMonthly  float64            `json:"total_monthly"`
 	Count         int                `json:"count"`
 }
+
+// Recurring Income with Next Occurrence
+
+type RecurringIncomeWithNextDate struct {
+	ID                uuid.UUID `json:"id"`
+	Amount            float64   `json:"amount"`
+	Currency          string    `json:"currency"`
+	Date              string    `json:"date"`
+	Description       *string   `json:"description,omitempty"`
+	RecurringType     *string   `json:"recurring_type,omitempty"`
+	StartDate         *string   `json:"start_date,omitempty"`
+	EndDate           *string   `json:"end_date,omitempty"`
+	NextOccurrence    string    `json:"next_occurrence"`
+	MonthlyEquivalent float64   `json:"monthly_equivalent"`
+}
+
+type RecurringSummaryResponse struct {
+	TotalRecurringIncome   float64 `json:"total_recurring_income"`
+	TotalRecurringExpenses float64 `json:"total_recurring_expenses"`
+	NetRecurringCashFlow   float64 `json:"net_recurring_cash_flow"`
+	RecurringIncomeCount   int     `json:"recurring_income_count"`
+	RecurringExpenseCount  int     `json:"recurring_expense_count"`
+}
+
+type SkippedIncomeCheckResponse struct {
+	IsSkipped bool       `json:"is_skipped"`
+	SkippedID *uuid.UUID `json:"skipped_id,omitempty"`
+}

@@ -134,6 +134,16 @@ WHERE user_id = $1
     AND exclude_from_calculations = false
 ORDER BY start_date;
 
+-- name: CheckSkippedIncome :one
+SELECT EXISTS(
+    SELECT 1 FROM budget_incomes
+    WHERE user_id = $1
+    AND date = $2
+    AND amount < 0
+    AND recurring_type IS NULL
+    AND description LIKE 'Skipped:%'
+);
+
 -- name: GetExpensesForPeriod :one
 SELECT COALESCE(SUM(amount), 0::numeric) as total_amount
 FROM budget_expenses

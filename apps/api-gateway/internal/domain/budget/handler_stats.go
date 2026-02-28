@@ -1192,6 +1192,42 @@ func (h *Handler) GetSubscriptions(c echo.Context) error {
 	})
 }
 
+// CheckSkippedExpense godoc
+// @Summary Check if an expense occurrence has been skipped for a specific date
+// @Tags budget
+// @Param date query string true "Date to check (YYYY-MM-DD)"
+// @Produce json
+// @Success 200 {boolean} true if skipped, false otherwise
+// @Router /api/budget/expenses/check-skipped [get]
+func (h *Handler) CheckSkippedExpense(c echo.Context) error {
+	userID, err := h.getUserID(c)
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to get user ID")
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to get user ID"})
+	}
+
+	dateStr := c.QueryParam("date")
+	if dateStr == "" {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "date is required"})
+	}
+
+	date, err := time.Parse("2006-01-02", dateStr)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid date format. Use YYYY-MM-DD"})
+	}
+
+	exists, err := h.queries.CheckSkippedExpense(c.Request().Context(), sqlc.CheckSkippedExpenseParams{
+		UserID:      userID,
+		ExpenseDate: pgtype.Date{Time: date, Valid: true},
+	})
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to check skipped expense")
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to check skipped expense"})
+	}
+
+	return c.JSON(http.StatusOK, exists)
+}
+
 // GetCurrentTotalMoney godoc
 // @Summary Get current total money across all accounts
 // @Description Calculates current total money as baseline + (income - expenses) since tracking start date

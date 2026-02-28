@@ -104,6 +104,7 @@ func (a *Application) RegisterRoutes() {
 			expenses.POST("", a.BudgetHandler.CreateExpense)
 			expenses.GET("", a.BudgetHandler.ListExpenses)
 			expenses.GET("/search", a.BudgetHandler.SearchExpenses)
+			expenses.GET("/check-skipped", a.BudgetHandler.CheckSkippedExpense)
 			expenses.GET("/:id", a.BudgetHandler.GetExpense)
 			expenses.PUT("/:id", a.BudgetHandler.UpdateExpense)
 			expenses.DELETE("/:id", a.BudgetHandler.DeleteExpense)
@@ -112,6 +113,7 @@ func (a *Application) RegisterRoutes() {
 			incomes := budget.Group("/incomes")
 			incomes.POST("", a.BudgetHandler.CreateIncome)
 			incomes.GET("", a.BudgetHandler.ListIncomes)
+			incomes.GET("/check-skipped", a.BudgetHandler.CheckSkippedIncome)
 			incomes.GET("/:id", a.BudgetHandler.GetIncome)
 			incomes.PUT("/:id", a.BudgetHandler.UpdateIncome)
 			incomes.DELETE("/:id", a.BudgetHandler.DeleteIncome)
@@ -140,6 +142,9 @@ func (a *Application) RegisterRoutes() {
 
 			// Subscriptions
 			budget.GET("/subscriptions", a.BudgetHandler.GetSubscriptions)
+
+			// Recurring Incomes
+			budget.GET("/recurring-incomes", a.BudgetHandler.GetRecurringIncomes)
 
 			// Category budgets
 			categoryBudgets := budget.Group("/category-budgets")

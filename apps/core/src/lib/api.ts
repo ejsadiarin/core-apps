@@ -26,6 +26,8 @@ import type {
   Income,
   CreateIncomeRequest,
   UpdateIncomeRequest,
+  RecurringIncomeWithNextDate,
+  RecurringSummary,
   BudgetRemainingResponse,
   PaginatedResponse,
   PaginationParams,
@@ -645,6 +647,46 @@ export async function deleteIncome(id: string): Promise<void> {
   if (!res.ok) {
     throw new Error(`Error deleting income: ${res.status}`);
   }
+}
+
+export async function fetchRecurringIncomes(): Promise<RecurringIncomeWithNextDate[]> {
+  const res = await fetch(url + '/api/budget/recurring-incomes', {
+    credentials: 'include'
+  });
+  if (!res.ok) {
+    throw new Error(`Error fetching recurring incomes: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function checkSkippedIncome(date: string): Promise<boolean> {
+  const res = await fetch(url + `/api/budget/incomes/check-skipped?date=${date}`, {
+    credentials: 'include'
+  });
+  if (!res.ok) {
+    throw new Error(`Error checking skipped income: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function checkSkippedExpense(date: string): Promise<boolean> {
+  const res = await fetch(url + `/api/budget/expenses/check-skipped?date=${date}`, {
+    credentials: 'include'
+  });
+  if (!res.ok) {
+    throw new Error(`Error checking skipped expense: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function cancelRecurringExpense(id: string): Promise<Expense> {
+  const today = new Date().toISOString().split('T')[0];
+  return updateExpense(id, { end_date: today });
+}
+
+export async function cancelRecurringIncome(id: string): Promise<Income> {
+  const today = new Date().toISOString().split('T')[0];
+  return updateIncome(id, { end_date: today });
 }
 
 export async function fetchBudgetRemaining(date?: string): Promise<BudgetRemainingResponse> {

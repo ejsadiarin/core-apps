@@ -2,10 +2,12 @@
 
 import { motion } from 'motion/react';
 import {
-  SubscriptionList,
-  SubscriptionTotalCard,
+  RecurringSummaryCard,
+  RecurringExpensesList,
+  RecurringIncomesList,
   TopMerchantsTable
 } from '@/components/budget';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
@@ -26,32 +28,52 @@ export default function SubscriptionsPage() {
                 <ArrowLeft className="h-4 w-4" />
               </Button>
             </Link>
-            <h1 className="text-primary">SUBSCRIPTIONS & MERCHANTS</h1>
+            <h1 className="text-primary">RECURRING TRACKER</h1>
           </div>
           <p className="text-sm text-muted-foreground ml-11">
-            Track recurring expenses and top spending merchants
+            Manage recurring expenses and incomes, skip or cancel occurrences
           </p>
         </div>
       </motion.div>
 
-      {/* subscription total card */}
+      {/* summary card */}
       <motion.div
         className="mb-6 grid gap-4 md:grid-cols-3"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.1 }}
       >
-        <SubscriptionTotalCard />
+        <RecurringSummaryCard />
       </motion.div>
 
-      {/* subscriptions list + merchants */}
+      {/* recurring items tabs */}
       <motion.div
-        className="mb-6 grid gap-4 lg:grid-cols-2"
+        className="mb-6"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.2 }}
       >
-        <SubscriptionList />
+        <Tabs defaultValue="expenses">
+          <TabsList>
+            <TabsTrigger value="expenses">Expenses</TabsTrigger>
+            <TabsTrigger value="incomes">Incomes</TabsTrigger>
+          </TabsList>
+          <TabsContent value="expenses">
+            <RecurringExpensesList />
+          </TabsContent>
+          <TabsContent value="incomes">
+            <RecurringIncomesList />
+          </TabsContent>
+        </Tabs>
+      </motion.div>
+
+      {/* merchants table */}
+      <motion.div
+        className="mb-6"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.3 }}
+      >
         <TopMerchantsTable />
       </motion.div>
     </div>

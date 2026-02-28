@@ -1,6 +1,13 @@
 export { SavingsRateCard } from './savings-rate-card';
 export { SpendingVelocityCard } from './spending-velocity-card';
 export { UpcomingBillsCard } from './upcoming-bills-card';
+export { RecurringSummaryCard } from './recurring-summary-card';
+export { RecurringIncomeList } from './recurring-income-list';
+export { SkipOccurrenceDialog } from './skip-occurrence-dialog';
+export { SkipExpenseDialog } from './skip-expense-dialog';
+export { CancelRecurringDialog } from './cancel-recurring-dialog';
+export { RecurringExpensesList } from './recurring-expenses-list';
+export { RecurringIncomesList } from './recurring-incomes-list';
 export { CategoryBudgetForm } from './category-budget-form';
 export { BudgetVarianceTable } from './budget-variance-table';
 export { HealthScoreCard } from './health-score-card';

@@ -473,3 +473,13 @@ ORDER BY
         WHEN 'yearly' THEN 4
     END,
     description;
+
+-- name: CheckSkippedExpense :one
+SELECT EXISTS(
+    SELECT 1 FROM budget_expenses
+    WHERE user_id = $1
+    AND expense_date = $2
+    AND amount < 0
+    AND recurring_type IS NULL
+    AND description LIKE 'Skipped:%'
+);

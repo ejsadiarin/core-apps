@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/labstack/echo/v4"
 )
 
@@ -321,4 +322,130 @@ func (h *Handler) DeleteIncome(c echo.Context) error {
 	}
 
 	return c.NoContent(http.StatusNoContent)
+}
+
+// GetRecurringIncomes godoc
+// @Summary Get all recurring incomes with next occurrence dates
+// @Tags budget
+// @Produce json
+// @Success 200 {array} RecurringIncomeWithNextDate
+// @Router /api/budget/recurring-incomes [get]
+func (h *Handler) GetRecurringIncomes(c echo.Context) error {
+	userID, err := h.getUserID(c)
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to get user ID")
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to get user ID"})
+	}
+
+	recurringIncomes, err := h.queries.GetRecurringIncomeRules(c.Request().Context(), sqlc.GetRecurringIncomeRulesParams{
+		UserID:    userID,
+		StartDate: pgtype.Date{Time: time.Now(), Valid: true},
+	})
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to get recurring incomes")
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to get recurring incomes"})
+	}
+
+	today := time.Now()
+	result := make([]RecurringIncomeWithNextDate, len(recurringIncomes))
+	for i, inc := range recurringIncomes {
+		nextOccurrence := calculateNextOccurrenceFromStart(inc.StartDate.Time, inc.RecurringType.String, today)
+		monthlyEquiv := calculateMonthlyEquivalent(numericToFloat64(inc.Amount), inc.RecurringType.String)
+
+		result[i] = RecurringIncomeWithNextDate{
+			ID:                inc.ID,
+			Amount:            numericToFloat64(inc.Amount),
+			Currency:          getCurrency(inc.Currency),
+			Date:              dateToString(inc.Date),
+			Description:       textToStringPtr(inc.Description),
+			RecurringType:     textToStringPtr(inc.RecurringType),
+			StartDate:         dateToNullableStringPtr(inc.StartDate),
+			EndDate:           dateToNullableStringPtr(inc.EndDate),
+			NextOccurrence:    nextOccurrence.Format("2006-01-02"),
+			MonthlyEquivalent: monthlyEquiv,
+		}
+	}
+
+	return c.JSON(http.StatusOK, result)
+}
+
+// calculateNextOccurrenceFromStart calculates the next occurrence date based on start date and frequency
+func calculateNextOccurrenceFromStart(startDate time.Time, recurringType string, today time.Time) time.Time {
+	switch recurringType {
+	case "daily":
+		return today
+	case "weekly":
+		startWeekday := startDate.Weekday()
+		todayWeekday := today.Weekday()
+		daysUntil := int(startWeekday - todayWeekday)
+		if daysUntil <= 0 {
+			daysUntil += 7
+		}
+		return today.AddDate(0, 0, daysUntil)
+	case "monthly":
+		dayOfMonth := startDate.Day()
+		nextMonth := today
+		if today.Day() >= dayOfMonth {
+			nextMonth = today.AddDate(0, 1, 0)
+		}
+		nextOcc := time.Date(nextMonth.Year(), nextMonth.Month(), dayOfMonth, 0, 0, 0, 0, time.UTC)
+		if nextOcc.Month() != nextMonth.Month() {
+			nextOcc = time.Date(nextMonth.Year(), nextMonth.Month()+1, 0, 0, 0, 0, 0, time.UTC)
+		}
+		return nextOcc
+	default:
+		return today
+	}
+}
+
+// calculateMonthlyEquivalent converts a recurring amount to monthly equivalent
+func calculateMonthlyEquivalent(amount float64, recurringType string) float64 {
+	switch recurringType {
+	case "daily":
+		return amount * 30
+	case "weekly":
+		return amount * 4.33
+	case "monthly":
+		return amount
+	case "yearly":
+		return amount / 12
+	default:
+		return amount
+	}
+}
+
+// CheckSkippedIncome godoc
+// @Summary Check if an income occurrence has been skipped for a specific date
+// @Tags budget
+// @Param date query string true "Date to check (YYYY-MM-DD)"
+// @Produce json
+// @Success 200 {boolean} true if skipped, false otherwise
+// @Router /api/budget/incomes/check-skipped [get]
+func (h *Handler) CheckSkippedIncome(c echo.Context) error {
+	userID, err := h.getUserID(c)
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to get user ID")
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to get user ID"})
+	}
+
+	dateStr := c.QueryParam("date")
+	if dateStr == "" {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "date is required"})
+	}
+
+	date, err := time.Parse("2006-01-02", dateStr)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid date format. Use YYYY-MM-DD"})
+	}
+
+	exists, err := h.queries.CheckSkippedIncome(c.Request().Context(), sqlc.CheckSkippedIncomeParams{
+		UserID: userID,
+		Date:   pgtype.Date{Time: date, Valid: true},
+	})
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to check skipped income")
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to check skipped income"})
+	}
+
+	return c.JSON(http.StatusOK, exists)
 }

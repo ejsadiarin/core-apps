@@ -9,7 +9,7 @@ import {
   FileText,
   Users,
   Heart,
-  Store,
+  RefreshCw,
   type LucideIcon,
 } from "lucide-react";
 
@@ -69,8 +69,8 @@ export const navItems: NavItem[] = [
     section: "finance",
   },
   {
-    label: "Subscriptions",
-    icon: Store,
+    label: "Recurring",
+    icon: RefreshCw,
     path: "/dashboard/budget/subscriptions",
     section: "finance",
   },
