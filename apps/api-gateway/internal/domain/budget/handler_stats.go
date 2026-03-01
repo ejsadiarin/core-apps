@@ -1,6 +1,7 @@
 package budget
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -365,6 +366,13 @@ func (h *Handler) GetSavingsRate(c echo.Context) error {
 		status = "negative"
 	}
 
+	var dateRangeSource string
+	if startParam := c.QueryParam("start_date"); startParam != "" || c.QueryParam("end_date") != "" {
+		dateRangeSource = "custom"
+	} else {
+		dateRangeSource = "tracking_start_date"
+	}
+
 	return c.JSON(http.StatusOK, SavingsRateResponse{
 		Income:              totalIncome,
 		Expenses:            totalExpenses,
@@ -373,6 +381,11 @@ func (h *Handler) GetSavingsRate(c echo.Context) error {
 		Status:              status,
 		Period:              startDate.Format("2006-01-02") + " to " + endDate.Format("2006-01-02"),
 		TrackingPeriodStart: startDate.Format("2006-01-02"),
+		DateRange: &DateRangeMetadata{
+			Start:  startDate.Format("2006-01-02"),
+			End:    endDate.Format("2006-01-02"),
+			Source: dateRangeSource,
+		},
 	})
 }
 
@@ -380,6 +393,8 @@ func (h *Handler) GetSavingsRate(c echo.Context) error {
 // @Summary Get spending velocity and projection
 // @Tags budget
 // @Produce json
+// @Param start_date query string false "Start date (YYYY-MM-DD), defaults to first day of current month"
+// @Param end_date query string false "End date (YYYY-MM-DD), defaults to today"
 // @Success 200 {object} SpendingVelocityResponse
 // @Router /api/budget/velocity [get]
 func (h *Handler) GetSpendingVelocity(c echo.Context) error {
@@ -388,23 +403,61 @@ func (h *Handler) GetSpendingVelocity(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to get user context"})
 	}
 
-	now := time.Now()
-	startOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
-	daysInMonth := daysInMonth(now.Month(), now.Year())
-	daysElapsed := now.Day()
+	user, err := h.queries.GetUser(c.Request().Context(), userID)
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to get user")
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to get user"})
+	}
 
-	// Get month-to-date spending
-	mtdSpending, err := h.queries.GetMonthToDateSpending(c.Request().Context(), sqlc.GetMonthToDateSpendingParams{
+	now := time.Now()
+
+	var startDate, endDate time.Time
+	var dateRangeSource string
+
+	startDateParam := c.QueryParam("start_date")
+	endDateParam := c.QueryParam("end_date")
+
+	if startDateParam != "" || endDateParam != "" {
+		startDate, endDate, err = parseDateRange(startDateParam, endDateParam, now)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: err.Error()})
+		}
+
+		// If start_date wasn't provided, default to start of month to maintain previous behavior
+		if startDateParam == "" {
+			startOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+			startDate = startOfMonth
+			if user.TrackingStartDate.Valid && user.TrackingStartDate.Time.After(startOfMonth) {
+				startDate = user.TrackingStartDate.Time
+			}
+		}
+
+		dateRangeSource = "custom"
+	} else {
+		startOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+		startDate = startOfMonth
+		endDate = now
+		if user.TrackingStartDate.Valid && user.TrackingStartDate.Time.After(startOfMonth) {
+			startDate = user.TrackingStartDate.Time
+		}
+		dateRangeSource = "tracking_start_date"
+	}
+
+	daysInMonth := daysInMonth(endDate.Month(), endDate.Year())
+	daysElapsed := int(endDate.Sub(startDate).Hours() / 24)
+
+	// Get spending for the period
+	periodSpending, err := h.queries.GetExpensesForPeriod(c.Request().Context(), sqlc.GetExpensesForPeriodParams{
 		UserID:        userID,
-		ExpenseDate:   stringToDate(startOfMonth.Format("2006-01-02")),
-		ExpenseDate_2: stringToDate(now.Format("2006-01-02")),
+		ExpenseDate:   stringToDate(startDate.Format("2006-01-02")),
+		ExpenseDate_2: stringToDate(endDate.Format("2006-01-02")),
 	})
 	if err != nil {
-		h.logger.Error().Err(err).Msg("Failed to get month-to-date spending")
+		h.logger.Error().Err(err).Msg("Failed to get period spending")
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to calculate spending velocity"})
 	}
 
-	amountSpent := interfaceToFloat64(mtdSpending.TotalAmount)
+	amountSpent := interfaceToFloat64(periodSpending)
 
 	// Calculate velocity
 	var velocity float64
@@ -412,10 +465,10 @@ func (h *Handler) GetSpendingVelocity(c echo.Context) error {
 		velocity = (amountSpent / float64(daysElapsed)) * float64(daysInMonth)
 	}
 
-	// Get total budget for the month
+	// Get total budget for the period
 	budgets, err := h.queries.ListCategoryBudgets(c.Request().Context(), sqlc.ListCategoryBudgetsParams{
 		UserID: userID,
-		Month:  stringToDate(startOfMonth.Format("2006-01-02")),
+		Month:  stringToDate(startDate.Format("2006-01-02")),
 	})
 	if err != nil {
 		h.logger.Error().Err(err).Msg("Failed to get category budgets")
@@ -449,6 +502,11 @@ func (h *Handler) GetSpendingVelocity(c echo.Context) error {
 		ProjectedSpend: velocity,
 		TotalBudget:    totalBudget,
 		Status:         status,
+		DateRange: &DateRangeMetadata{
+			Start:  startDate.Format("2006-01-02"),
+			End:    endDate.Format("2006-01-02"),
+			Source: dateRangeSource,
+		},
 	})
 }
 
@@ -907,6 +965,8 @@ func get503020Status(actual, target float64) string {
 // @Summary Get spending patterns by day of week
 // @Tags budget
 // @Produce json
+// @Param start_date query string false "Start date (YYYY-MM-DD), defaults to first day of current month"
+// @Param end_date query string false "End date (YYYY-MM-DD), defaults to today"
 // @Success 200 {object} WeekdayPatternResponse
 // @Router /api/budget/analysis/weekday-pattern [get]
 func (h *Handler) GetWeekdayPattern(c echo.Context) error {
@@ -915,13 +975,50 @@ func (h *Handler) GetWeekdayPattern(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to get user context"})
 	}
 
+	user, err := h.queries.GetUser(c.Request().Context(), userID)
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to get user")
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to get user"})
+	}
+
 	now := time.Now()
-	startOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+
+	var startDate, endDate time.Time
+	var dateRangeSource string
+
+	startDateParam := c.QueryParam("start_date")
+	endDateParam := c.QueryParam("end_date")
+
+	if startDateParam != "" || endDateParam != "" {
+		startDate, endDate, err = parseDateRange(startDateParam, endDateParam, now)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: err.Error()})
+		}
+
+		// If start_date wasn't provided, default to start of month to maintain previous behavior
+		if startDateParam == "" {
+			startOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+			startDate = startOfMonth
+			if user.TrackingStartDate.Valid && user.TrackingStartDate.Time.After(startOfMonth) {
+				startDate = user.TrackingStartDate.Time
+			}
+		}
+
+		dateRangeSource = "custom"
+	} else {
+		startOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+		startDate = startOfMonth
+		endDate = now
+		if user.TrackingStartDate.Valid && user.TrackingStartDate.Time.After(startOfMonth) {
+			startDate = user.TrackingStartDate.Time
+		}
+		dateRangeSource = "tracking_start_date"
+	}
 
 	patterns, err := h.queries.GetSpendingByDayOfWeek(c.Request().Context(), sqlc.GetSpendingByDayOfWeekParams{
 		UserID:    userID,
-		StartDate: stringToDate(startOfMonth.Format("2006-01-02")),
-		EndDate:   stringToDate(now.Format("2006-01-02")),
+		StartDate: stringToDate(startDate.Format("2006-01-02")),
+		EndDate:   stringToDate(endDate.Format("2006-01-02")),
 	})
 	if err != nil {
 		h.logger.Error().Err(err).Msg("Failed to get weekday patterns")
@@ -974,6 +1071,11 @@ func (h *Handler) GetWeekdayPattern(c echo.Context) error {
 		Weekdays:   weekdays,
 		HighestDay: highestDay,
 		LowestDay:  lowestDay,
+		DateRange: &DateRangeMetadata{
+			Start:  startDate.Format("2006-01-02"),
+			End:    endDate.Format("2006-01-02"),
+			Source: dateRangeSource,
+		},
 	})
 }
 
@@ -1233,6 +1335,8 @@ func (h *Handler) CheckSkippedExpense(c echo.Context) error {
 // @Description Calculates current total money as baseline + (income - expenses) since tracking start date
 // @Tags budget
 // @Produce json
+// @Param start_date query string false "Start date (YYYY-MM-DD), defaults to tracking start date"
+// @Param end_date query string false "End date (YYYY-MM-DD), defaults to today"
 // @Success 200 {object} CurrentTotalMoneyResponse
 // @Router /api/budget/current-total-money [get]
 func (h *Handler) GetCurrentTotalMoney(c echo.Context) error {
@@ -1241,53 +1345,79 @@ func (h *Handler) GetCurrentTotalMoney(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to get user context"})
 	}
 
-	// get user to fetch baseline and tracking_start_date
 	user, err := h.queries.GetUser(c.Request().Context(), userID)
 	if err != nil {
 		h.logger.Error().Err(err).Msg("Failed to get user")
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to get user"})
 	}
 
-	// default tracking start date if not set
-	trackingStartDate := "2026-01-15"
-	if user.TrackingStartDate.Valid {
-		trackingStartDate = user.TrackingStartDate.Time.Format("2006-01-02")
-	}
-
 	now := time.Now()
 
-	// calculate total income since tracking start (exclude_from_calculations = false)
+	var startDate, endDate time.Time
+	var dateRangeSource string
+	var trackingStartDate string
+
+	if user.TrackingStartDate.Valid {
+		trackingStartDate = user.TrackingStartDate.Time.Format("2006-01-02")
+	} else {
+		trackingStartDate = "2026-01-15"
+	}
+
+	startDateParam := c.QueryParam("start_date")
+	endDateParam := c.QueryParam("end_date")
+
+	if startDateParam != "" || endDateParam != "" {
+		startDate, endDate, err = parseDateRange(startDateParam, endDateParam, now)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: err.Error()})
+		}
+
+		// If start_date wasn't provided, use tracking start date instead of epoch
+		if startDateParam == "" {
+			if user.TrackingStartDate.Valid {
+				startDate = user.TrackingStartDate.Time
+			} else {
+				startDate = time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC)
+			}
+		}
+
+		dateRangeSource = "custom"
+	} else {
+		if user.TrackingStartDate.Valid {
+			startDate = user.TrackingStartDate.Time
+		} else {
+			startDate = time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC)
+		}
+		endDate = now
+		dateRangeSource = "tracking_start_date"
+	}
+
+	startDateStr := startDate.Format("2006-01-02")
+	endDateStr := endDate.Format("2006-01-02")
+
 	oneTimeIncome, _ := h.queries.GetIncomeForPeriod(c.Request().Context(), sqlc.GetIncomeForPeriodParams{
 		UserID: userID,
-		Date:   stringToDate(trackingStartDate),
-		Date_2: stringToDate(now.Format("2006-01-02")),
+		Date:   stringToDate(startDateStr),
+		Date_2: stringToDate(endDateStr),
 	})
 
 	recurringRules, _ := h.queries.GetRecurringIncomeForPeriod(c.Request().Context(), sqlc.GetRecurringIncomeForPeriodParams{
 		UserID:    userID,
-		StartDate: stringToDate(now.Format("2006-01-02")),
-		EndDate:   stringToDate(trackingStartDate),
+		StartDate: stringToDate(endDateStr),
+		EndDate:   stringToDate(startDateStr),
 	})
 
-	var recurringIncome float64
-	if user.TrackingStartDate.Valid {
-		recurringIncome = calculateRecurringIncomeForPeriod(recurringRules, user.TrackingStartDate.Time, now)
-	} else {
-		recurringIncome = calculateRecurringIncomeForPeriod(recurringRules, time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC), now)
-	}
-
+	recurringIncome := calculateRecurringIncomeForPeriod(recurringRules, startDate, endDate)
 	totalIncome := interfaceToFloat64(oneTimeIncome) + recurringIncome
 
-	// calculate total expenses since tracking start
 	totalExpenses, _ := h.queries.GetExpensesForPeriod(c.Request().Context(), sqlc.GetExpensesForPeriodParams{
 		UserID:        userID,
-		ExpenseDate:   stringToDate(trackingStartDate),
-		ExpenseDate_2: stringToDate(now.Format("2006-01-02")),
+		ExpenseDate:   stringToDate(startDateStr),
+		ExpenseDate_2: stringToDate(endDateStr),
 	})
 
 	totalExpensesVal := interfaceToFloat64(totalExpenses)
 
-	// calculate current total
 	baseline := numericToFloat64(user.MoneyBaseline)
 	netChange := totalIncome - totalExpensesVal
 	currentTotal := baseline + netChange
@@ -1299,5 +1429,39 @@ func (h *Handler) GetCurrentTotalMoney(c echo.Context) error {
 		ExpensesSinceStart: totalExpensesVal,
 		NetChange:          netChange,
 		TrackingStartDate:  trackingStartDate,
+		DateRange: &DateRangeMetadata{
+			Start:  startDateStr,
+			End:    endDateStr,
+			Source: dateRangeSource,
+		},
 	})
+}
+
+// parseDateRange parses and validates start_date and end_date query parameters
+// Returns the parsed dates and an error if validation fails
+func parseDateRange(startDateParam, endDateParam string, now time.Time) (startDate, endDate time.Time, err error) {
+	if startDateParam != "" {
+		startDate, err = time.Parse("2006-01-02", startDateParam)
+		if err != nil {
+			return time.Time{}, time.Time{}, fmt.Errorf("invalid start_date format, use YYYY-MM-DD")
+		}
+	} else {
+		startDate = time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
+	}
+
+	if endDateParam != "" {
+		endDate, err = time.Parse("2006-01-02", endDateParam)
+		if err != nil {
+			return time.Time{}, time.Time{}, fmt.Errorf("invalid end_date format, use YYYY-MM-DD")
+		}
+	} else {
+		endDate = now
+	}
+
+	// Validate that end date is not before start date
+	if endDate.Before(startDate) {
+		return time.Time{}, time.Time{}, fmt.Errorf("end_date must be on or after start_date")
+	}
+
+	return startDate, endDate, nil
 }
