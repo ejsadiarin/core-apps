@@ -96,7 +96,8 @@ export const budgetKeys = {
   // Budget Analytics
   savingsRate: (startDate?: string, endDate?: string) =>
     [...budgetKeys.stats(), 'savingsRate', { startDate, endDate }] as const,
-  spendingVelocity: () => [...budgetKeys.stats(), 'spendingVelocity'] as const,
+  spendingVelocity: (startDate?: string, endDate?: string) =>
+    [...budgetKeys.stats(), 'spendingVelocity', { startDate, endDate }] as const,
   upcomingBills: (days: 7 | 30) => [...budgetKeys.all, 'upcomingBills', days] as const,
   categoryBudgets: (month?: string) => [...budgetKeys.all, 'categoryBudgets', month] as const,
 
@@ -114,7 +115,8 @@ export const budgetKeys = {
   subscriptions: () => [...budgetKeys.all, 'subscriptions'] as const,
 
   // Current Total Money
-  currentTotalMoney: () => [...budgetKeys.all, 'currentTotalMoney'] as const
+  currentTotalMoney: (startDate?: string, endDate?: string) =>
+    [...budgetKeys.all, 'currentTotalMoney', { startDate, endDate }] as const
 };
 
 // Categories
@@ -581,10 +583,10 @@ export function useSavingsRate(startDate?: string, endDate?: string) {
   });
 }
 
-export function useSpendingVelocity() {
+export function useSpendingVelocity(startDate?: string, endDate?: string) {
   return useQuery<SpendingVelocityResponse>({
-    queryKey: budgetKeys.spendingVelocity(),
-    queryFn: fetchSpendingVelocity,
+    queryKey: budgetKeys.spendingVelocity(startDate, endDate),
+    queryFn: () => fetchSpendingVelocity(startDate, endDate),
     staleTime: 60000 // 1 minute
   });
 }
@@ -733,10 +735,10 @@ export function useSubscriptions() {
   });
 }
 
-export function useCurrentTotalMoney() {
+export function useCurrentTotalMoney(startDate?: string, endDate?: string) {
   return useQuery<CurrentTotalMoneyResponse>({
-    queryKey: budgetKeys.currentTotalMoney(),
-    queryFn: fetchCurrentTotalMoney,
+    queryKey: budgetKeys.currentTotalMoney(startDate, endDate),
+    queryFn: () => fetchCurrentTotalMoney(startDate, endDate),
     staleTime: 300000
   });
 }

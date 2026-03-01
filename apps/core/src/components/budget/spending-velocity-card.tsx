@@ -7,11 +7,13 @@ import { Gauge, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface SpendingVelocityCardProps {
+  startDate?: string;
+  endDate?: string;
   className?: string;
 }
 
-export function SpendingVelocityCard({ className }: SpendingVelocityCardProps) {
-  const { data, isLoading, error } = useSpendingVelocity();
+export function SpendingVelocityCard({ startDate, endDate, className }: SpendingVelocityCardProps) {
+  const { data, isLoading, error } = useSpendingVelocity(startDate, endDate);
 
   if (isLoading) {
     return (

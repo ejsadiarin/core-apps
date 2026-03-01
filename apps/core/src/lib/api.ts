@@ -721,8 +721,17 @@ export async function fetchSavingsRate(startDate?: string, endDate?: string): Pr
   return res.json();
 }
 
-export async function fetchSpendingVelocity(): Promise<SpendingVelocityResponse> {
-  const res = await fetch(url + '/api/budget/velocity', {
+export async function fetchSpendingVelocity(startDate?: string, endDate?: string): Promise<SpendingVelocityResponse> {
+  const params = new URLSearchParams();
+  if (startDate) params.append('start_date', startDate);
+  if (endDate) params.append('end_date', endDate);
+
+  const queryString = params.toString();
+  const endpoint = queryString
+    ? `/api/budget/velocity?${queryString}`
+    : '/api/budget/velocity';
+
+  const res = await fetch(url + endpoint, {
     credentials: 'include'
   });
   if (!res.ok) {
@@ -879,8 +888,17 @@ export async function fetchSubscriptions(): Promise<SubscriptionsResponse> {
   return res.json();
 }
 
-export async function fetchCurrentTotalMoney(): Promise<CurrentTotalMoneyResponse> {
-  const res = await fetch(url + '/api/budget/current-total-money', {
+export async function fetchCurrentTotalMoney(startDate?: string, endDate?: string): Promise<CurrentTotalMoneyResponse> {
+  const params = new URLSearchParams();
+  if (startDate) params.append('start_date', startDate);
+  if (endDate) params.append('end_date', endDate);
+
+  const queryString = params.toString();
+  const endpoint = queryString
+    ? `/api/budget/current-total-money?${queryString}`
+    : '/api/budget/current-total-money';
+
+  const res = await fetch(url + endpoint, {
     credentials: 'include'
   });
   if (!res.ok) {

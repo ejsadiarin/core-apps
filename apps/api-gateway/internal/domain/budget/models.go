@@ -2,6 +2,13 @@ package budget
 
 import "github.com/google/uuid"
 
+// DateRangeMetadata represents the date range used for analytics calculations
+type DateRangeMetadata struct {
+	Start  string `json:"start"`
+	End    string `json:"end"`
+	Source string `json:"source"` // "custom" or "tracking_start_date"
+}
+
 // Categories
 
 type CreateCategoryRequest struct {
@@ -176,31 +183,34 @@ type TrendItem struct {
 // Budget Analytics
 
 type SavingsRateResponse struct {
-	Income              float64 `json:"income"`
-	Expenses            float64 `json:"expenses"`
-	Savings             float64 `json:"savings"`
-	SavingsRate         float64 `json:"savings_rate"`
-	Status              string  `json:"status"`
-	Period              string  `json:"period"`
-	TrackingPeriodStart string  `json:"tracking_period_start,omitempty"`
+	Income              float64            `json:"income"`
+	Expenses            float64            `json:"expenses"`
+	Savings             float64            `json:"savings"`
+	SavingsRate         float64            `json:"savings_rate"`
+	Status              string             `json:"status"`
+	Period              string             `json:"period"`
+	TrackingPeriodStart string             `json:"tracking_period_start,omitempty"`
+	DateRange           *DateRangeMetadata `json:"date_range,omitempty"`
 }
 
 type CurrentTotalMoneyResponse struct {
-	CurrentTotal       float64 `json:"current_total"`
-	MoneyBaseline      float64 `json:"money_baseline"`
-	IncomeSinceStart   float64 `json:"income_since_start"`
-	ExpensesSinceStart float64 `json:"expenses_since_start"`
-	NetChange          float64 `json:"net_change"`
-	TrackingStartDate  string  `json:"tracking_start_date"`
+	CurrentTotal       float64            `json:"current_total"`
+	MoneyBaseline      float64            `json:"money_baseline"`
+	IncomeSinceStart   float64            `json:"income_since_start"`
+	ExpensesSinceStart float64            `json:"expenses_since_start"`
+	NetChange          float64            `json:"net_change"`
+	TrackingStartDate  string             `json:"tracking_start_date"`
+	DateRange          *DateRangeMetadata `json:"date_range,omitempty"`
 }
 
 type SpendingVelocityResponse struct {
-	AmountSpent    float64 `json:"amount_spent"`
-	DaysElapsed    int32   `json:"days_elapsed"`
-	DaysInMonth    int32   `json:"days_in_month"`
-	ProjectedSpend float64 `json:"projected_spend"`
-	TotalBudget    float64 `json:"total_budget"`
-	Status         string  `json:"status"`
+	AmountSpent    float64            `json:"amount_spent"`
+	DaysElapsed    int32              `json:"days_elapsed"`
+	DaysInMonth    int32              `json:"days_in_month"`
+	ProjectedSpend float64            `json:"projected_spend"`
+	TotalBudget    float64            `json:"total_budget"`
+	Status         string             `json:"status"`
+	DateRange      *DateRangeMetadata `json:"date_range,omitempty"`
 }
 
 type UpcomingBill struct {
@@ -300,6 +310,7 @@ type WeekdayPatternResponse struct {
 	Weekdays   []WeekdaySpendingItem `json:"weekdays"`
 	HighestDay string                `json:"highest_spending_day"`
 	LowestDay  string                `json:"lowest_spending_day"`
+	DateRange  *DateRangeMetadata    `json:"date_range,omitempty"`
 }
 
 type MonthOverMonthItem struct {

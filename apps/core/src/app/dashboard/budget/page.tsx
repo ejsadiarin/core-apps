@@ -47,6 +47,11 @@ export default function BudgetDashboard() {
   const searchParams = useSearchParams();
   const [period] = useState<string>("month");
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  
+  // Date range for analytics cards
+  const [dateRangeStart, setDateRangeStart] = useState<string>('');
+  const [dateRangeEnd, setDateRangeEnd] = useState<string>('');
+  
   const { data: summaryStats, isLoading: statsLoading } = useSummaryStats(period);
   const { data: expensesData, isLoading: expensesLoading } = useExpenses(undefined, 1, 5);
   const { data: incomesData, isLoading: incomesLoading } = useIncomes(undefined, 1, 5);
@@ -248,6 +253,46 @@ export default function BudgetDashboard() {
         <ExpenseStats stats={summaryStats} isLoading={statsLoading} />
       </motion.div>
 
+      {/* Date Range Picker for Analytics */}
+      <motion.div
+        className="mb-4 flex items-center gap-4"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.18 }}
+      >
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-muted-foreground">Date Range:</span>
+          <Input
+            type="date"
+            value={dateRangeStart}
+            onChange={(e) => setDateRangeStart(e.target.value)}
+            className="w-40 h-8"
+            placeholder="Start date"
+          />
+          <span className="text-muted-foreground">to</span>
+          <Input
+            type="date"
+            value={dateRangeEnd}
+            onChange={(e) => setDateRangeEnd(e.target.value)}
+            className="w-40 h-8"
+            placeholder="End date"
+          />
+          {(dateRangeStart || dateRangeEnd) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setDateRangeStart('');
+                setDateRangeEnd('');
+              }}
+              className="h-8 px-2"
+            >
+              Clear
+            </Button>
+          )}
+        </div>
+      </motion.div>
+
       {/* Budget Analytics Cards */}
       <motion.div
         className="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4"
@@ -255,9 +300,9 @@ export default function BudgetDashboard() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.2 }}
       >
-        <CurrentTotalMoneyCard />
-        <SavingsRateCard />
-        <SpendingVelocityCard />
+        <CurrentTotalMoneyCard startDate={dateRangeStart || undefined} endDate={dateRangeEnd || undefined} />
+        <SavingsRateCard startDate={dateRangeStart || undefined} endDate={dateRangeEnd || undefined} />
+        <SpendingVelocityCard startDate={dateRangeStart || undefined} endDate={dateRangeEnd || undefined} />
         <RecurringSummaryCard />
       </motion.div>
 
