@@ -329,6 +329,7 @@ export interface SavingsRateResponse {
     status: "excellent" | "good" | "fair" | "poor" | "negative";
     period: string;
     tracking_period_start?: string;
+    date_range?: DateRangeMetadata;
 }
 
 export interface SpendingVelocityResponse {
@@ -338,6 +339,7 @@ export interface SpendingVelocityResponse {
     projected_spend: number;
     total_budget: number;
     status: "on_track" | "warning" | "at_risk" | "over_pace" | "unknown";
+    date_range?: DateRangeMetadata;
 }
 
 export interface UpcomingBill {
@@ -430,6 +432,7 @@ export interface WeekdayPatternResponse {
     weekdays: WeekdaySpendingItem[];
     highest_spending_day: string;
     lowest_spending_day: string;
+    date_range?: DateRangeMetadata;
 }
 
 export interface MonthOverMonthItem {
@@ -477,6 +480,12 @@ export interface SubscriptionsResponse {
     count: number;
 }
 
+export interface DateRangeMetadata {
+    start: string;
+    end: string;
+    source: string;
+}
+
 export interface CurrentTotalMoneyResponse {
     current_total: number;
     money_baseline: number;
@@ -484,4 +493,5 @@ export interface CurrentTotalMoneyResponse {
     expenses_since_start: number;
     net_change: number;
     tracking_start_date: string;
+    date_range?: DateRangeMetadata;
 }

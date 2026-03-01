@@ -7,11 +7,13 @@ import { TrendingUp, TrendingDown, Wallet, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface CurrentTotalMoneyCardProps {
+  startDate?: string;
+  endDate?: string;
   className?: string;
 }
 
-export function CurrentTotalMoneyCard({ className }: CurrentTotalMoneyCardProps) {
-  const { data, isLoading, error } = useCurrentTotalMoney();
+export function CurrentTotalMoneyCard({ startDate, endDate, className }: CurrentTotalMoneyCardProps) {
+  const { data, isLoading, error } = useCurrentTotalMoney(startDate, endDate);
 
   if (isLoading) {
     return (
@@ -51,7 +53,7 @@ export function CurrentTotalMoneyCard({ className }: CurrentTotalMoneyCardProps)
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">Total Money</CardTitle>
         <CardDescription className="text-xs">
-          Since {new Date(data.tracking_start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+          Since {new Date(data.date_range?.start || data.tracking_start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
         </CardDescription>
       </CardHeader>
       <CardContent>

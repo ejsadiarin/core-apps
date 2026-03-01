@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState, useEffect } from 'react';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { motion } from 'motion/react';
 import {
   HealthScoreCard,
@@ -11,53 +12,58 @@ import {
   SpendingVelocityCard
 } from '@/components/budget';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
-type Period = 'week' | 'month';
+function HealthDashboardContent() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
-function getDatesForPeriod(period: Period): { startDate: string; endDate: string } {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth();
-  const day = now.getDate();
-  const currentDay = now.getDay(); // 0 = Sunday
+  const queryStartDate = searchParams.get('start_date');
+  const queryEndDate = searchParams.get('end_date');
 
-  if (period === 'week') {
-    // Get start of week (Sunday)
-    const startOfWeek = new Date(now);
-    startOfWeek.setDate(day - currentDay);
-    // Get end of week (Saturday)
-    const endOfWeek = new Date(now);
-    endOfWeek.setDate(day + (6 - currentDay));
+  const [dateRangeStart, setDateRangeStart] = useState<string>('');
+  const [dateRangeEnd, setDateRangeEnd] = useState<string>('');
 
-    // If current date is before start of week (shouldn't happen with above logic but just in case)
-    if (now < startOfWeek) {
-        startOfWeek.setDate(startOfWeek.getDate() - 7);
-        endOfWeek.setDate(endOfWeek.getDate() - 7);
+  useEffect(() => {
+    // Set default boundaries on mount if not provided in URL
+    if (!queryStartDate && !queryEndDate) {
+      const today = new Date().toISOString().split('T')[0];
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setDateRangeStart('2026-01-15');
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setDateRangeEnd(today);
+    } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setDateRangeStart(queryStartDate || '');
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setDateRangeEnd(queryEndDate || '');
     }
+  }, [queryStartDate, queryEndDate]);
 
-    return {
-      startDate: startOfWeek.toISOString().split('T')[0],
-      endDate: endOfWeek.toISOString().split('T')[0]
-    };
-  } else {
-    // This month
-    const startOfMonth = new Date(year, month, 1);
-    const endOfMonth = new Date(year, month + 1, 0);
-    return {
-      startDate: startOfMonth.toISOString().split('T')[0],
-      endDate: endOfMonth.toISOString().split('T')[0]
-    };
-  }
-}
+  const handleApplyFilter = () => {
+    const params = new URLSearchParams(searchParams.toString());
+    
+    if (dateRangeStart) params.set('start_date', dateRangeStart);
+    else params.delete('start_date');
 
-export default function HealthDashboardPage() {
-  const [period, setPeriod] = useState<Period>('month');
-  
-  // Calculate dates based on period
-  const { startDate, endDate } = getDatesForPeriod(period);
+    if (dateRangeEnd) params.set('end_date', dateRangeEnd);
+    else params.delete('end_date');
+
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
+  const handleClearFilter = () => {
+    setDateRangeStart('');
+    setDateRangeEnd('');
+    router.push(pathname);
+  };
+
+  const currentStartDate = queryStartDate || undefined;
+  const currentEndDate = queryEndDate || undefined;
 
   return (
     <div className="px-4 md:px-6 py-6">
@@ -81,23 +87,40 @@ export default function HealthDashboardPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-lg">
+        <div className="flex flex-wrap items-center gap-2 text-sm bg-muted/30 p-2 rounded-lg">
+          <span className="text-muted-foreground font-medium mr-1">Date Range:</span>
+          <Input
+            type="date"
+            value={dateRangeStart}
+            onChange={(e) => setDateRangeStart(e.target.value)}
+            className="w-36 h-8 bg-background"
+            placeholder="Start date"
+          />
+          <span className="text-muted-foreground">to</span>
+          <Input
+            type="date"
+            value={dateRangeEnd}
+            onChange={(e) => setDateRangeEnd(e.target.value)}
+            className="w-36 h-8 bg-background"
+            placeholder="End date"
+          />
           <Button
-            variant={period === 'week' ? 'default' : 'ghost'}
             size="sm"
-            onClick={() => setPeriod('week')}
-            className={cn("h-8 px-3", period === 'week' && "shadow-sm")}
+            onClick={handleApplyFilter}
+            className="h-8 ml-1"
           >
-            Week
+            Apply
           </Button>
-          <Button
-            variant={period === 'month' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setPeriod('month')}
-            className={cn("h-8 px-3", period === 'month' && "shadow-sm")}
-          >
-            Month
-          </Button>
+          {(queryStartDate || queryEndDate) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleClearFilter}
+              className="h-8 px-2"
+            >
+              Clear
+            </Button>
+          )}
         </div>
       </motion.div>
 
@@ -108,8 +131,8 @@ export default function HealthDashboardPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.1 }}
       >
-        <SavingsRateCard startDate={startDate} endDate={endDate} />
-        <SpendingVelocityCard />
+        <SavingsRateCard startDate={currentStartDate} endDate={currentEndDate} />
+        <SpendingVelocityCard startDate={currentStartDate} endDate={currentEndDate} />
         <HealthScoreCard />
       </motion.div>
 
@@ -121,8 +144,8 @@ export default function HealthDashboardPage() {
         transition={{ duration: 0.5, delay: 0.2 }}
       >
         <WeekdaySpendingChart 
-          startDate={startDate} 
-          endDate={endDate} 
+          startDate={currentStartDate} 
+          endDate={currentEndDate} 
         />
         <SpendingTrendCard />
       </motion.div>
@@ -136,5 +159,17 @@ export default function HealthDashboardPage() {
         <FiftyThirtyTwentyChart />
       </motion.div>
     </div>
+  );
+}
+
+export default function HealthDashboardPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-[50vh] items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    }>
+      <HealthDashboardContent />
+    </Suspense>
   );
 }
