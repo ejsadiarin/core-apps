@@ -4,19 +4,21 @@ import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import {
-  LayoutDashboard,
-  Wallet,
-  Receipt,
-  Server,
-  MoreHorizontal,
-  TrendingUp,
-  SlidersHorizontal,
-  Users,
-  BarChart3,
-  FileText,
-  LogOut,
-  X,
-  type LucideIcon,
+LayoutDashboard,
+Wallet,
+Receipt,
+Server,
+MoreHorizontal,
+TrendingUp,
+SlidersHorizontal,
+Users,
+BarChart3,
+FileText,
+LogOut,
+X,
+Heart,
+Repeat,
+type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth-context";
@@ -38,11 +40,13 @@ const primaryItems: BottomNavItem[] = [
 ];
 
 const overflowItems: BottomNavItem[] = [
-  { label: "Incomes", icon: TrendingUp, path: "/dashboard/budget/incomes" },
-  { label: "Settings", icon: SlidersHorizontal, path: "/dashboard/budget/settings" },
-  { label: "Analytics", icon: BarChart3, path: "/analytics", disabled: true },
-  { label: "Logs", icon: FileText, path: "/logs", disabled: true },
-  { label: "Users", icon: Users, path: "/dashboard/admin/users", adminOnly: true },
+{ label: "Health", icon: Heart, path: "/dashboard/budget/health" },
+{ label: "Recurring", icon: Repeat, path: "/dashboard/budget/recurring" },
+{ label: "Incomes", icon: TrendingUp, path: "/dashboard/budget/incomes" },
+{ label: "Settings", icon: SlidersHorizontal, path: "/dashboard/budget/settings" },
+{ label: "Analytics", icon: BarChart3, path: "/analytics", disabled: true },
+{ label: "Logs", icon: FileText, path: "/logs", disabled: true },
+{ label: "Users", icon: Users, path: "/dashboard/admin/users", adminOnly: true },
 ];
 
 function NavButton({

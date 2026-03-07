@@ -1,6 +1,7 @@
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useTrends } from '@/hooks/use-budget';
 import { cn } from '@/lib/utils';
 
@@ -51,6 +52,14 @@ export function WeekdaySpendingChart({ startDate, endDate, className }: WeekdayS
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
+  // Helper to abbreviate amounts for compact display
+  const formatAmount = (amount: number) => {
+    if (amount >= 10000) {
+      return `₱${(amount / 1000).toFixed(1)}k`;
+    }
+    return `₱${Math.round(amount).toLocaleString()}`;
+  };
+
   return (
     <Card className={className}>
       <CardHeader className="pb-2">
@@ -60,30 +69,41 @@ export function WeekdaySpendingChart({ startDate, endDate, className }: WeekdayS
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="flex items-end gap-1 h-32">
-          {data.map((day) => {
-            const heightPct = (day.total_amount / maxAmount) * 100;
-            const isHighest = day.date === maxAmountItem?.date;
-            const isLowest = day.date === minAmountItem?.date;
+        <div className="overflow-x-auto overflow-y-hidden">
+          <div className="flex items-end gap-1 h-32 min-w-0" style={{ minWidth: `${Math.max(data.length * 36, 100)}px` }}>
+            {data.map((day) => {
+              const heightPct = (day.total_amount / maxAmount) * 100;
+              const isHighest = day.date === maxAmountItem?.date;
+              const isLowest = day.date === minAmountItem?.date;
 
-            return (
-              <div key={day.date} className="flex-1 flex flex-col items-center gap-1">
-                <div className="text-[10px] text-muted-foreground font-medium">
-                  ₱{Math.round(day.total_amount).toLocaleString()}
-                </div>
-                <div className="w-full relative" style={{ height: '80px' }}>
-                  <div
-                    className={cn(
-                      'absolute bottom-0 w-full rounded-t transition-all',
-                      isHighest ? 'bg-red-500/80' : isLowest ? 'bg-green-500/80' : 'bg-primary/60'
-                    )}
-                    style={{ height: `${Math.max(heightPct, 4)}%` }}
-                  />
-                </div>
-                <div className="text-[10px] text-muted-foreground">{new Date(day.date).getDate()}</div>
-              </div>
-            );
-          })}
+              return (
+                <TooltipProvider>
+                <Tooltip key={day.date}>
+                  <TooltipTrigger asChild>
+                    <div className="flex flex-col items-center gap-1 min-w-[32px] flex-shrink-0">
+                      <div className="text-[10px] text-muted-foreground font-medium overflow-hidden text-ellipsis whitespace-nowrap max-w-[40px]">
+                        {formatAmount(day.total_amount)}
+                      </div>
+                      <div className="w-full relative" style={{ height: '80px' }}>
+                        <div
+                          className={cn(
+                            'absolute bottom-0 w-full rounded-t transition-all',
+                            isHighest ? 'bg-red-500/80' : isLowest ? 'bg-green-500/80' : 'bg-primary/60'
+                          )}
+                          style={{ height: `${Math.max(heightPct, 4)}%` }}
+                        />
+                      </div>
+                      <div className="text-[10px] text-muted-foreground">{new Date(day.date).getDate()}</div>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{formatDate(day.date)}: ₱{day.total_amount.toLocaleString()}</p>
+                  </TooltipContent>
+                </Tooltip>
+                </TooltipProvider>
+              );
+            })}
+          </div>
         </div>
 
         <div className="mt-4 pt-3 border-t border-border grid grid-cols-2 gap-2">
