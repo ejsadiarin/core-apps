@@ -44,7 +44,8 @@ import type {
   MonthOverMonthResponse,
   MerchantAnalysisResponse,
   SubscriptionsResponse,
-  CurrentTotalMoneyResponse
+  CurrentTotalMoneyResponse,
+  IncomeOccurrence
 } from '@/types/api';
 
 const url = 'http://localhost:8080';
@@ -647,6 +648,24 @@ export async function deleteIncome(id: string): Promise<void> {
   if (!res.ok) {
     throw new Error(`Error deleting income: ${res.status}`);
   }
+}
+
+export async function fetchIncomeOccurrences(
+  params: PaginationParams & { start_date: string; end_date: string }
+): Promise<PaginatedResponse<IncomeOccurrence>> {
+  const searchParams = new URLSearchParams();
+  searchParams.append('start_date', params.start_date);
+  searchParams.append('end_date', params.end_date);
+  if (params.page) searchParams.append('page', params.page.toString());
+  if (params.limit) searchParams.append('limit', params.limit.toString());
+
+  const res = await fetch(url + `/api/budget/incomes/occurrences?${searchParams.toString()}`, {
+    credentials: 'include'
+  });
+  if (!res.ok) {
+    throw new Error(`Error fetching income occurrences: ${res.status}`);
+  }
+  return res.json();
 }
 
 export async function fetchRecurringIncomes(): Promise<RecurringIncomeWithNextDate[]> {

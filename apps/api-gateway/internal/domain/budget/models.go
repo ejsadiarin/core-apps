@@ -62,6 +62,7 @@ type CreateExpenseRequest struct {
 	StartDate       *string     `json:"start_date,omitempty" validate:"omitempty,datetime=2006-01-02"`
 	EndDate         *string     `json:"end_date,omitempty" validate:"omitempty,datetime=2006-01-02"`
 	PriorityGroupID *uuid.UUID  `json:"priority_group_id,omitempty"`
+	IsDebt          *bool       `json:"is_debt,omitempty"`
 }
 
 type UpdateExpenseRequest struct {
@@ -76,6 +77,7 @@ type UpdateExpenseRequest struct {
 	StartDate       *string     `json:"start_date,omitempty" validate:"omitempty,datetime=2006-01-02"`
 	EndDate         *string     `json:"end_date,omitempty" validate:"omitempty,datetime=2006-01-02"`
 	PriorityGroupID *uuid.UUID  `json:"priority_group_id,omitempty"`
+	IsDebt          *bool       `json:"is_debt,omitempty"`
 }
 
 type ExpenseFilters struct {
@@ -105,6 +107,7 @@ type ExpenseResponse struct {
 	RecurringType *string                `json:"recurring_type,omitempty"`
 	StartDate     *string                `json:"start_date,omitempty"`
 	EndDate       *string                `json:"end_date,omitempty"`
+	IsDebt        bool                   `json:"is_debt"`
 	CreatedAt     string                 `json:"created_at"`
 	UpdatedAt     string                 `json:"updated_at"`
 }
@@ -272,13 +275,20 @@ type CategoryBudgetWithVarianceResponse struct {
 
 // Financial Health
 
+type FactorScoreBreakdown struct {
+	SavingsRate   int `json:"savings_rate"`
+	DebtToIncome  int `json:"debt_to_income"`
+	EmergencyFund int `json:"emergency_fund"`
+}
+
 type HealthScoreResponse struct {
-	Score           int      `json:"score"`
-	Status          string   `json:"status"`
-	SavingsRate     float64  `json:"savings_rate"`
-	DebtToIncome    float64  `json:"debt_to_income"`
-	EmergencyFund   float64  `json:"emergency_fund_months"`
-	Recommendations []string `json:"recommendations"`
+	Score           int                  `json:"score"`
+	Status          string               `json:"status"`
+	SavingsRate     float64              `json:"savings_rate"`
+	DebtToIncome    float64              `json:"debt_to_income"`
+	EmergencyFund   float64              `json:"emergency_fund_months"`
+	Recommendations []string             `json:"recommendations"`
+	FactorScores    FactorScoreBreakdown `json:"factor_scores"`
 }
 
 type FiftyThirtyTwentyItem struct {
@@ -292,7 +302,7 @@ type FiftyThirtyTwentyItem struct {
 type FiftyThirtyTwentyResponse struct {
 	Needs               FiftyThirtyTwentyItem `json:"needs"`
 	Wants               FiftyThirtyTwentyItem `json:"wants"`
-	Savings             FiftyThirtyTwentyItem `json:"savings"`
+	Savings             FiftyThirtyTwentyItem `json:"investments"`
 	TotalIncome         float64               `json:"total_income"`
 	UnclassifiedCount   int64                 `json:"unclassified_count"`
 	UnclassifiedAmount  float64               `json:"unclassified_amount"`
@@ -386,4 +396,18 @@ type RecurringSummaryResponse struct {
 type SkippedIncomeCheckResponse struct {
 	IsSkipped bool       `json:"is_skipped"`
 	SkippedID *uuid.UUID `json:"skipped_id,omitempty"`
+}
+
+// Income Occurrences
+
+type IncomeOccurrence struct {
+	ID             string  `json:"id"`
+	SourceIncomeID string  `json:"source_income_id"`
+	Amount         float64 `json:"amount"`
+	Currency       string  `json:"currency"`
+	Date           string  `json:"date"`
+	Description    *string `json:"description,omitempty"`
+	RecurringType  *string `json:"recurring_type,omitempty"`
+	IsVirtual      bool    `json:"is_virtual"`
+	IsSkipped      bool    `json:"is_skipped"`
 }

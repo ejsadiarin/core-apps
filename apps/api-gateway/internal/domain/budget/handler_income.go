@@ -449,3 +449,249 @@ func (h *Handler) CheckSkippedIncome(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, exists)
 }
+
+// GetIncomeOccurrences godoc
+// @Summary Get expanded income occurrences for a date range
+// @Description Returns one-time incomes and expanded virtual recurring income entries for a period
+// @Tags budget
+// @Produce json
+// @Param start_date query string true "Start date (YYYY-MM-DD)"
+// @Param end_date query string true "End date (YYYY-MM-DD)"
+// @Param page query int false "Page number (default 1)"
+// @Param limit query int false "Page size (default 50, max 200)"
+// @Success 200 {object} models.PaginatedResponse[IncomeOccurrence]
+// @Router /api/budget/incomes/occurrences [get]
+func (h *Handler) GetIncomeOccurrences(c echo.Context) error {
+	userID, err := h.getUserID(c)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to get user context"})
+	}
+
+	startDateStr := c.QueryParam("start_date")
+	endDateStr := c.QueryParam("end_date")
+	if startDateStr == "" || endDateStr == "" {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "start_date and end_date are required"})
+	}
+
+	startDate, err := time.Parse("2006-01-02", startDateStr)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid start_date format, use YYYY-MM-DD"})
+	}
+	endDate, err := time.Parse("2006-01-02", endDateStr)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid end_date format, use YYYY-MM-DD"})
+	}
+	if endDate.Before(startDate) {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "end_date must be on or after start_date"})
+	}
+
+	// pagination
+	var paginationParams models.PaginationParams
+	if err := c.Bind(&paginationParams); err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid pagination parameters"})
+	}
+	if paginationParams.Page == 0 {
+		paginationParams.Page = 1
+	}
+	if paginationParams.Limit == 0 {
+		paginationParams.Limit = 50
+	}
+	if paginationParams.Limit > 200 {
+		paginationParams.Limit = 200
+	}
+
+	ctx := c.Request().Context()
+
+	// fetch one-time incomes in the range
+	oneTimeIncomes, err := h.queries.GetOneTimeIncomesForPeriod(ctx, sqlc.GetOneTimeIncomesForPeriodParams{
+		UserID: userID,
+		Date:   pgtype.Date{Time: startDate, Valid: true},
+		Date_2: pgtype.Date{Time: endDate, Valid: true},
+	})
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to get one-time incomes for period")
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to get income occurrences"})
+	}
+
+	// fetch recurring income rules that overlap the period
+	recurringRules, err := h.queries.GetRecurringIncomeForPeriod(ctx, sqlc.GetRecurringIncomeForPeriodParams{
+		UserID:    userID,
+		StartDate: pgtype.Date{Time: endDate, Valid: true},
+		EndDate:   pgtype.Date{Time: startDate, Valid: true},
+	})
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to get recurring income rules")
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to get income occurrences"})
+	}
+
+	// fetch skipped dates for the period
+	skippedDates, err := h.queries.GetSkippedIncomeDatesForPeriod(ctx, sqlc.GetSkippedIncomeDatesForPeriodParams{
+		UserID: userID,
+		Date:   pgtype.Date{Time: startDate, Valid: true},
+		Date_2: pgtype.Date{Time: endDate, Valid: true},
+	})
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to get skipped income dates")
+	}
+
+	skippedSet := make(map[string]bool, len(skippedDates))
+	for _, d := range skippedDates {
+		skippedSet[d.Time.Format("2006-01-02")] = true
+	}
+
+	// build all occurrences
+	var allOccurrences []IncomeOccurrence
+
+	// add one-time incomes (exclude skip records themselves)
+	for _, inc := range oneTimeIncomes {
+		desc := textToStringPtr(inc.Description)
+		if desc != nil && len(*desc) > 8 && (*desc)[:8] == "Skipped:" {
+			continue
+		}
+		allOccurrences = append(allOccurrences, IncomeOccurrence{
+			ID:             inc.ID.String(),
+			SourceIncomeID: inc.ID.String(),
+			Amount:         numericToFloat64(inc.Amount),
+			Currency:       getCurrency(inc.Currency),
+			Date:           dateToString(inc.Date),
+			Description:    desc,
+			RecurringType:  nil,
+			IsVirtual:      false,
+			IsSkipped:      false,
+		})
+	}
+
+	// expand recurring rules into virtual entries
+	for _, rule := range recurringRules {
+		effectiveStart := rule.StartDate.Time
+		if effectiveStart.Before(startDate) {
+			effectiveStart = startDate
+		}
+		effectiveEnd := endDate
+		if rule.EndDate.Valid && rule.EndDate.Time.Before(endDate) {
+			effectiveEnd = rule.EndDate.Time
+		}
+
+		occDates := expandRecurringOccurrences(effectiveStart, effectiveEnd, rule.StartDate.Time, rule.RecurringType.String)
+		ruleID := rule.ID.String()
+		desc := textToStringPtr(rule.Description)
+		recType := textToStringPtr(rule.RecurringType)
+
+		for _, d := range occDates {
+			dateStr := d.Format("2006-01-02")
+			allOccurrences = append(allOccurrences, IncomeOccurrence{
+				ID:             ruleID + ":" + dateStr,
+				SourceIncomeID: ruleID,
+				Amount:         numericToFloat64(rule.Amount),
+				Currency:       getCurrency(rule.Currency),
+				Date:           dateStr,
+				Description:    desc,
+				RecurringType:  recType,
+				IsVirtual:      true,
+				IsSkipped:      skippedSet[dateStr],
+			})
+		}
+	}
+
+	// sort by date descending
+	sortOccurrencesByDateDesc(allOccurrences)
+
+	// paginate
+	total := int64(len(allOccurrences))
+	offset := (paginationParams.Page - 1) * paginationParams.Limit
+	end := offset + paginationParams.Limit
+	if offset > int(total) {
+		offset = int(total)
+	}
+	if end > int(total) {
+		end = int(total)
+	}
+	page := allOccurrences[offset:end]
+
+	totalPages := int(total) / paginationParams.Limit
+	if int(total)%paginationParams.Limit != 0 {
+		totalPages++
+	}
+	hasMore := paginationParams.Page < totalPages
+
+	return c.JSON(http.StatusOK, models.PaginatedResponse[IncomeOccurrence]{
+		Data: page,
+		Pagination: models.OffsetPagination{
+			Total:      total,
+			Page:       paginationParams.Page,
+			Limit:      paginationParams.Limit,
+			TotalPages: totalPages,
+			HasMore:    hasMore,
+		},
+	})
+}
+
+// expandRecurringOccurrences generates occurrence dates for a recurring rule
+// within [rangeStart, rangeEnd], aligning to the original rule start date's schedule
+func expandRecurringOccurrences(rangeStart, rangeEnd, ruleStart time.Time, recurringType string) []time.Time {
+	var dates []time.Time
+
+	switch recurringType {
+	case "daily":
+		d := rangeStart
+		for !d.After(rangeEnd) {
+			dates = append(dates, d)
+			d = d.AddDate(0, 0, 1)
+			if len(dates) > 366 {
+				break
+			}
+		}
+
+	case "weekly":
+		// align to the same weekday as the rule start date
+		targetWeekday := ruleStart.Weekday()
+		d := rangeStart
+		for d.Weekday() != targetWeekday {
+			d = d.AddDate(0, 0, 1)
+		}
+		for !d.After(rangeEnd) {
+			dates = append(dates, d)
+			d = d.AddDate(0, 0, 7)
+			if len(dates) > 53 {
+				break
+			}
+		}
+
+	case "monthly":
+		targetDay := ruleStart.Day()
+		// start from the month of rangeStart
+		y, m, _ := rangeStart.Date()
+		for {
+			candidate := time.Date(y, m, targetDay, 0, 0, 0, 0, time.UTC)
+			// clamp to end of month if day doesn't exist
+			if candidate.Month() != m {
+				candidate = time.Date(y, m+1, 0, 0, 0, 0, 0, time.UTC)
+			}
+			if candidate.After(rangeEnd) {
+				break
+			}
+			if !candidate.Before(rangeStart) {
+				dates = append(dates, candidate)
+			}
+			m++
+			if m > 12 {
+				m = 1
+				y++
+			}
+			if len(dates) > 12 {
+				break
+			}
+		}
+	}
+
+	return dates
+}
+
+// sortOccurrencesByDateDesc sorts occurrences by date descending
+func sortOccurrencesByDateDesc(occurrences []IncomeOccurrence) {
+	for i := 1; i < len(occurrences); i++ {
+		for j := i; j > 0 && occurrences[j].Date > occurrences[j-1].Date; j-- {
+			occurrences[j], occurrences[j-1] = occurrences[j-1], occurrences[j]
+		}
+	}
+}

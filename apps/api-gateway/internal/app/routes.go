@@ -114,6 +114,7 @@ func (a *Application) RegisterRoutes() {
 			incomes.POST("", a.BudgetHandler.CreateIncome)
 			incomes.GET("", a.BudgetHandler.ListIncomes)
 			incomes.GET("/check-skipped", a.BudgetHandler.CheckSkippedIncome)
+			incomes.GET("/occurrences", a.BudgetHandler.GetIncomeOccurrences)
 			incomes.GET("/:id", a.BudgetHandler.GetIncome)
 			incomes.PUT("/:id", a.BudgetHandler.UpdateIncome)
 			incomes.DELETE("/:id", a.BudgetHandler.DeleteIncome)

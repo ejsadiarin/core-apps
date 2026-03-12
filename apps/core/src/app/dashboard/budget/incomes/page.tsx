@@ -2,21 +2,63 @@
 
 import { motion } from "motion/react";
 import { useState } from "react";
-import { useIncomes, useDeleteIncome, useUpdateIncome, useCreateIncome, GuestBlockedError } from "@/hooks/use-budget";
+import { useIncomes, useIncomeOccurrences, useDeleteIncome, useUpdateIncome, useCreateIncome, GuestBlockedError } from "@/hooks/use-budget";
 import { IncomeCard } from "@/components/budget/income-card";
 import { EditIncomeDialog } from "@/components/budget/income-edit-dialog";
 import { IncomeForm } from "@/components/budget/income-form";
 import { Pagination } from "@/components/ui/pagination";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Filter, ArrowLeft, EyeOff } from "lucide-react";
+import { Plus, Filter, ArrowLeft, EyeOff, Repeat } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { Income, UpdateIncomeRequest, CreateIncomeRequest } from "@/types/api";
+import type { Income, IncomeOccurrence, UpdateIncomeRequest, CreateIncomeRequest } from "@/types/api";
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/components/ui/toast";
+import { Card, CardContent } from "@/components/ui/card";
+import { format } from "date-fns";
 import Link from "next/link";
+
+function OccurrenceCard({ occurrence }: { occurrence: IncomeOccurrence }) {
+  return (
+    <Card className={`${occurrence.is_skipped ? 'opacity-60' : ''} ${occurrence.is_virtual ? 'border-dashed' : ''}`}>
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <h3 className={`font-semibold ${occurrence.is_skipped ? 'line-through text-muted-foreground' : ''}`}>
+                {occurrence.description || "Income"}
+              </h3>
+              {occurrence.is_virtual && (
+                <Badge variant="secondary" className="text-xs">
+                  <Repeat className="h-3 w-3 mr-1" />
+                  {occurrence.recurring_type || "recurring"}
+                </Badge>
+              )}
+              {occurrence.is_skipped && (
+                <Badge variant="destructive" className="text-xs">
+                  Skipped
+                </Badge>
+              )}
+              {!occurrence.is_virtual && (
+                <Badge variant="outline" className="text-xs">
+                  One-time
+                </Badge>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {format(new Date(occurrence.date), "MMM dd, yyyy")}
+            </p>
+          </div>
+          <div className={`text-xl font-bold ${occurrence.is_skipped ? 'text-red-600' : 'text-green-600'}`}>
+            {occurrence.is_skipped ? '' : '+'}{occurrence.currency} {Math.abs(occurrence.amount).toFixed(2)}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 interface IncomeFilters {
   start_date?: string;
@@ -31,11 +73,25 @@ export default function IncomesPage() {
   const [limit] = useState(5);
   const [editingIncome, setEditingIncome] = useState<Income | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showOccurrences, setShowOccurrences] = useState(false);
+
+  const hasDateRange = !!(filters.start_date && filters.end_date);
 
   const { 
     data, 
     isLoading,
   } = useIncomes(filters, page, limit);
+
+  const {
+    data: occurrencesData,
+    isLoading: occurrencesLoading,
+  } = useIncomeOccurrences(
+    filters.start_date || '',
+    filters.end_date || '',
+    page,
+    limit,
+    hasDateRange && showOccurrences
+  );
   const deleteIncome = useDeleteIncome();
   const updateIncome = useUpdateIncome();
   const createIncome = useCreateIncome();
@@ -244,6 +300,30 @@ export default function IncomesPage() {
         )}
       </motion.div>
 
+      {/* Occurrences Toggle */}
+      {hasDateRange && (
+        <motion.div
+          className="mb-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3 }}
+        >
+          <div className="flex items-center gap-3 p-3 rounded-lg border border-border/50 bg-muted/30">
+            <Repeat className="h-4 w-4 text-muted-foreground shrink-0" />
+            <p className="text-sm text-muted-foreground flex-1">
+              Date range is set. You can view expanded recurring income occurrences for this period.
+            </p>
+            <Button
+              variant={showOccurrences ? "default" : "outline"}
+              size="sm"
+              onClick={() => { setShowOccurrences(!showOccurrences); setPage(1); }}
+            >
+              {showOccurrences ? "Show Records" : "Show Occurrences"}
+            </Button>
+          </div>
+        </motion.div>
+      )}
+
       {/* Income List */}
       <motion.div
         className="space-y-4"
@@ -251,7 +331,39 @@ export default function IncomesPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.2 }}
       >
-        {isLoading ? (
+        {showOccurrences && hasDateRange ? (
+          // occurrences view
+          occurrencesLoading ? (
+            <div className="space-y-4">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="h-24 bg-muted animate-pulse rounded-lg" />
+              ))}
+            </div>
+          ) : occurrencesData?.data && occurrencesData.data.length > 0 ? (
+            <>
+              {occurrencesData.data.map((occ) => (
+                <OccurrenceCard key={occ.id} occurrence={occ} />
+              ))}
+              {occurrencesData.pagination && occurrencesData.pagination.totalPages > 1 && (
+                <div className="mt-8 border-t pt-6 flex justify-center">
+                  <Pagination
+                    currentPage={page}
+                    totalPages={occurrencesData.pagination.totalPages}
+                    onPageChange={handlePageChange}
+                    disabled={occurrencesLoading}
+                  />
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="text-center py-12 text-muted-foreground">
+              <EyeOff className="w-8 h-8 mx-auto opacity-50" />
+              <p className="mt-2">No income occurrences in this date range.</p>
+            </div>
+          )
+        ) : (
+          // standard records view
+          isLoading ? (
           <div className="space-y-4">
             {[...Array(5)].map((_, i) => (
               <div key={i} className="h-32 bg-muted animate-pulse rounded-lg" />
@@ -297,7 +409,7 @@ export default function IncomesPage() {
               )}
             </div>
           </div>
-        )}
+        ))}
       </motion.div>
 
       {/* Edit Dialog */}

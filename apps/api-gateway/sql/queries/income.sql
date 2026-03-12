@@ -144,6 +144,25 @@ SELECT EXISTS(
     AND description LIKE 'Skipped:%'
 );
 
+-- name: GetOneTimeIncomesForPeriod :many
+SELECT * FROM budget_incomes
+WHERE user_id = $1
+    AND recurring_type IS NULL
+    AND date >= $2
+    AND date <= $3
+    AND exclude_from_calculations = false
+ORDER BY date DESC;
+
+-- name: GetSkippedIncomeDatesForPeriod :many
+SELECT date FROM budget_incomes
+WHERE user_id = $1
+    AND date >= $2
+    AND date <= $3
+    AND amount < 0
+    AND recurring_type IS NULL
+    AND description LIKE 'Skipped:%'
+ORDER BY date;
+
 -- name: GetExpensesForPeriod :one
 SELECT COALESCE(SUM(amount), 0::numeric) as total_amount
 FROM budget_expenses

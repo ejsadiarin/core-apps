@@ -57,6 +57,12 @@ export const navItems: NavItem[] = [
     section: "finance",
   },
   {
+    label: "Summary",
+    icon: BarChart3,
+    path: "/dashboard/budget/summary",
+    section: "finance",
+  },
+  {
     label: "Settings",
     icon: SlidersHorizontal,
     path: "/dashboard/budget/settings",

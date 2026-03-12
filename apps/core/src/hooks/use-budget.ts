@@ -22,6 +22,7 @@ import {
   updateIncome,
   deleteIncome,
   fetchRecurringIncomes,
+  fetchIncomeOccurrences,
   fetchBudgetRemaining,
   fetchSummaryStats,
   fetchCategoryBreakdown,
@@ -41,6 +42,7 @@ import type {
   ExpenseFilters,
   Income,
   RecurringIncomeWithNextDate,
+  IncomeOccurrence,
   CreateIncomeRequest,
   UpdateIncomeRequest,
   BudgetRemainingResponse,
@@ -82,6 +84,8 @@ export const budgetKeys = {
   incomesList: (startDate?: string, endDate?: string, recurringType?: 'daily') => 
     [...budgetKeys.incomes(), 'list', { startDate, endDate, recurringType }] as const,
   incomeDetail: (id: string) => [...budgetKeys.incomes(), 'detail', id] as const,
+  incomeOccurrences: (startDate: string, endDate: string) =>
+    [...budgetKeys.incomes(), 'occurrences', { startDate, endDate }] as const,
   recurringIncomes: () => [...budgetKeys.all, 'recurringIncomes'] as const,
 
   budgetRemaining: (date?: string) => [...budgetKeys.all, 'budgetRemaining', date] as const,
@@ -426,6 +430,21 @@ export function useRecurringIncomes() {
     queryKey: budgetKeys.recurringIncomes(),
     queryFn: fetchRecurringIncomes,
     staleTime: 300000 // 5 minutes
+  });
+}
+
+export function useIncomeOccurrences(
+  startDate: string,
+  endDate: string,
+  page: number = 1,
+  limit: number = 50,
+  enabled: boolean = true
+) {
+  return useQuery<PaginatedResponse<IncomeOccurrence>>({
+    queryKey: [...budgetKeys.incomeOccurrences(startDate, endDate), page, limit],
+    queryFn: () => fetchIncomeOccurrences({ start_date: startDate, end_date: endDate, page, limit }),
+    enabled: enabled && !!startDate && !!endDate,
+    staleTime: 60000
   });
 }
 

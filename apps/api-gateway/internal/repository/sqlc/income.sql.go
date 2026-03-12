@@ -343,6 +343,55 @@ func (q *Queries) GetOneTimeIncomeToDate(ctx context.Context, arg GetOneTimeInco
 	return total_amount, err
 }
 
+const getOneTimeIncomesForPeriod = `-- name: GetOneTimeIncomesForPeriod :many
+SELECT id, user_id, amount, currency, date, description, recurring_type, start_date, created_at, updated_at, end_date, exclude_from_calculations FROM budget_incomes
+WHERE user_id = $1
+    AND recurring_type IS NULL
+    AND date >= $2
+    AND date <= $3
+    AND exclude_from_calculations = false
+ORDER BY date DESC
+`
+
+type GetOneTimeIncomesForPeriodParams struct {
+	UserID uuid.UUID   `json:"user_id"`
+	Date   pgtype.Date `json:"date"`
+	Date_2 pgtype.Date `json:"date_2"`
+}
+
+func (q *Queries) GetOneTimeIncomesForPeriod(ctx context.Context, arg GetOneTimeIncomesForPeriodParams) ([]BudgetIncome, error) {
+	rows, err := q.db.Query(ctx, getOneTimeIncomesForPeriod, arg.UserID, arg.Date, arg.Date_2)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []BudgetIncome{}
+	for rows.Next() {
+		var i BudgetIncome
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Amount,
+			&i.Currency,
+			&i.Date,
+			&i.Description,
+			&i.RecurringType,
+			&i.StartDate,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.EndDate,
+			&i.ExcludeFromCalculations,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getRecurringIncomeForPeriod = `-- name: GetRecurringIncomeForPeriod :many
 SELECT id, user_id, amount, currency, date, description, recurring_type, start_date, created_at, updated_at, end_date, exclude_from_calculations FROM budget_incomes
 WHERE user_id = $1
@@ -433,6 +482,43 @@ func (q *Queries) GetRecurringIncomeRules(ctx context.Context, arg GetRecurringI
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getSkippedIncomeDatesForPeriod = `-- name: GetSkippedIncomeDatesForPeriod :many
+SELECT date FROM budget_incomes
+WHERE user_id = $1
+    AND date >= $2
+    AND date <= $3
+    AND amount < 0
+    AND recurring_type IS NULL
+    AND description LIKE 'Skipped:%'
+ORDER BY date
+`
+
+type GetSkippedIncomeDatesForPeriodParams struct {
+	UserID uuid.UUID   `json:"user_id"`
+	Date   pgtype.Date `json:"date"`
+	Date_2 pgtype.Date `json:"date_2"`
+}
+
+func (q *Queries) GetSkippedIncomeDatesForPeriod(ctx context.Context, arg GetSkippedIncomeDatesForPeriodParams) ([]pgtype.Date, error) {
+	rows, err := q.db.Query(ctx, getSkippedIncomeDatesForPeriod, arg.UserID, arg.Date, arg.Date_2)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []pgtype.Date{}
+	for rows.Next() {
+		var date pgtype.Date
+		if err := rows.Scan(&date); err != nil {
+			return nil, err
+		}
+		items = append(items, date)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

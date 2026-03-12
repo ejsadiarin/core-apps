@@ -394,6 +394,12 @@ export interface UpdateCategoryBudgetRequest {
 
 // Financial Health Response Types
 
+export interface FactorScoreBreakdown {
+    savings_rate: number;
+    debt_to_income: number;
+    emergency_fund: number;
+}
+
 export interface HealthScoreResponse {
     score: number;
     status: string;
@@ -401,6 +407,7 @@ export interface HealthScoreResponse {
     debt_to_income: number;
     emergency_fund_months: number;
     recommendations: string[];
+    factor_scores?: FactorScoreBreakdown;
 }
 
 export interface FiftyThirtyTwentyItem {
@@ -414,7 +421,7 @@ export interface FiftyThirtyTwentyItem {
 export interface FiftyThirtyTwentyResponse {
     needs: FiftyThirtyTwentyItem;
     wants: FiftyThirtyTwentyItem;
-    savings: FiftyThirtyTwentyItem;
+    investments: FiftyThirtyTwentyItem;
     total_income: number;
     unclassified_count: number;
     unclassified_amount: number;
@@ -494,4 +501,16 @@ export interface CurrentTotalMoneyResponse {
     net_change: number;
     tracking_start_date: string;
     date_range?: DateRangeMetadata;
+}
+
+export interface IncomeOccurrence {
+    id: string;
+    source_income_id: string;
+    amount: number;
+    currency: string;
+    date: string;
+    description?: string;
+    recurring_type?: 'daily' | 'weekly' | 'monthly' | null;
+    is_virtual: boolean;
+    is_skipped: boolean;
 }
