@@ -479,6 +479,7 @@ SELECT EXISTS(
     SELECT 1 FROM budget_expenses
     WHERE user_id = $1
     AND expense_date = $2
+    AND source_rule_id = $3
     AND status = 'skipped'
 );
 
