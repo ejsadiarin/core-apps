@@ -22,13 +22,25 @@ const (
 )
 
 type incomeMatchIndex struct {
-	byDate map[string][]ImportIncomeRecord
-	byKey  map[string]ImportIncomeRecord
+	byDate            map[string][]ImportIncomeRecord
+	byDateDescription map[string][]ImportIncomeRecord
 }
 
 type expenseMatchIndex struct {
-	byDate map[string][]ImportExpenseRecord
-	byKey  map[string]ImportExpenseRecord
+	byDate            map[string][]ImportExpenseRecord
+	byDateDescription map[string][]ImportExpenseRecord
+}
+
+type incomeImportDecision struct {
+	InputIndex int
+	Incoming   ImportIncomeRecord
+	Match      ImportMatchResult
+}
+
+type expenseImportDecision struct {
+	InputIndex int
+	Incoming   ImportExpenseRecord
+	Match      ImportMatchResult
 }
 
 // ExportBudgetJSON godoc
@@ -84,6 +96,13 @@ func (h *Handler) ExportBudgetJSON(c echo.Context) error {
 func (h *Handler) ImportBudgetJSON(c echo.Context) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
+		if httpErr, ok := err.(*echo.HTTPError); ok {
+			msg, ok := httpErr.Message.(string)
+			if !ok || msg == "" {
+				msg = "Failed authorization"
+			}
+			return c.JSON(httpErr.Code, models.ErrorResponse{Error: msg})
+		}
 		return c.JSON(http.StatusForbidden, models.ErrorResponse{Error: "Guest users cannot import budget data"})
 	}
 
@@ -125,8 +144,10 @@ func (h *Handler) ImportBudgetJSON(c echo.Context) error {
 		Conflicts: make([]ImportConflictDetail, 0),
 	}
 
+	incomeDecisions := make([]incomeImportDecision, 0, len(req.Incomes))
 	for idx, incoming := range req.Incomes {
 		match := matchImportedIncomeIndexed(incoming, incomeIdx)
+		incomeDecisions = append(incomeDecisions, incomeImportDecision{InputIndex: idx, Incoming: incoming, Match: match})
 		result.Incomes = append(result.Incomes, ImportIncomeResult{
 			InputIndex: idx,
 			Action:     match.Action,
@@ -145,10 +166,16 @@ func (h *Handler) ImportBudgetJSON(c echo.Context) error {
 				result.Conflicts = append(result.Conflicts, *match.Conflict)
 			}
 		}
+
+		if match.Action == ImportMergeActionCreate {
+			incomeIdx.add(incoming)
+		}
 	}
 
+	expenseDecisions := make([]expenseImportDecision, 0, len(req.Expenses))
 	for idx, incoming := range req.Expenses {
 		match := matchImportedExpenseIndexed(incoming, expenseIdx)
+		expenseDecisions = append(expenseDecisions, expenseImportDecision{InputIndex: idx, Incoming: incoming, Match: match})
 		result.Expenses = append(result.Expenses, ImportExpenseResult{
 			InputIndex: idx,
 			Action:     match.Action,
@@ -166,6 +193,10 @@ func (h *Handler) ImportBudgetJSON(c echo.Context) error {
 			if match.Conflict != nil {
 				result.Conflicts = append(result.Conflicts, *match.Conflict)
 			}
+		}
+
+		if match.Action == ImportMergeActionCreate {
+			expenseIdx.add(incoming)
 		}
 	}
 
@@ -190,67 +221,57 @@ func (h *Handler) ImportBudgetJSON(c echo.Context) error {
 
 	categoryNameToID := make(map[string]uuid.UUID)
 
-	for _, incoming := range req.Incomes {
-		match := matchImportedIncomeIndexed(incoming, incomeIdx)
-		if match.Action != ImportMergeActionCreate {
+	for _, decision := range incomeDecisions {
+		if decision.Match.Action != ImportMergeActionCreate {
 			continue
 		}
 
-		createdIncome, createErr := txQueries.CreateIncome(ctx, sqlc.CreateIncomeParams{
-			Amount:        float64ToNumeric(incoming.Amount),
-			Currency:      stringPtrToText(stringPtr(incoming.Currency)),
-			Date:          stringToDate(incoming.Date),
-			Description:   stringPtrToText(stringPtr(incoming.Description)),
-			RecurringType: stringPtrToText(incoming.RecurringType),
-			StartDate:     stringPtrToDate(incoming.StartDate),
-			EndDate:       stringPtrToDate(incoming.EndDate),
+		_, createErr := txQueries.CreateIncome(ctx, sqlc.CreateIncomeParams{
+			Amount:        float64ToNumeric(decision.Incoming.Amount),
+			Currency:      stringPtrToText(stringPtr(decision.Incoming.Currency)),
+			Date:          stringToDate(decision.Incoming.Date),
+			Description:   stringPtrToText(stringPtr(decision.Incoming.Description)),
+			RecurringType: stringPtrToText(decision.Incoming.RecurringType),
+			StartDate:     stringPtrToDate(decision.Incoming.StartDate),
+			EndDate:       stringPtrToDate(decision.Incoming.EndDate),
 			UserID:        userID,
 		})
 		if createErr != nil {
 			h.logger.Error().Err(createErr).Msg("Failed to create imported income")
 			return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to import budget"})
 		}
-
-		createdIncomeForMatch := incoming
-		createdIncomeForMatch.ID = createdIncome.ID.String()
-		incomeIdx.add(createdIncomeForMatch)
 	}
 
-	for _, incoming := range req.Expenses {
-		match := matchImportedExpenseIndexed(incoming, expenseIdx)
-		if match.Action != ImportMergeActionCreate {
+	for _, decision := range expenseDecisions {
+		if decision.Match.Action != ImportMergeActionCreate {
 			continue
 		}
 
-		categoryID, resolveErr := resolveCategoryIDForImport(ctx, txQueries, userID, incoming.CategoryName, categoryNameToID)
+		categoryID, resolveErr := resolveCategoryIDForImport(ctx, txQueries, userID, decision.Incoming.CategoryName, categoryNameToID)
 		if resolveErr != nil {
 			h.logger.Error().Err(resolveErr).Msg("Failed to resolve categories for import")
 			return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to import budget"})
 		}
 
-		priorityGroupID := parseOptionalUUID(incoming.PriorityGroupID)
+		priorityGroupID := parseOptionalUUID(decision.Incoming.PriorityGroupID)
 
-		createdExpense, createErr := txQueries.CreateExpense(ctx, sqlc.CreateExpenseParams{
-			Description:     incoming.Description,
-			Amount:          float64ToNumeric(incoming.Amount),
-			Currency:        stringPtrToText(stringPtr(incoming.Currency)),
+		_, createErr := txQueries.CreateExpense(ctx, sqlc.CreateExpenseParams{
+			Description:     decision.Incoming.Description,
+			Amount:          float64ToNumeric(decision.Incoming.Amount),
+			Currency:        stringPtrToText(stringPtr(decision.Incoming.Currency)),
 			CategoryID:      uuidPtrToNullUUID(categoryID),
-			ExpenseDate:     stringToDate(incoming.ExpenseDate),
-			Notes:           stringPtrToText(incoming.Notes),
+			ExpenseDate:     stringToDate(decision.Incoming.ExpenseDate),
+			Notes:           stringPtrToText(decision.Incoming.Notes),
 			UserID:          userID,
-			RecurringType:   stringPtrToText(incoming.RecurringType),
-			StartDate:       stringPtrToDate(incoming.StartDate),
-			EndDate:         stringPtrToDate(incoming.EndDate),
+			RecurringType:   stringPtrToText(decision.Incoming.RecurringType),
+			StartDate:       stringPtrToDate(decision.Incoming.StartDate),
+			EndDate:         stringPtrToDate(decision.Incoming.EndDate),
 			PriorityGroupID: uuidPtrToNullUUID(priorityGroupID),
 		})
 		if createErr != nil {
 			h.logger.Error().Err(createErr).Msg("Failed to create imported expense")
 			return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to import budget"})
 		}
-
-		createdExpenseForMatch := incoming
-		createdExpenseForMatch.ID = createdExpense.ID.String()
-		expenseIdx.add(createdExpenseForMatch)
 	}
 
 	if commitErr := tx.Commit(ctx); commitErr != nil {
@@ -345,8 +366,8 @@ func parseOptionalUUID(v *string) *uuid.UUID {
 
 func newIncomeMatchIndex(existing []ImportIncomeRecord) *incomeMatchIndex {
 	idx := &incomeMatchIndex{
-		byDate: make(map[string][]ImportIncomeRecord, len(existing)),
-		byKey:  make(map[string]ImportIncomeRecord, len(existing)),
+		byDate:            make(map[string][]ImportIncomeRecord, len(existing)),
+		byDateDescription: make(map[string][]ImportIncomeRecord, len(existing)),
 	}
 	for _, item := range existing {
 		idx.add(item)
@@ -356,13 +377,13 @@ func newIncomeMatchIndex(existing []ImportIncomeRecord) *incomeMatchIndex {
 
 func (i *incomeMatchIndex) add(item ImportIncomeRecord) {
 	i.byDate[item.Date] = append(i.byDate[item.Date], item)
-	i.byKey[incomeExactKey(item)] = item
+	i.byDateDescription[incomeDateDescriptionKey(item)] = append(i.byDateDescription[incomeDateDescriptionKey(item)], item)
 }
 
 func newExpenseMatchIndex(existing []ImportExpenseRecord) *expenseMatchIndex {
 	idx := &expenseMatchIndex{
-		byDate: make(map[string][]ImportExpenseRecord, len(existing)),
-		byKey:  make(map[string]ImportExpenseRecord, len(existing)),
+		byDate:            make(map[string][]ImportExpenseRecord, len(existing)),
+		byDateDescription: make(map[string][]ImportExpenseRecord, len(existing)),
 	}
 	for _, item := range existing {
 		idx.add(item)
@@ -372,29 +393,32 @@ func newExpenseMatchIndex(existing []ImportExpenseRecord) *expenseMatchIndex {
 
 func (e *expenseMatchIndex) add(item ImportExpenseRecord) {
 	e.byDate[item.ExpenseDate] = append(e.byDate[item.ExpenseDate], item)
-	e.byKey[expenseExactKey(item)] = item
+	e.byDateDescription[expenseDateDescriptionKey(item)] = append(e.byDateDescription[expenseDateDescriptionKey(item)], item)
 }
 
-func incomeExactKey(in ImportIncomeRecord) string {
-	return strings.Join([]string{in.Date, in.Description, in.Currency, fmt.Sprintf("%.12f", in.Amount)}, "|")
+func incomeDateDescriptionKey(in ImportIncomeRecord) string {
+	return strings.Join([]string{in.Date, in.Description}, "|")
 }
 
-func expenseExactKey(in ImportExpenseRecord) string {
-	return strings.Join([]string{in.ExpenseDate, in.Description, in.Currency, in.CategoryName, fmt.Sprintf("%.12f", in.Amount)}, "|")
+func expenseDateDescriptionKey(in ImportExpenseRecord) string {
+	return strings.Join([]string{in.ExpenseDate, in.Description}, "|")
 }
 
 func matchImportedIncomeIndexed(incoming ImportIncomeRecord, idx *incomeMatchIndex) ImportMatchResult {
-	if existing, ok := idx.byKey[incomeExactKey(incoming)]; ok && existing.Date == incoming.Date {
-		id := existing.ID
-		if id == "" {
-			id = existing.Date
-		}
-		return ImportMatchResult{Action: ImportMergeActionSkipExisting, MatchedExistingID: &id}
-	}
-
 	sameDate := idx.byDate[incoming.Date]
 	if len(sameDate) == 0 {
 		return ImportMatchResult{Action: ImportMergeActionCreate}
+	}
+
+	candidates := idx.byDateDescription[incomeDateDescriptionKey(incoming)]
+	for _, candidate := range candidates {
+		if candidate.Currency == incoming.Currency && amountsEqual(candidate.Amount, incoming.Amount) {
+			id := candidate.ID
+			if id == "" {
+				id = candidate.Date
+			}
+			return ImportMatchResult{Action: ImportMergeActionSkipExisting, MatchedExistingID: &id}
+		}
 	}
 
 	conflictCandidate := sameDate[0]
@@ -418,17 +442,22 @@ func matchImportedIncomeIndexed(incoming ImportIncomeRecord, idx *incomeMatchInd
 }
 
 func matchImportedExpenseIndexed(incoming ImportExpenseRecord, idx *expenseMatchIndex) ImportMatchResult {
-	if existing, ok := idx.byKey[expenseExactKey(incoming)]; ok && existing.ExpenseDate == incoming.ExpenseDate {
-		id := existing.ID
-		if id == "" {
-			id = existing.ExpenseDate
-		}
-		return ImportMatchResult{Action: ImportMergeActionSkipExisting, MatchedExistingID: &id}
-	}
-
 	sameDate := idx.byDate[incoming.ExpenseDate]
 	if len(sameDate) == 0 {
 		return ImportMatchResult{Action: ImportMergeActionCreate}
+	}
+
+	candidates := idx.byDateDescription[expenseDateDescriptionKey(incoming)]
+	for _, candidate := range candidates {
+		if candidate.Currency == incoming.Currency &&
+			candidate.CategoryName == incoming.CategoryName &&
+			amountsEqual(candidate.Amount, incoming.Amount) {
+			id := candidate.ID
+			if id == "" {
+				id = candidate.ExpenseDate
+			}
+			return ImportMatchResult{Action: ImportMergeActionSkipExisting, MatchedExistingID: &id}
+		}
 	}
 
 	conflictCandidate := sameDate[0]
@@ -498,6 +527,11 @@ func validateImportPayload(payload BudgetExportPayload) error {
 		if expense.EndDate != nil {
 			if _, err := time.Parse("2006-01-02", *expense.EndDate); err != nil {
 				return fmt.Errorf("invalid payload: expenses[%d].end_date must be YYYY-MM-DD", i)
+			}
+		}
+		if expense.PriorityGroupID != nil {
+			if _, err := uuid.Parse(*expense.PriorityGroupID); err != nil {
+				return fmt.Errorf("invalid payload: expenses[%d].priority_group_id must be UUID", i)
 			}
 		}
 		if math.IsNaN(expense.Amount) || math.IsInf(expense.Amount, 0) {

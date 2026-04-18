@@ -258,6 +258,10 @@ func setAuthenticatedUser(c echo.Context, userID uuid.UUID) {
 	c.Set("user", &auth.UserContext{ID: userID, Role: auth.RoleUser, Email: "user@example.com"})
 }
 
+func setGuestUser(c echo.Context) {
+	c.Set("user", &auth.UserContext{ID: uuid.New(), Role: auth.RoleGuest, Email: "guest@example.com"})
+}
+
 func TestExportBudgetJSONReturnsExpectedStructure(t *testing.T) {
 	e := echo.New()
 	db := &stubDB{}
@@ -396,10 +400,12 @@ func TestImportBudgetJSONInvalidPayloadReturns400(t *testing.T) {
 	h := NewHandler(queries, &logger, txBeginner)
 
 	bodyPayload := BudgetExportPayload{
-		Incomes: []ImportIncomeRecord{{
-			Date:     "invalid-date",
-			Amount:   100,
-			Currency: "USD",
+		Expenses: []ImportExpenseRecord{{
+			ExpenseDate:     "2026-04-10",
+			Description:     "Rent",
+			Amount:          100,
+			Currency:        "USD",
+			PriorityGroupID: stringPtr("not-a-uuid"),
 		}},
 	}
 	bodyBytes, err := json.Marshal(bodyPayload)
@@ -414,9 +420,157 @@ func TestImportBudgetJSONInvalidPayloadReturns400(t *testing.T) {
 	err = h.ImportBudgetJSON(c)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusBadRequest, rec.Code)
-	assert.Contains(t, rec.Body.String(), "incomes[0].date")
+	assert.Contains(t, rec.Body.String(), "expenses[0].priority_group_id")
 
 	assert.Equal(t, 0, txBeginner.beginCalls)
 	assert.False(t, tx.commitCalled)
 	assert.False(t, tx.rollbackCalled)
+}
+
+func TestImportBudgetJSONSkipAndConflictOutcomes(t *testing.T) {
+	e := echo.New()
+	db := &stubDB{}
+	queries := sqlc.New(db)
+	logger := zerolog.Nop()
+
+	userID := uuid.New()
+	categoryID := uuid.New()
+	incomeExistingID := uuid.New()
+	expenseExistingID := uuid.New()
+
+	tx := &stubTx{listCategoriesRows: [][]any{{
+		categoryID,
+		"Food",
+		pgtype.Text{Valid: false},
+		pgtype.Text{Valid: false},
+		pgtype.Timestamp{Valid: true},
+		userID,
+	}}}
+	txBeginner := &stubTxBeginner{tx: tx}
+	h := NewHandler(queries, &logger, txBeginner)
+
+	db.exportIncomesRows = [][]any{ // existing income on exact date
+		{
+			incomeExistingID,
+			userID,
+			float64ToNumeric(1000.0),
+			pgtype.Text{String: "USD", Valid: true},
+			stringToDate("2026-05-01"),
+			pgtype.Text{String: "Salary", Valid: true},
+			pgtype.Text{Valid: false},
+			pgtype.Date{Valid: false},
+			pgtype.Timestamp{Valid: true},
+			pgtype.Timestamp{Valid: true},
+			pgtype.Date{Valid: false},
+			pgtype.Bool{Bool: false, Valid: true},
+			"posted",
+			pgtype.UUID{Valid: false},
+		},
+	}
+
+	db.exportExpensesRows = [][]any{ // existing expense on exact date
+		{
+			expenseExistingID,
+			"Groceries",
+			float64ToNumeric(25.0),
+			pgtype.Text{String: "USD", Valid: true},
+			pgtype.UUID{Bytes: categoryID, Valid: true},
+			stringToDate("2026-05-02"),
+			pgtype.Timestamp{Valid: true},
+			pgtype.Timestamp{Valid: true},
+			pgtype.Text{Valid: false},
+			userID,
+			pgtype.Text{Valid: false},
+			pgtype.Date{Valid: false},
+			pgtype.Date{Valid: false},
+			pgtype.UUID{Valid: false},
+			"posted",
+			pgtype.UUID{Valid: false},
+			pgtype.Text{String: "Food", Valid: true},
+		},
+	}
+
+	bodyPayload := BudgetExportPayload{
+		Incomes: []ImportIncomeRecord{
+			{Date: "2026-05-01", Description: "Salary", Amount: 1000.0, Currency: "USD"}, // skip
+			{Date: "2026-05-01", Description: "Salary", Amount: 1200.0, Currency: "USD"}, // conflict
+		},
+		Expenses: []ImportExpenseRecord{
+			{ExpenseDate: "2026-05-02", Description: "Groceries", Amount: 25.0, Currency: "USD", CategoryName: "Food"}, // skip
+			{ExpenseDate: "2026-05-02", Description: "Groceries", Amount: 30.0, Currency: "USD", CategoryName: "Food"}, // conflict
+		},
+	}
+	bodyBytes, err := json.Marshal(bodyPayload)
+	require.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/budget/import", bytes.NewReader(bodyBytes))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	setAuthenticatedUser(c, userID)
+
+	err = h.ImportBudgetJSON(c)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	var result BudgetImportResult
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &result))
+
+	assert.Equal(t, 0, result.Summary.IncomesCreated)
+	assert.Equal(t, 1, result.Summary.IncomesSkipped)
+	assert.Equal(t, 1, result.Summary.IncomesConflicts)
+	assert.Equal(t, 0, result.Summary.ExpensesCreated)
+	assert.Equal(t, 1, result.Summary.ExpensesSkipped)
+	assert.Equal(t, 1, result.Summary.ExpensesConflicts)
+
+	require.Len(t, result.Incomes, 2)
+	assert.Equal(t, ImportMergeActionSkipExisting, result.Incomes[0].Action)
+	assert.Equal(t, ImportMergeActionConflict, result.Incomes[1].Action)
+	require.NotNil(t, result.Incomes[1].Conflict)
+	assert.NotEmpty(t, result.Incomes[1].Conflict.Differences)
+
+	require.Len(t, result.Expenses, 2)
+	assert.Equal(t, ImportMergeActionSkipExisting, result.Expenses[0].Action)
+	assert.Equal(t, ImportMergeActionConflict, result.Expenses[1].Action)
+	require.NotNil(t, result.Expenses[1].Conflict)
+	assert.NotEmpty(t, result.Expenses[1].Conflict.Differences)
+
+	assert.Equal(t, 0, tx.createIncomeCalls)
+	assert.Equal(t, 0, tx.createExpenseCalls)
+	assert.True(t, tx.commitCalled)
+	assert.False(t, tx.rollbackCalled)
+}
+
+func TestImportBudgetJSONPreservesRequireUserStatus(t *testing.T) {
+	e := echo.New()
+	db := &stubDB{}
+	queries := sqlc.New(db)
+	logger := zerolog.Nop()
+
+	tx := &stubTx{}
+	txBeginner := &stubTxBeginner{tx: tx}
+	h := NewHandler(queries, &logger, txBeginner)
+
+	// unauthenticated => 401
+	req := httptest.NewRequest(http.MethodPost, "/api/budget/import", bytes.NewReader([]byte(`{"incomes":[],"expenses":[]}`)))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	err := h.ImportBudgetJSON(c)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusUnauthorized, rec.Code)
+	assert.Equal(t, 0, txBeginner.beginCalls)
+
+	// guest => 403
+	req2 := httptest.NewRequest(http.MethodPost, "/api/budget/import", bytes.NewReader([]byte(`{"incomes":[],"expenses":[]}`)))
+	req2.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec2 := httptest.NewRecorder()
+	c2 := e.NewContext(req2, rec2)
+	setGuestUser(c2)
+
+	err = h.ImportBudgetJSON(c2)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusForbidden, rec2.Code)
+	assert.Equal(t, 0, txBeginner.beginCalls)
 }
