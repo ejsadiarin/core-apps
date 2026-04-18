@@ -68,6 +68,7 @@ type Querier interface {
 	GetDailySpendingForVelocity(ctx context.Context, arg GetDailySpendingForVelocityParams) ([]GetDailySpendingForVelocityRow, error)
 	GetExpense(ctx context.Context, arg GetExpenseParams) (BudgetExpense, error)
 	GetExpenseByID(ctx context.Context, id uuid.UUID) (BudgetExpense, error)
+	GetExpenseRowsForPeriod(ctx context.Context, arg GetExpenseRowsForPeriodParams) ([]BudgetExpense, error)
 	GetExpenseTags(ctx context.Context, expenseID uuid.UUID) ([]BudgetTag, error)
 	// Statistics (filtered by user)
 	GetExpensesByDateRange(ctx context.Context, arg GetExpensesByDateRangeParams) ([]BudgetExpense, error)
@@ -76,12 +77,14 @@ type Querier interface {
 	GetIncomeByID(ctx context.Context, id uuid.UUID) (BudgetIncome, error)
 	// Savings Rate Calculation
 	GetIncomeForPeriod(ctx context.Context, arg GetIncomeForPeriodParams) (interface{}, error)
+	GetIncomeRowsForPeriod(ctx context.Context, arg GetIncomeRowsForPeriodParams) ([]BudgetIncome, error)
 	GetMerchantSpendingTrend(ctx context.Context, arg GetMerchantSpendingTrendParams) ([]GetMerchantSpendingTrendRow, error)
 	GetMonthToDateSpending(ctx context.Context, arg GetMonthToDateSpendingParams) (GetMonthToDateSpendingRow, error)
 	GetMonthlySpending(ctx context.Context, userID uuid.UUID) ([]GetMonthlySpendingRow, error)
 	// Budget Remaining Calculation Queries
 	// These queries fetch raw data; proration logic is handled in the application layer
 	GetOneTimeIncomeToDate(ctx context.Context, arg GetOneTimeIncomeToDateParams) (interface{}, error)
+	GetOneTimeIncomesForPeriod(ctx context.Context, arg GetOneTimeIncomesForPeriodParams) ([]BudgetIncome, error)
 	GetPriorityGroupBySlug(ctx context.Context, slug string) (BudgetPriorityGroup, error)
 	GetRecurringIncomeForPeriod(ctx context.Context, arg GetRecurringIncomeForPeriodParams) ([]BudgetIncome, error)
 	GetRecurringIncomeRules(ctx context.Context, arg GetRecurringIncomeRulesParams) ([]BudgetIncome, error)
@@ -93,6 +96,7 @@ type Querier interface {
 	GetServiceStats30d(ctx context.Context, serviceID pgtype.UUID) (GetServiceStats30dRow, error)
 	GetServiceStats7d(ctx context.Context, serviceID pgtype.UUID) (GetServiceStats7dRow, error)
 	GetSessionByTokenHash(ctx context.Context, tokenHash string) (GetSessionByTokenHashRow, error)
+	GetSkippedIncomeDatesForPeriod(ctx context.Context, arg GetSkippedIncomeDatesForPeriodParams) ([]pgtype.Date, error)
 	// Weekday Analysis
 	GetSpendingByDayOfWeek(ctx context.Context, arg GetSpendingByDayOfWeekParams) ([]GetSpendingByDayOfWeekRow, error)
 	// 50/30/20 Analysis
