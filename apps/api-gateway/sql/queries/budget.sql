@@ -218,6 +218,7 @@ WHERE et.expense_id = $1;
 -- name: GetExpensesByDateRange :many
 SELECT * FROM budget_expenses
 WHERE user_id = $1 AND expense_date BETWEEN $2 AND $3
+    AND status = 'posted'
 ORDER BY expense_date DESC;
 
 -- name: GetCategorySpending :many
@@ -233,6 +234,7 @@ WHERE
     e.user_id = $1
     AND (sqlc.narg('start_date')::date IS NULL OR e.expense_date >= sqlc.narg('start_date')::date)
     AND (sqlc.narg('end_date')::date IS NULL OR e.expense_date <= sqlc.narg('end_date')::date)
+    AND e.status = 'posted'
 GROUP BY c.id, c.name, c.color
 ORDER BY total_amount DESC;
 
@@ -249,6 +251,7 @@ WHERE
     (sqlc.narg('user_id')::uuid IS NULL OR e.user_id = sqlc.narg('user_id'))
     AND (sqlc.narg('start_date')::date IS NULL OR e.expense_date >= sqlc.narg('start_date')::date)
     AND (sqlc.narg('end_date')::date IS NULL OR e.expense_date <= sqlc.narg('end_date')::date)
+    AND e.status = 'posted'
 GROUP BY c.id, c.name, c.color
 ORDER BY total_amount DESC;
 
@@ -262,6 +265,7 @@ WHERE
     user_id = $1
     AND (sqlc.narg('start_date')::date IS NULL OR expense_date >= sqlc.narg('start_date')::date)
     AND (sqlc.narg('end_date')::date IS NULL OR expense_date <= sqlc.narg('end_date')::date)
+    AND status = 'posted'
 GROUP BY expense_date
 ORDER BY expense_date ASC;
 
@@ -272,6 +276,7 @@ SELECT
     COUNT(id) as transaction_count
 FROM budget_expenses
 WHERE user_id = $1
+    AND status = 'posted'
 GROUP BY month
 ORDER BY month DESC
 LIMIT 12;
@@ -284,7 +289,8 @@ FROM budget_expenses
 WHERE
     user_id = $1
     AND (sqlc.narg('start_date')::date IS NULL OR expense_date >= sqlc.narg('start_date')::date)
-    AND (sqlc.narg('end_date')::date IS NULL OR expense_date <= sqlc.narg('end_date')::date);
+    AND (sqlc.narg('end_date')::date IS NULL OR expense_date <= sqlc.narg('end_date')::date)
+    AND status = 'posted';
 
 -- name: GetAllTotalSpending :one
 SELECT
@@ -294,7 +300,8 @@ FROM budget_expenses
 WHERE
     (sqlc.narg('user_id')::uuid IS NULL OR user_id = sqlc.narg('user_id'))
     AND (sqlc.narg('start_date')::date IS NULL OR expense_date >= sqlc.narg('start_date')::date)
-    AND (sqlc.narg('end_date')::date IS NULL OR expense_date <= sqlc.narg('end_date')::date);
+    AND (sqlc.narg('end_date')::date IS NULL OR expense_date <= sqlc.narg('end_date')::date)
+    AND status = 'posted';
 
 -- Category Budgets
 
@@ -350,6 +357,7 @@ LEFT JOIN budget_expenses e ON c.id = e.category_id
     AND e.user_id = c.user_id
     AND (sqlc.narg('start_date')::date IS NULL OR e.expense_date >= sqlc.narg('start_date')::date)
     AND (sqlc.narg('end_date')::date IS NULL OR e.expense_date <= sqlc.narg('end_date')::date)
+    AND e.status = 'posted'
 WHERE c.user_id = $1
 GROUP BY c.id, c.name, c.color, cb.budget_amount
 ORDER BY c.name;
@@ -369,6 +377,7 @@ LEFT JOIN budget_expenses e ON e.priority_group_id = pg.id
     AND e.user_id = $1
     AND (sqlc.narg('start_date')::date IS NULL OR e.expense_date >= sqlc.narg('start_date')::date)
     AND (sqlc.narg('end_date')::date IS NULL OR e.expense_date <= sqlc.narg('end_date')::date)
+    AND e.status = 'posted'
 GROUP BY pg.id, pg.name, pg.slug, pg.display_order
 ORDER BY pg.display_order;
 
@@ -380,7 +389,8 @@ FROM budget_expenses
 WHERE user_id = $1
     AND priority_group_id IS NULL
     AND (sqlc.narg('start_date')::date IS NULL OR expense_date >= sqlc.narg('start_date')::date)
-    AND (sqlc.narg('end_date')::date IS NULL OR expense_date <= sqlc.narg('end_date')::date);
+    AND (sqlc.narg('end_date')::date IS NULL OR expense_date <= sqlc.narg('end_date')::date)
+    AND status = 'posted';
 
 -- Spending Velocity & Trends
 
@@ -393,6 +403,7 @@ FROM budget_expenses
 WHERE user_id = $1
     AND expense_date >= $2
     AND expense_date <= $3
+    AND status = 'posted'
 GROUP BY expense_date
 ORDER BY expense_date ASC;
 
@@ -403,7 +414,8 @@ SELECT
 FROM budget_expenses
 WHERE user_id = $1
     AND expense_date >= $2
-    AND expense_date <= $3;
+    AND expense_date <= $3
+    AND status = 'posted';
 
 -- Weekday Analysis
 
@@ -417,6 +429,7 @@ FROM budget_expenses
 WHERE user_id = $1
     AND (sqlc.narg('start_date')::date IS NULL OR expense_date >= sqlc.narg('start_date')::date)
     AND (sqlc.narg('end_date')::date IS NULL OR expense_date <= sqlc.narg('end_date')::date)
+    AND status = 'posted'
 GROUP BY day_of_week
 ORDER BY day_of_week;
 
@@ -432,6 +445,7 @@ FROM budget_expenses
 WHERE user_id = $1
     AND (sqlc.narg('start_date')::date IS NULL OR expense_date >= sqlc.narg('start_date')::date)
     AND (sqlc.narg('end_date')::date IS NULL OR expense_date <= sqlc.narg('end_date')::date)
+    AND status = 'posted'
 GROUP BY description
 ORDER BY total_amount DESC
 LIMIT sqlc.narg('limit');
@@ -445,6 +459,7 @@ SELECT
 FROM budget_expenses
 WHERE user_id = $1
     AND description ILIKE '%' || sqlc.narg('merchant_pattern') || '%'
+    AND status = 'posted'
 GROUP BY description, month
 ORDER BY month DESC;
 
@@ -488,4 +503,5 @@ SELECT * FROM budget_expenses
 WHERE user_id = $1
     AND expense_date >= $2
     AND expense_date <= $3
+    AND status = 'posted'
 ORDER BY expense_date DESC, created_at DESC;

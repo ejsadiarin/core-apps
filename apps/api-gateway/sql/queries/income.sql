@@ -73,6 +73,7 @@ WHERE
     user_id = $1
     AND recurring_type IS NULL
     AND date <= $2
+    AND status = 'posted'
     AND exclude_from_calculations = false;
 
 -- name: GetAllOneTimeIncomeToDate :one
@@ -81,7 +82,8 @@ FROM budget_incomes
 WHERE
     (sqlc.narg('user_id')::uuid IS NULL OR user_id = sqlc.narg('user_id'))
     AND recurring_type IS NULL
-    AND date <= sqlc.narg('date')::date;
+    AND date <= sqlc.narg('date')::date
+    AND status = 'posted';
 
 -- name: GetRecurringIncomeRules :many
 SELECT * FROM budget_incomes
@@ -90,6 +92,7 @@ WHERE
     AND recurring_type IN ('daily', 'weekly', 'monthly')
     AND start_date <= $2
     AND (end_date IS NULL OR end_date >= $2)
+    AND status = 'posted'
 ORDER BY start_date;
 
 -- name: GetAllRecurringIncomeRules :many
@@ -99,6 +102,7 @@ WHERE
     AND recurring_type IN ('daily', 'weekly', 'monthly')
     AND start_date <= sqlc.narg('date')::date
     AND (end_date IS NULL OR end_date >= sqlc.narg('date')::date)
+    AND status = 'posted'
 ORDER BY start_date;
 
 -- name: GetTotalExpensesToDate :one
@@ -106,14 +110,16 @@ SELECT COALESCE(SUM(amount), 0::numeric) as total_amount
 FROM budget_expenses
 WHERE
     user_id = $1
-    AND expense_date <= $2;
+    AND expense_date <= $2
+    AND status = 'posted';
 
 -- name: GetAllTotalExpensesToDate :one
 SELECT COALESCE(SUM(amount), 0::numeric) as total_amount
 FROM budget_expenses
 WHERE
     (sqlc.narg('user_id')::uuid IS NULL OR user_id = sqlc.narg('user_id'))
-    AND expense_date <= sqlc.narg('date')::date;
+    AND expense_date <= sqlc.narg('date')::date
+    AND status = 'posted';
 
 -- Savings Rate Calculation
 
@@ -123,6 +129,7 @@ FROM budget_incomes
 WHERE user_id = $1
     AND date >= $2
     AND date <= $3
+    AND status = 'posted'
     AND exclude_from_calculations = false;
 
 -- name: GetRecurringIncomeForPeriod :many
@@ -131,6 +138,7 @@ WHERE user_id = $1
     AND recurring_type IN ('daily', 'weekly', 'monthly')
     AND start_date <= $2
     AND (end_date IS NULL OR end_date >= $3)
+    AND status = 'posted'
     AND exclude_from_calculations = false
 ORDER BY start_date;
 
@@ -148,6 +156,7 @@ SELECT * FROM budget_incomes
 WHERE user_id = $1
     AND date >= $2
     AND date <= $3
+    AND status = 'posted'
 ORDER BY date DESC, created_at DESC;
 
 -- name: GetOneTimeIncomesForPeriod :many
@@ -156,6 +165,7 @@ WHERE user_id = $1
     AND recurring_type IS NULL
     AND date >= $2
     AND date <= $3
+    AND status = 'posted'
     AND exclude_from_calculations = false
 ORDER BY date DESC;
 
@@ -172,4 +182,5 @@ SELECT COALESCE(SUM(amount), 0::numeric) as total_amount
 FROM budget_expenses
 WHERE user_id = $1
     AND expense_date >= $2
-    AND expense_date <= $3;
+    AND expense_date <= $3
+    AND status = 'posted';
