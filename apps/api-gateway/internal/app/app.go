@@ -80,7 +80,7 @@ func New(cfg Config, logger *zerolog.Logger) (*Application, error) {
 	authHandler := auth.NewHandler(queries, logger)
 	userHandler := user.NewHandler(queries, logger)
 	serviceHandler := services.NewHandler(queries, logger)
-	budgetHandler := budget.NewHandler(queries, logger)
+	budgetHandler := budget.NewHandler(queries, logger, dbPool)
 
 	// initialize Echo
 	e := echo.New()

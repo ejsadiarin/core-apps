@@ -1,6 +1,7 @@
 package budget
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -10,20 +11,32 @@ import (
 	"core-gateway/internal/shared/validator"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog"
 )
 
-type Handler struct {
-	queries *sqlc.Queries
-	logger  *zerolog.Logger
+type txBeginner interface {
+	BeginTx(ctx context.Context, txOptions pgx.TxOptions) (pgx.Tx, error)
 }
 
-func NewHandler(queries *sqlc.Queries, logger *zerolog.Logger) *Handler {
+type Handler struct {
+	queries    *sqlc.Queries
+	logger     *zerolog.Logger
+	txBeginner txBeginner
+}
+
+func NewHandler(queries *sqlc.Queries, logger *zerolog.Logger, txBeginners ...txBeginner) *Handler {
+	var beginner txBeginner
+	if len(txBeginners) > 0 {
+		beginner = txBeginners[0]
+	}
+
 	return &Handler{
-		queries: queries,
-		logger:  logger,
+		queries:    queries,
+		logger:     logger,
+		txBeginner: beginner,
 	}
 }
 
