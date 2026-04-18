@@ -139,10 +139,15 @@ SELECT EXISTS(
     SELECT 1 FROM budget_incomes
     WHERE user_id = $1
     AND date = $2
-    AND amount < 0
-    AND recurring_type IS NULL
-    AND description LIKE 'Skipped:%'
+    AND status = 'skipped'
 );
+
+-- name: GetIncomeRowsForPeriod :many
+SELECT * FROM budget_incomes
+WHERE user_id = $1
+    AND date >= $2
+    AND date <= $3
+ORDER BY date DESC, created_at DESC;
 
 -- name: GetOneTimeIncomesForPeriod :many
 SELECT * FROM budget_incomes

@@ -479,7 +479,12 @@ SELECT EXISTS(
     SELECT 1 FROM budget_expenses
     WHERE user_id = $1
     AND expense_date = $2
-    AND amount < 0
-    AND recurring_type IS NULL
-    AND description LIKE 'Skipped:%'
+    AND status = 'skipped'
 );
+
+-- name: GetExpenseRowsForPeriod :many
+SELECT * FROM budget_expenses
+WHERE user_id = $1
+    AND expense_date >= $2
+    AND expense_date <= $3
+ORDER BY expense_date DESC, created_at DESC;
