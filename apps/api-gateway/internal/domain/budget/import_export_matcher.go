@@ -1,5 +1,13 @@
 package budget
 
+import "math"
+
+const amountEqualityEpsilon = 1e-9
+
+func amountsEqual(a, b float64) bool {
+	return math.Abs(a-b) <= amountEqualityEpsilon
+}
+
 func MatchImportedIncome(incoming ImportIncomeRecord, existing []ImportIncomeRecord) ImportMatchResult {
 	sameDate := make([]ImportIncomeRecord, 0)
 	for _, candidate := range existing {
@@ -13,7 +21,9 @@ func MatchImportedIncome(incoming ImportIncomeRecord, existing []ImportIncomeRec
 	}
 
 	for _, candidate := range sameDate {
-		if candidate.Description == incoming.Description && candidate.Amount == incoming.Amount {
+		if candidate.Description == incoming.Description &&
+			amountsEqual(candidate.Amount, incoming.Amount) &&
+			candidate.Currency == incoming.Currency {
 			id := candidate.ID
 			if id == "" {
 				id = candidate.Date
@@ -58,7 +68,10 @@ func MatchImportedExpense(incoming ImportExpenseRecord, existing []ImportExpense
 	}
 
 	for _, candidate := range sameDate {
-		if candidate.Description == incoming.Description && candidate.Amount == incoming.Amount {
+		if candidate.Description == incoming.Description &&
+			amountsEqual(candidate.Amount, incoming.Amount) &&
+			candidate.Currency == incoming.Currency &&
+			candidate.CategoryName == incoming.CategoryName {
 			id := candidate.ID
 			if id == "" {
 				id = candidate.ExpenseDate
@@ -95,7 +108,7 @@ func incomeDifferences(incoming, existing ImportIncomeRecord) []ImportFieldDiffe
 	if incoming.Description != existing.Description {
 		diffs = append(diffs, ImportFieldDifference{Field: "description", Incoming: incoming.Description, Existing: existing.Description})
 	}
-	if incoming.Amount != existing.Amount {
+	if !amountsEqual(incoming.Amount, existing.Amount) {
 		diffs = append(diffs, ImportFieldDifference{Field: "amount", Incoming: incoming.Amount, Existing: existing.Amount})
 	}
 	if incoming.Currency != existing.Currency {
@@ -109,7 +122,7 @@ func expenseDifferences(incoming, existing ImportExpenseRecord) []ImportFieldDif
 	if incoming.Description != existing.Description {
 		diffs = append(diffs, ImportFieldDifference{Field: "description", Incoming: incoming.Description, Existing: existing.Description})
 	}
-	if incoming.Amount != existing.Amount {
+	if !amountsEqual(incoming.Amount, existing.Amount) {
 		diffs = append(diffs, ImportFieldDifference{Field: "amount", Incoming: incoming.Amount, Existing: existing.Amount})
 	}
 	if incoming.Currency != existing.Currency {
