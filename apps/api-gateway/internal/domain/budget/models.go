@@ -141,16 +141,18 @@ type IncomeFilters struct {
 }
 
 type IncomeResponse struct {
-	ID            uuid.UUID `json:"id"`
-	Amount        float64   `json:"amount"`
-	Currency      string    `json:"currency"`
-	Date          string    `json:"date"`
-	Description   *string   `json:"description,omitempty"`
-	RecurringType *string   `json:"recurring_type,omitempty"`
-	StartDate     *string   `json:"start_date,omitempty"`
-	EndDate       *string   `json:"end_date,omitempty"`
-	CreatedAt     string    `json:"created_at"`
-	UpdatedAt     string    `json:"updated_at"`
+	ID            uuid.UUID  `json:"id"`
+	Amount        float64    `json:"amount"`
+	Currency      string     `json:"currency"`
+	Date          string     `json:"date"`
+	Description   *string    `json:"description,omitempty"`
+	RecurringType *string    `json:"recurring_type,omitempty"`
+	StartDate     *string    `json:"start_date,omitempty"`
+	EndDate       *string    `json:"end_date,omitempty"`
+	Status        string     `json:"status"`
+	SourceRuleID  *uuid.UUID `json:"source_rule_id,omitempty"`
+	CreatedAt     string     `json:"created_at"`
+	UpdatedAt     string     `json:"updated_at"`
 }
 
 // Stats
@@ -403,11 +405,13 @@ type SkippedIncomeCheckResponse struct {
 type IncomeOccurrence struct {
 	ID             string  `json:"id"`
 	SourceIncomeID string  `json:"source_income_id"`
+	SourceRuleID   *string `json:"source_rule_id,omitempty"`
 	Amount         float64 `json:"amount"`
 	Currency       string  `json:"currency"`
 	Date           string  `json:"date"`
 	Description    *string `json:"description,omitempty"`
 	RecurringType  *string `json:"recurring_type,omitempty"`
+	Status         string  `json:"status"`
 	IsVirtual      bool    `json:"is_virtual"`
 	IsSkipped      bool    `json:"is_skipped"`
 }

@@ -70,6 +70,8 @@ func (h *Handler) CreateIncome(c echo.Context) error {
 		RecurringType: textToStringPtr(inc.RecurringType),
 		StartDate:     dateToNullableStringPtr(inc.StartDate),
 		EndDate:       dateToNullableStringPtr(inc.EndDate),
+		Status:        inc.Status,
+		SourceRuleID:  nullableSourceRuleUUID(inc.SourceRuleID),
 		CreatedAt:     inc.CreatedAt.Time.Format(time.RFC3339),
 		UpdatedAt:     inc.UpdatedAt.Time.Format(time.RFC3339),
 	})
@@ -160,6 +162,8 @@ func (h *Handler) ListIncomes(c echo.Context) error {
 			RecurringType: textToStringPtr(row.RecurringType),
 			StartDate:     dateToNullableStringPtr(row.StartDate),
 			EndDate:       dateToNullableStringPtr(row.EndDate),
+			Status:        row.Status,
+			SourceRuleID:  nullableSourceRuleUUID(row.SourceRuleID),
 			CreatedAt:     row.CreatedAt.Time.Format(time.RFC3339),
 			UpdatedAt:     row.UpdatedAt.Time.Format(time.RFC3339),
 		}
@@ -220,6 +224,8 @@ func (h *Handler) GetIncome(c echo.Context) error {
 		RecurringType: textToStringPtr(inc.RecurringType),
 		StartDate:     dateToNullableStringPtr(inc.StartDate),
 		EndDate:       dateToNullableStringPtr(inc.EndDate),
+		Status:        inc.Status,
+		SourceRuleID:  nullableSourceRuleUUID(inc.SourceRuleID),
 		CreatedAt:     inc.CreatedAt.Time.Format(time.RFC3339),
 		UpdatedAt:     inc.UpdatedAt.Time.Format(time.RFC3339),
 	})
@@ -288,6 +294,8 @@ func (h *Handler) UpdateIncome(c echo.Context) error {
 		RecurringType: textToStringPtr(inc.RecurringType),
 		StartDate:     dateToNullableStringPtr(inc.StartDate),
 		EndDate:       dateToNullableStringPtr(inc.EndDate),
+		Status:        inc.Status,
+		SourceRuleID:  nullableSourceRuleUUID(inc.SourceRuleID),
 		CreatedAt:     inc.CreatedAt.Time.Format(time.RFC3339),
 		UpdatedAt:     inc.UpdatedAt.Time.Format(time.RFC3339),
 	})
@@ -418,6 +426,7 @@ func calculateMonthlyEquivalent(amount float64, recurringType string) float64 {
 // @Summary Check if an income occurrence has been skipped for a specific date
 // @Tags budget
 // @Param date query string true "Date to check (YYYY-MM-DD)"
+// @Param source_rule_id query string true "Source recurring rule ID"
 // @Produce json
 // @Success 200 {boolean} true if skipped, false otherwise
 // @Router /api/budget/incomes/check-skipped [get]
@@ -432,15 +441,25 @@ func (h *Handler) CheckSkippedIncome(c echo.Context) error {
 	if dateStr == "" {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "date is required"})
 	}
+	sourceRuleIDStr := c.QueryParam("source_rule_id")
+	if sourceRuleIDStr == "" {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "source_rule_id is required"})
+	}
 
 	date, err := time.Parse("2006-01-02", dateStr)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid date format. Use YYYY-MM-DD"})
 	}
 
+	sourceRuleID, err := uuid.Parse(sourceRuleIDStr)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid source_rule_id format"})
+	}
+
 	exists, err := h.queries.CheckSkippedIncome(c.Request().Context(), sqlc.CheckSkippedIncomeParams{
-		UserID: userID,
-		Date:   pgtype.Date{Time: date, Valid: true},
+		UserID:       userID,
+		Date:         pgtype.Date{Time: date, Valid: true},
+		SourceRuleID: pgtype.UUID{Bytes: sourceRuleID, Valid: true},
 	})
 	if err != nil {
 		h.logger.Error().Err(err).Msg("Failed to check skipped income")
@@ -451,8 +470,8 @@ func (h *Handler) CheckSkippedIncome(c echo.Context) error {
 }
 
 // GetIncomeOccurrences godoc
-// @Summary Get expanded income occurrences for a date range
-// @Description Returns one-time incomes and expanded virtual recurring income entries for a period
+// @Summary Get income occurrences for a date range
+// @Description Returns persisted income rows for a period
 // @Tags budget
 // @Produce json
 // @Param start_date query string true "Start date (YYYY-MM-DD)"
@@ -502,99 +521,20 @@ func (h *Handler) GetIncomeOccurrences(c echo.Context) error {
 
 	ctx := c.Request().Context()
 
-	// fetch one-time incomes in the range
-	oneTimeIncomes, err := h.queries.GetOneTimeIncomesForPeriod(ctx, sqlc.GetOneTimeIncomesForPeriodParams{
+	rows, err := h.queries.GetIncomeRowsForPeriod(ctx, sqlc.GetIncomeRowsForPeriodParams{
 		UserID: userID,
 		Date:   pgtype.Date{Time: startDate, Valid: true},
 		Date_2: pgtype.Date{Time: endDate, Valid: true},
 	})
 	if err != nil {
-		h.logger.Error().Err(err).Msg("Failed to get one-time incomes for period")
+		h.logger.Error().Err(err).Msg("Failed to get income rows for period")
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to get income occurrences"})
 	}
 
-	// fetch recurring income rules that overlap the period
-	recurringRules, err := h.queries.GetRecurringIncomeForPeriod(ctx, sqlc.GetRecurringIncomeForPeriodParams{
-		UserID:    userID,
-		StartDate: pgtype.Date{Time: endDate, Valid: true},
-		EndDate:   pgtype.Date{Time: startDate, Valid: true},
-	})
-	if err != nil {
-		h.logger.Error().Err(err).Msg("Failed to get recurring income rules")
-		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to get income occurrences"})
+	allOccurrences := make([]IncomeOccurrence, len(rows))
+	for i, row := range rows {
+		allOccurrences[i] = mapIncomeRowToOccurrence(row)
 	}
-
-	// fetch skipped dates for the period
-	skippedDates, err := h.queries.GetSkippedIncomeDatesForPeriod(ctx, sqlc.GetSkippedIncomeDatesForPeriodParams{
-		UserID: userID,
-		Date:   pgtype.Date{Time: startDate, Valid: true},
-		Date_2: pgtype.Date{Time: endDate, Valid: true},
-	})
-	if err != nil {
-		h.logger.Error().Err(err).Msg("Failed to get skipped income dates")
-	}
-
-	skippedSet := make(map[string]bool, len(skippedDates))
-	for _, d := range skippedDates {
-		skippedSet[d.Time.Format("2006-01-02")] = true
-	}
-
-	// build all occurrences
-	var allOccurrences []IncomeOccurrence
-
-	// add one-time incomes (exclude skip records themselves)
-	for _, inc := range oneTimeIncomes {
-		desc := textToStringPtr(inc.Description)
-		if desc != nil && len(*desc) > 8 && (*desc)[:8] == "Skipped:" {
-			continue
-		}
-		allOccurrences = append(allOccurrences, IncomeOccurrence{
-			ID:             inc.ID.String(),
-			SourceIncomeID: inc.ID.String(),
-			Amount:         numericToFloat64(inc.Amount),
-			Currency:       getCurrency(inc.Currency),
-			Date:           dateToString(inc.Date),
-			Description:    desc,
-			RecurringType:  nil,
-			IsVirtual:      false,
-			IsSkipped:      false,
-		})
-	}
-
-	// expand recurring rules into virtual entries
-	for _, rule := range recurringRules {
-		effectiveStart := rule.StartDate.Time
-		if effectiveStart.Before(startDate) {
-			effectiveStart = startDate
-		}
-		effectiveEnd := endDate
-		if rule.EndDate.Valid && rule.EndDate.Time.Before(endDate) {
-			effectiveEnd = rule.EndDate.Time
-		}
-
-		occDates := expandRecurringOccurrences(effectiveStart, effectiveEnd, rule.StartDate.Time, rule.RecurringType.String)
-		ruleID := rule.ID.String()
-		desc := textToStringPtr(rule.Description)
-		recType := textToStringPtr(rule.RecurringType)
-
-		for _, d := range occDates {
-			dateStr := d.Format("2006-01-02")
-			allOccurrences = append(allOccurrences, IncomeOccurrence{
-				ID:             ruleID + ":" + dateStr,
-				SourceIncomeID: ruleID,
-				Amount:         numericToFloat64(rule.Amount),
-				Currency:       getCurrency(rule.Currency),
-				Date:           dateStr,
-				Description:    desc,
-				RecurringType:  recType,
-				IsVirtual:      true,
-				IsSkipped:      skippedSet[dateStr],
-			})
-		}
-	}
-
-	// sort by date descending
-	sortOccurrencesByDateDesc(allOccurrences)
 
 	// paginate
 	total := int64(len(allOccurrences))
@@ -626,72 +566,36 @@ func (h *Handler) GetIncomeOccurrences(c echo.Context) error {
 	})
 }
 
-// expandRecurringOccurrences generates occurrence dates for a recurring rule
-// within [rangeStart, rangeEnd], aligning to the original rule start date's schedule
-func expandRecurringOccurrences(rangeStart, rangeEnd, ruleStart time.Time, recurringType string) []time.Time {
-	var dates []time.Time
-
-	switch recurringType {
-	case "daily":
-		d := rangeStart
-		for !d.After(rangeEnd) {
-			dates = append(dates, d)
-			d = d.AddDate(0, 0, 1)
-			if len(dates) > 366 {
-				break
-			}
-		}
-
-	case "weekly":
-		// align to the same weekday as the rule start date
-		targetWeekday := ruleStart.Weekday()
-		d := rangeStart
-		for d.Weekday() != targetWeekday {
-			d = d.AddDate(0, 0, 1)
-		}
-		for !d.After(rangeEnd) {
-			dates = append(dates, d)
-			d = d.AddDate(0, 0, 7)
-			if len(dates) > 53 {
-				break
-			}
-		}
-
-	case "monthly":
-		targetDay := ruleStart.Day()
-		// start from the month of rangeStart
-		y, m, _ := rangeStart.Date()
-		for {
-			candidate := time.Date(y, m, targetDay, 0, 0, 0, 0, time.UTC)
-			// clamp to end of month if day doesn't exist
-			if candidate.Month() != m {
-				candidate = time.Date(y, m+1, 0, 0, 0, 0, 0, time.UTC)
-			}
-			if candidate.After(rangeEnd) {
-				break
-			}
-			if !candidate.Before(rangeStart) {
-				dates = append(dates, candidate)
-			}
-			m++
-			if m > 12 {
-				m = 1
-				y++
-			}
-			if len(dates) > 12 {
-				break
-			}
-		}
+func mapIncomeRowToOccurrence(row sqlc.BudgetIncome) IncomeOccurrence {
+	sourceIncomeID := row.ID.String()
+	var sourceRuleID *string
+	if row.SourceRuleID.Valid {
+		ruleID := uuid.UUID(row.SourceRuleID.Bytes)
+		sourceIncomeID = ruleID.String()
+		s := ruleID.String()
+		sourceRuleID = &s
 	}
 
-	return dates
+	return IncomeOccurrence{
+		ID:             row.ID.String(),
+		SourceIncomeID: sourceIncomeID,
+		SourceRuleID:   sourceRuleID,
+		Amount:         numericToFloat64(row.Amount),
+		Currency:       getCurrency(row.Currency),
+		Date:           dateToString(row.Date),
+		Description:    textToStringPtr(row.Description),
+		RecurringType:  textToStringPtr(row.RecurringType),
+		Status:         row.Status,
+		IsVirtual:      false,
+		IsSkipped:      false,
+	}
 }
 
-// sortOccurrencesByDateDesc sorts occurrences by date descending
-func sortOccurrencesByDateDesc(occurrences []IncomeOccurrence) {
-	for i := 1; i < len(occurrences); i++ {
-		for j := i; j > 0 && occurrences[j].Date > occurrences[j-1].Date; j-- {
-			occurrences[j], occurrences[j-1] = occurrences[j-1], occurrences[j]
-		}
+func nullableSourceRuleUUID(sourceRuleID pgtype.UUID) *uuid.UUID {
+	if !sourceRuleID.Valid {
+		return nil
 	}
+	id := sourceRuleID.Bytes
+	parsed := uuid.UUID(id)
+	return &parsed
 }
