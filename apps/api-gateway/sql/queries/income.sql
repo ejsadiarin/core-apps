@@ -45,6 +45,12 @@ WHERE
     AND (sqlc.narg('end_date')::date IS NULL OR i.date <= sqlc.narg('end_date')::date)
 ORDER BY i.date DESC, i.created_at DESC;
 
+-- name: ExportIncomes :many
+SELECT * FROM budget_incomes
+WHERE user_id = $1
+    AND status = 'posted'
+ORDER BY date ASC, created_at ASC;
+
 -- name: UpdateIncome :one
 UPDATE budget_incomes
 SET

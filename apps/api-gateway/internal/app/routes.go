@@ -121,6 +121,8 @@ func (a *Application) RegisterRoutes() {
 
 			// budget remaining
 			budget.GET("/remaining", a.BudgetHandler.GetBudgetRemaining)
+			budget.GET("/export", a.BudgetHandler.ExportBudgetJSON)
+			budget.POST("/import", a.BudgetHandler.ImportBudgetJSON)
 
 			// stats
 			stats := budget.Group("/stats")

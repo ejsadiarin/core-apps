@@ -171,6 +171,14 @@ WHERE
     AND (sqlc.narg('end_date')::date IS NULL OR e.expense_date <= sqlc.narg('end_date')::date)
 ORDER BY e.expense_date DESC, e.created_at DESC;
 
+-- name: ExportExpenses :many
+SELECT e.*, c.name as category_name
+FROM budget_expenses e
+LEFT JOIN budget_categories c ON e.category_id = c.id
+WHERE e.user_id = $1
+    AND e.status = 'posted'
+ORDER BY e.expense_date ASC, e.created_at ASC;
+
 -- name: UpdateExpense :one
 UPDATE budget_expenses
 SET

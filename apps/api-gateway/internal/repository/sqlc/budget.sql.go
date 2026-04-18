@@ -341,6 +341,73 @@ func (q *Queries) DeleteTag(ctx context.Context, arg DeleteTagParams) error {
 	return err
 }
 
+const exportExpenses = `-- name: ExportExpenses :many
+SELECT e.id, e.description, e.amount, e.currency, e.category_id, e.expense_date, e.created_at, e.updated_at, e.notes, e.user_id, e.recurring_type, e.start_date, e.end_date, e.priority_group_id, e.status, e.source_rule_id, c.name as category_name
+FROM budget_expenses e
+LEFT JOIN budget_categories c ON e.category_id = c.id
+WHERE e.user_id = $1
+    AND e.status = 'posted'
+ORDER BY e.expense_date ASC, e.created_at ASC
+`
+
+type ExportExpensesRow struct {
+	ID              uuid.UUID        `json:"id"`
+	Description     string           `json:"description"`
+	Amount          pgtype.Numeric   `json:"amount"`
+	Currency        pgtype.Text      `json:"currency"`
+	CategoryID      pgtype.UUID      `json:"category_id"`
+	ExpenseDate     pgtype.Date      `json:"expense_date"`
+	CreatedAt       pgtype.Timestamp `json:"created_at"`
+	UpdatedAt       pgtype.Timestamp `json:"updated_at"`
+	Notes           pgtype.Text      `json:"notes"`
+	UserID          uuid.UUID        `json:"user_id"`
+	RecurringType   pgtype.Text      `json:"recurring_type"`
+	StartDate       pgtype.Date      `json:"start_date"`
+	EndDate         pgtype.Date      `json:"end_date"`
+	PriorityGroupID pgtype.UUID      `json:"priority_group_id"`
+	Status          string           `json:"status"`
+	SourceRuleID    pgtype.UUID      `json:"source_rule_id"`
+	CategoryName    pgtype.Text      `json:"category_name"`
+}
+
+func (q *Queries) ExportExpenses(ctx context.Context, userID uuid.UUID) ([]ExportExpensesRow, error) {
+	rows, err := q.db.Query(ctx, exportExpenses, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ExportExpensesRow{}
+	for rows.Next() {
+		var i ExportExpensesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Description,
+			&i.Amount,
+			&i.Currency,
+			&i.CategoryID,
+			&i.ExpenseDate,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Notes,
+			&i.UserID,
+			&i.RecurringType,
+			&i.StartDate,
+			&i.EndDate,
+			&i.PriorityGroupID,
+			&i.Status,
+			&i.SourceRuleID,
+			&i.CategoryName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getAllCategorySpending = `-- name: GetAllCategorySpending :many
 SELECT
     c.id,

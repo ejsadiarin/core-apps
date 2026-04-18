@@ -51,6 +51,8 @@ type Querier interface {
 	DeleteTag(ctx context.Context, arg DeleteTagParams) error
 	DeleteUser(ctx context.Context, id uuid.UUID) error
 	DeleteUserSessions(ctx context.Context, userID uuid.UUID) error
+	ExportExpenses(ctx context.Context, userID uuid.UUID) ([]ExportExpensesRow, error)
+	ExportIncomes(ctx context.Context, userID uuid.UUID) ([]BudgetIncome, error)
 	GetAllCategorySpending(ctx context.Context, arg GetAllCategorySpendingParams) ([]GetAllCategorySpendingRow, error)
 	GetAllOneTimeIncomeToDate(ctx context.Context, arg GetAllOneTimeIncomeToDateParams) (interface{}, error)
 	GetAllRecurringIncomeRules(ctx context.Context, arg GetAllRecurringIncomeRulesParams) ([]BudgetIncome, error)

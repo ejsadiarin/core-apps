@@ -131,6 +131,48 @@ func (q *Queries) DeleteIncome(ctx context.Context, arg DeleteIncomeParams) erro
 	return err
 }
 
+const exportIncomes = `-- name: ExportIncomes :many
+SELECT id, user_id, amount, currency, date, description, recurring_type, start_date, created_at, updated_at, end_date, exclude_from_calculations, status, source_rule_id FROM budget_incomes
+WHERE user_id = $1
+    AND status = 'posted'
+ORDER BY date ASC, created_at ASC
+`
+
+func (q *Queries) ExportIncomes(ctx context.Context, userID uuid.UUID) ([]BudgetIncome, error) {
+	rows, err := q.db.Query(ctx, exportIncomes, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []BudgetIncome{}
+	for rows.Next() {
+		var i BudgetIncome
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Amount,
+			&i.Currency,
+			&i.Date,
+			&i.Description,
+			&i.RecurringType,
+			&i.StartDate,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.EndDate,
+			&i.ExcludeFromCalculations,
+			&i.Status,
+			&i.SourceRuleID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getAllOneTimeIncomeToDate = `-- name: GetAllOneTimeIncomeToDate :one
 SELECT COALESCE(SUM(amount), 0::numeric) as total_amount
 FROM budget_incomes
