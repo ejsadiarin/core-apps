@@ -426,7 +426,7 @@ func calculateMonthlyEquivalent(amount float64, recurringType string) float64 {
 // @Summary Check if an income occurrence has been skipped for a specific date
 // @Tags budget
 // @Param date query string true "Date to check (YYYY-MM-DD)"
-// @Param source_rule_id query string true "Source recurring rule ID"
+// @Param source_rule_id query string false "Source recurring rule ID"
 // @Produce json
 // @Success 200 {boolean} true if skipped, false otherwise
 // @Router /api/budget/incomes/check-skipped [get]
@@ -441,14 +441,27 @@ func (h *Handler) CheckSkippedIncome(c echo.Context) error {
 	if dateStr == "" {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "date is required"})
 	}
-	sourceRuleIDStr := c.QueryParam("source_rule_id")
-	if sourceRuleIDStr == "" {
-		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "source_rule_id is required"})
-	}
-
 	date, err := time.Parse("2006-01-02", dateStr)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid date format. Use YYYY-MM-DD"})
+	}
+
+	ctx := c.Request().Context()
+
+	sourceRuleIDStr := c.QueryParam("source_rule_id")
+	if sourceRuleIDStr == "" {
+		skippedDates, err := h.queries.GetSkippedIncomeDatesForPeriod(ctx, sqlc.GetSkippedIncomeDatesForPeriodParams{
+			UserID:       userID,
+			Date:         pgtype.Date{Time: date, Valid: true},
+			Date_2:       pgtype.Date{Time: date, Valid: true},
+			SourceRuleID: pgtype.UUID{Valid: false},
+		})
+		if err != nil {
+			h.logger.Error().Err(err).Msg("Failed to check skipped income")
+			return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to check skipped income"})
+		}
+
+		return c.JSON(http.StatusOK, isDateInSkippedDates(date, skippedDates))
 	}
 
 	sourceRuleID, err := uuid.Parse(sourceRuleIDStr)
@@ -456,7 +469,7 @@ func (h *Handler) CheckSkippedIncome(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid source_rule_id format"})
 	}
 
-	exists, err := h.queries.CheckSkippedIncome(c.Request().Context(), sqlc.CheckSkippedIncomeParams{
+	exists, err := h.queries.CheckSkippedIncome(ctx, sqlc.CheckSkippedIncomeParams{
 		UserID:       userID,
 		Date:         pgtype.Date{Time: date, Valid: true},
 		SourceRuleID: pgtype.UUID{Bytes: sourceRuleID, Valid: true},
@@ -531,10 +544,7 @@ func (h *Handler) GetIncomeOccurrences(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to get income occurrences"})
 	}
 
-	allOccurrences := make([]IncomeOccurrence, len(rows))
-	for i, row := range rows {
-		allOccurrences[i] = mapIncomeRowToOccurrence(row)
-	}
+	allOccurrences := mapIncomeRowsToOccurrences(rows)
 
 	// paginate
 	total := int64(len(allOccurrences))
@@ -564,6 +574,31 @@ func (h *Handler) GetIncomeOccurrences(c echo.Context) error {
 			HasMore:    hasMore,
 		},
 	})
+}
+
+func mapIncomeRowsToOccurrences(rows []sqlc.BudgetIncome) []IncomeOccurrence {
+	occurrences := make([]IncomeOccurrence, 0, len(rows))
+	for _, row := range rows {
+		if row.ExcludeFromCalculations.Valid && row.ExcludeFromCalculations.Bool {
+			continue
+		}
+		occurrences = append(occurrences, mapIncomeRowToOccurrence(row))
+	}
+	return occurrences
+}
+
+func isDateInSkippedDates(targetDate time.Time, skippedDates []pgtype.Date) bool {
+	for _, skippedDate := range skippedDates {
+		if !skippedDate.Valid {
+			continue
+		}
+		y1, m1, d1 := targetDate.Date()
+		y2, m2, d2 := skippedDate.Time.Date()
+		if y1 == y2 && m1 == m2 && d1 == d2 {
+			return true
+		}
+	}
+	return false
 }
 
 func mapIncomeRowToOccurrence(row sqlc.BudgetIncome) IncomeOccurrence {
