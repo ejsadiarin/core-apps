@@ -2,12 +2,12 @@
 -- +goose Up
 
 ALTER TABLE budget_incomes
-    ADD COLUMN status TEXT NOT NULL DEFAULT 'posted',
-    ADD COLUMN source_rule_id UUID NULL;
+    ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'posted',
+    ADD COLUMN IF NOT EXISTS source_rule_id UUID NULL;
 
 ALTER TABLE budget_expenses
-    ADD COLUMN status TEXT NOT NULL DEFAULT 'posted',
-    ADD COLUMN source_rule_id UUID NULL;
+    ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'posted',
+    ADD COLUMN IF NOT EXISTS source_rule_id UUID NULL;
 
 CREATE OR REPLACE FUNCTION budget_incomes_clear_source_rule_refs()
 RETURNS TRIGGER AS $$
@@ -37,27 +37,91 @@ CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS idx_budget_incomes_id_user_unique
 CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS idx_budget_expenses_id_user_unique
     ON budget_expenses(id, user_id);
 
-ALTER TABLE budget_incomes
-    ADD CONSTRAINT budget_incomes_status_check
-        CHECK (status IN ('pending', 'posted', 'skipped')),
-    ADD CONSTRAINT budget_incomes_source_rule_id_fkey
-        FOREIGN KEY (source_rule_id, user_id) REFERENCES budget_incomes(id, user_id);
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'budget_incomes_status_check'
+          AND conrelid = 'budget_incomes'::regclass
+    ) THEN
+        ALTER TABLE budget_incomes
+            ADD CONSTRAINT budget_incomes_status_check
+                CHECK (status IN ('pending', 'posted', 'skipped'));
+    END IF;
 
-ALTER TABLE budget_expenses
-    ADD CONSTRAINT budget_expenses_status_check
-        CHECK (status IN ('pending', 'posted', 'skipped')),
-    ADD CONSTRAINT budget_expenses_source_rule_id_fkey
-        FOREIGN KEY (source_rule_id, user_id) REFERENCES budget_expenses(id, user_id);
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'budget_incomes_source_rule_id_fkey'
+          AND conrelid = 'budget_incomes'::regclass
+    ) THEN
+        ALTER TABLE budget_incomes
+            ADD CONSTRAINT budget_incomes_source_rule_id_fkey
+                FOREIGN KEY (source_rule_id, user_id) REFERENCES budget_incomes(id, user_id);
+    END IF;
+END;
+$$;
 
-CREATE TRIGGER budget_incomes_clear_source_rule_refs_before_delete
-    BEFORE DELETE ON budget_incomes
-    FOR EACH ROW
-    EXECUTE FUNCTION budget_incomes_clear_source_rule_refs();
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'budget_expenses_status_check'
+          AND conrelid = 'budget_expenses'::regclass
+    ) THEN
+        ALTER TABLE budget_expenses
+            ADD CONSTRAINT budget_expenses_status_check
+                CHECK (status IN ('pending', 'posted', 'skipped'));
+    END IF;
 
-CREATE TRIGGER budget_expenses_clear_source_rule_refs_before_delete
-    BEFORE DELETE ON budget_expenses
-    FOR EACH ROW
-    EXECUTE FUNCTION budget_expenses_clear_source_rule_refs();
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'budget_expenses_source_rule_id_fkey'
+          AND conrelid = 'budget_expenses'::regclass
+    ) THEN
+        ALTER TABLE budget_expenses
+            ADD CONSTRAINT budget_expenses_source_rule_id_fkey
+                FOREIGN KEY (source_rule_id, user_id) REFERENCES budget_expenses(id, user_id);
+    END IF;
+END;
+$$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_trigger
+        WHERE tgname = 'budget_incomes_clear_source_rule_refs_before_delete'
+          AND tgrelid = 'budget_incomes'::regclass
+          AND NOT tgisinternal
+    ) THEN
+        CREATE TRIGGER budget_incomes_clear_source_rule_refs_before_delete
+            BEFORE DELETE ON budget_incomes
+            FOR EACH ROW
+            EXECUTE FUNCTION budget_incomes_clear_source_rule_refs();
+    END IF;
+END;
+$$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_trigger
+        WHERE tgname = 'budget_expenses_clear_source_rule_refs_before_delete'
+          AND tgrelid = 'budget_expenses'::regclass
+          AND NOT tgisinternal
+    ) THEN
+        CREATE TRIGGER budget_expenses_clear_source_rule_refs_before_delete
+            BEFORE DELETE ON budget_expenses
+            FOR EACH ROW
+            EXECUTE FUNCTION budget_expenses_clear_source_rule_refs();
+    END IF;
+END;
+$$;
 
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_budget_incomes_user_source_rule
     ON budget_incomes(user_id, source_rule_id);

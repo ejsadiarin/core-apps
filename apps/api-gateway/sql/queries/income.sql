@@ -83,7 +83,8 @@ WHERE
     (sqlc.narg('user_id')::uuid IS NULL OR user_id = sqlc.narg('user_id'))
     AND recurring_type IS NULL
     AND date <= sqlc.narg('date')::date
-    AND status = 'posted';
+    AND status = 'posted'
+    AND exclude_from_calculations = false;
 
 -- name: GetRecurringIncomeRules :many
 SELECT * FROM budget_incomes
