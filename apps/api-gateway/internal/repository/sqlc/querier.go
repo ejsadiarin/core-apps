@@ -141,6 +141,8 @@ type Querier interface {
 	UpdateService(ctx context.Context, arg UpdateServiceParams) (Service, error)
 	UpdateTag(ctx context.Context, arg UpdateTagParams) (BudgetTag, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
+	UpsertSkippedExpense(ctx context.Context, arg UpsertSkippedExpenseParams) (UpsertSkippedExpenseRow, error)
+	UpsertSkippedIncome(ctx context.Context, arg UpsertSkippedIncomeParams) (UpsertSkippedIncomeRow, error)
 }
 
 var _ Querier = (*Queries)(nil)

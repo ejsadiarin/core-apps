@@ -503,9 +503,67 @@ SELECT EXISTS(
     SELECT 1 FROM budget_expenses
     WHERE user_id = $1
     AND expense_date = $2
-    AND source_rule_id = $3
+    AND (sqlc.narg('source_rule_id')::uuid IS NULL OR source_rule_id = sqlc.narg('source_rule_id')::uuid)
     AND status = 'skipped'
 );
+
+-- name: UpsertSkippedExpense :one
+WITH updated AS (
+    UPDATE budget_expenses AS be
+    SET
+        description = COALESCE(be.description, 'Skipped recurring expense'),
+        amount = 0,
+        currency = COALESCE(NULLIF(be.currency, ''), 'USD'),
+        category_id = NULL,
+        notes = COALESCE(be.notes, ''),
+        recurring_type = NULL,
+        start_date = NULL,
+        end_date = NULL,
+        priority_group_id = NULL,
+        status = 'skipped',
+        source_rule_id = $3,
+        updated_at = NOW()
+    WHERE be.user_id = $1
+        AND be.expense_date = $2
+        AND be.source_rule_id = $3
+    RETURNING *
+), inserted AS (
+    INSERT INTO budget_expenses (
+        user_id,
+        description,
+        amount,
+        currency,
+        category_id,
+        expense_date,
+        notes,
+        recurring_type,
+        start_date,
+        end_date,
+        priority_group_id,
+        status,
+        source_rule_id
+    )
+    SELECT
+        $1,
+        'Skipped recurring expense',
+        0,
+        'USD',
+        NULL,
+        $2,
+        '',
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        'skipped',
+        $3
+    WHERE NOT EXISTS (SELECT 1 FROM updated)
+    RETURNING *
+)
+SELECT * FROM updated
+UNION ALL
+SELECT * FROM inserted
+LIMIT 1;
 
 -- name: GetExpenseRowsForPeriod :many
 SELECT * FROM budget_expenses

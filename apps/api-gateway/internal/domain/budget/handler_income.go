@@ -12,6 +12,11 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+type skipIncomeRequest struct {
+	Date         string    `json:"date" validate:"required,datetime=2006-01-02"`
+	SourceRuleID uuid.UUID `json:"source_rule_id" validate:"required"`
+}
+
 // Incomes
 
 // CreateIncome godoc
@@ -446,33 +451,20 @@ func (h *Handler) CheckSkippedIncome(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid date format. Use YYYY-MM-DD"})
 	}
 
-	ctx := c.Request().Context()
-
+	var sourceRuleID pgtype.UUID
 	sourceRuleIDStr := c.QueryParam("source_rule_id")
-	if sourceRuleIDStr == "" {
-		skippedDates, err := h.queries.GetSkippedIncomeDatesForPeriod(ctx, sqlc.GetSkippedIncomeDatesForPeriodParams{
-			UserID:       userID,
-			Date:         pgtype.Date{Time: date, Valid: true},
-			Date_2:       pgtype.Date{Time: date, Valid: true},
-			SourceRuleID: pgtype.UUID{Valid: false},
-		})
-		if err != nil {
-			h.logger.Error().Err(err).Msg("Failed to check skipped income")
-			return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to check skipped income"})
+	if sourceRuleIDStr != "" {
+		sourceRule, parseErr := uuid.Parse(sourceRuleIDStr)
+		if parseErr != nil {
+			return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid source_rule_id format"})
 		}
-
-		return c.JSON(http.StatusOK, isDateInSkippedDates(date, skippedDates))
+		sourceRuleID = pgtype.UUID{Bytes: sourceRule, Valid: true}
 	}
 
-	sourceRuleID, err := uuid.Parse(sourceRuleIDStr)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid source_rule_id format"})
-	}
-
-	exists, err := h.queries.CheckSkippedIncome(ctx, sqlc.CheckSkippedIncomeParams{
+	exists, err := h.queries.CheckSkippedIncome(c.Request().Context(), sqlc.CheckSkippedIncomeParams{
 		UserID:       userID,
 		Date:         pgtype.Date{Time: date, Valid: true},
-		SourceRuleID: pgtype.UUID{Bytes: sourceRuleID, Valid: true},
+		SourceRuleID: sourceRuleID,
 	})
 	if err != nil {
 		h.logger.Error().Err(err).Msg("Failed to check skipped income")
@@ -480,6 +472,53 @@ func (h *Handler) CheckSkippedIncome(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, exists)
+}
+
+// SkipIncome godoc
+// @Summary Skip an income occurrence for a source recurring rule
+// @Tags budget
+// @Accept json
+// @Produce json
+// @Param skip body skipIncomeRequest true "Skip payload"
+// @Success 200 {object} IncomeResponse
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 403 {object} models.ErrorResponse
+// @Router /api/budget/incomes/skip [post]
+func (h *Handler) SkipIncome(c echo.Context) error {
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return c.JSON(http.StatusForbidden, models.ErrorResponse{Error: "Guest users cannot skip incomes"})
+	}
+
+	req, err := validator.BindAndValidate[skipIncomeRequest](c)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: err.Error()})
+	}
+
+	inc, err := h.queries.UpsertSkippedIncome(c.Request().Context(), sqlc.UpsertSkippedIncomeParams{
+		UserID:       userID,
+		Date:         stringToDate(req.Date),
+		SourceRuleID: pgtype.UUID{Bytes: req.SourceRuleID, Valid: true},
+	})
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to skip income occurrence")
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to skip income occurrence"})
+	}
+
+	return c.JSON(http.StatusOK, IncomeResponse{
+		ID:            inc.ID,
+		Amount:        numericToFloat64(inc.Amount),
+		Currency:      getCurrency(inc.Currency),
+		Date:          dateToString(inc.Date),
+		Description:   textToStringPtr(inc.Description),
+		RecurringType: textToStringPtr(inc.RecurringType),
+		StartDate:     dateToNullableStringPtr(inc.StartDate),
+		EndDate:       dateToNullableStringPtr(inc.EndDate),
+		Status:        inc.Status,
+		SourceRuleID:  nullableSourceRuleUUID(inc.SourceRuleID),
+		CreatedAt:     inc.CreatedAt.Time.Format(time.RFC3339),
+		UpdatedAt:     inc.UpdatedAt.Time.Format(time.RFC3339),
+	})
 }
 
 // GetIncomeOccurrences godoc
