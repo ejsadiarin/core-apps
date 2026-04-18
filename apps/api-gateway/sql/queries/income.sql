@@ -175,6 +175,7 @@ WHERE user_id = $1
     AND date >= $2
     AND date <= $3
     AND status = 'skipped'
+    AND (sqlc.narg('source_rule_id')::uuid IS NULL OR source_rule_id = sqlc.narg('source_rule_id')::uuid)
 ORDER BY date;
 
 -- name: GetExpensesForPeriod :one
