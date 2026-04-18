@@ -478,6 +478,7 @@ SELECT
 FROM budget_expenses
 WHERE user_id = $1
     AND recurring_type IS NOT NULL
+    AND status = 'posted'
     AND start_date <= $2
     AND (end_date IS NULL OR end_date >= CURRENT_DATE)
 ORDER BY 
