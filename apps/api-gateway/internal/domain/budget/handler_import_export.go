@@ -117,13 +117,32 @@ func (h *Handler) ImportBudgetJSON(c echo.Context) error {
 
 	ctx := c.Request().Context()
 
-	existingIncomeRows, err := h.queries.ExportIncomes(ctx, userID)
+	if h.txBeginner == nil {
+		h.logger.Error().Msg("Budget import transaction support is not configured")
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to import budget"})
+	}
+
+	tx, err := h.txBeginner.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.Serializable})
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to begin budget import transaction")
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to import budget"})
+	}
+
+	txQueries := h.queries.WithTx(tx)
+	committed := false
+	defer func() {
+		if !committed {
+			_ = tx.Rollback(ctx)
+		}
+	}()
+
+	existingIncomeRows, err := txQueries.ExportIncomes(ctx, userID)
 	if err != nil {
 		h.logger.Error().Err(err).Msg("Failed to load existing incomes for import")
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to import budget"})
 	}
 
-	existingExpenseRows, err := h.queries.ExportExpenses(ctx, userID)
+	existingExpenseRows, err := txQueries.ExportExpenses(ctx, userID)
 	if err != nil {
 		h.logger.Error().Err(err).Msg("Failed to load existing expenses for import")
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to import budget"})
@@ -199,25 +218,6 @@ func (h *Handler) ImportBudgetJSON(c echo.Context) error {
 			expenseIdx.add(incoming)
 		}
 	}
-
-	if h.txBeginner == nil {
-		h.logger.Error().Msg("Budget import transaction support is not configured")
-		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to import budget"})
-	}
-
-	tx, err := h.txBeginner.BeginTx(ctx, pgx.TxOptions{})
-	if err != nil {
-		h.logger.Error().Err(err).Msg("Failed to begin budget import transaction")
-		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to import budget"})
-	}
-
-	txQueries := h.queries.WithTx(tx)
-	committed := false
-	defer func() {
-		if !committed {
-			_ = tx.Rollback(ctx)
-		}
-	}()
 
 	categoryNameToID := make(map[string]uuid.UUID)
 
@@ -488,19 +488,42 @@ func validateImportPayload(payload BudgetExportPayload) error {
 		if _, err := time.Parse("2006-01-02", income.Date); err != nil {
 			return fmt.Errorf("invalid payload: incomes[%d].date must be YYYY-MM-DD", i)
 		}
+
+		var incomeStartDate *time.Time
 		if income.StartDate != nil {
-			if _, err := time.Parse("2006-01-02", *income.StartDate); err != nil {
+			parsed, err := time.Parse("2006-01-02", *income.StartDate)
+			if err != nil {
 				return fmt.Errorf("invalid payload: incomes[%d].start_date must be YYYY-MM-DD", i)
 			}
+			incomeStartDate = &parsed
 		}
+
+		var incomeEndDate *time.Time
 		if income.EndDate != nil {
-			if _, err := time.Parse("2006-01-02", *income.EndDate); err != nil {
+			parsed, err := time.Parse("2006-01-02", *income.EndDate)
+			if err != nil {
 				return fmt.Errorf("invalid payload: incomes[%d].end_date must be YYYY-MM-DD", i)
 			}
+			incomeEndDate = &parsed
 		}
+
+		if incomeStartDate != nil && incomeEndDate != nil && incomeEndDate.Before(*incomeStartDate) {
+			return fmt.Errorf("invalid payload: incomes[%d].end_date must be on or after start_date", i)
+		}
+
 		if strings.TrimSpace(income.Currency) == "" {
 			return fmt.Errorf("invalid payload: incomes[%d].currency is required", i)
 		}
+		if !isCurrencyCode(income.Currency) {
+			return fmt.Errorf("invalid payload: incomes[%d].currency must be 3-letter code", i)
+		}
+
+		if income.RecurringType != nil && *income.RecurringType != "" {
+			if !isAllowedRecurringType(*income.RecurringType, "daily", "weekly", "monthly") {
+				return fmt.Errorf("invalid payload: incomes[%d].recurring_type must be one of daily, weekly, monthly", i)
+			}
+		}
+
 		if math.IsNaN(income.Amount) || math.IsInf(income.Amount, 0) {
 			return fmt.Errorf("invalid payload: incomes[%d].amount must be finite", i)
 		}
@@ -519,16 +542,38 @@ func validateImportPayload(payload BudgetExportPayload) error {
 		if strings.TrimSpace(expense.Currency) == "" {
 			return fmt.Errorf("invalid payload: expenses[%d].currency is required", i)
 		}
+		if !isCurrencyCode(expense.Currency) {
+			return fmt.Errorf("invalid payload: expenses[%d].currency must be 3-letter code", i)
+		}
+
+		if expense.RecurringType != nil && *expense.RecurringType != "" {
+			if !isAllowedRecurringType(*expense.RecurringType, "daily", "weekly", "monthly", "yearly") {
+				return fmt.Errorf("invalid payload: expenses[%d].recurring_type must be one of daily, weekly, monthly, yearly", i)
+			}
+		}
+
+		var expenseStartDate *time.Time
 		if expense.StartDate != nil {
-			if _, err := time.Parse("2006-01-02", *expense.StartDate); err != nil {
+			parsed, err := time.Parse("2006-01-02", *expense.StartDate)
+			if err != nil {
 				return fmt.Errorf("invalid payload: expenses[%d].start_date must be YYYY-MM-DD", i)
 			}
+			expenseStartDate = &parsed
 		}
+
+		var expenseEndDate *time.Time
 		if expense.EndDate != nil {
-			if _, err := time.Parse("2006-01-02", *expense.EndDate); err != nil {
+			parsed, err := time.Parse("2006-01-02", *expense.EndDate)
+			if err != nil {
 				return fmt.Errorf("invalid payload: expenses[%d].end_date must be YYYY-MM-DD", i)
 			}
+			expenseEndDate = &parsed
 		}
+
+		if expenseStartDate != nil && expenseEndDate != nil && expenseEndDate.Before(*expenseStartDate) {
+			return fmt.Errorf("invalid payload: expenses[%d].end_date must be on or after start_date", i)
+		}
+
 		if expense.PriorityGroupID != nil {
 			if _, err := uuid.Parse(*expense.PriorityGroupID); err != nil {
 				return fmt.Errorf("invalid payload: expenses[%d].priority_group_id must be UUID", i)
@@ -540,4 +585,25 @@ func validateImportPayload(payload BudgetExportPayload) error {
 	}
 
 	return nil
+}
+
+func isAllowedRecurringType(value string, allowed ...string) bool {
+	for _, candidate := range allowed {
+		if value == candidate {
+			return true
+		}
+	}
+	return false
+}
+
+func isCurrencyCode(value string) bool {
+	if len(value) != 3 {
+		return false
+	}
+	for _, r := range value {
+		if (r < 'A' || r > 'Z') && (r < 'a' || r > 'z') {
+			return false
+		}
+	}
+	return true
 }

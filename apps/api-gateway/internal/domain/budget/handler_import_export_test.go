@@ -144,10 +144,12 @@ type stubTxBeginner struct {
 	tx         *stubTx
 	beginErr   error
 	beginCalls int
+	lastTxOpts pgx.TxOptions
 }
 
-func (b *stubTxBeginner) BeginTx(_ context.Context, _ pgx.TxOptions) (pgx.Tx, error) {
+func (b *stubTxBeginner) BeginTx(_ context.Context, txOptions pgx.TxOptions) (pgx.Tx, error) {
 	b.beginCalls++
+	b.lastTxOpts = txOptions
 	if b.beginErr != nil {
 		return nil, b.beginErr
 	}
@@ -163,6 +165,8 @@ type stubTx struct {
 
 	createExpenseErr error
 
+	exportIncomesRows  [][]any
+	exportExpensesRows [][]any
 	listCategoriesRows [][]any
 }
 
@@ -195,6 +199,12 @@ func (t *stubTx) Exec(context.Context, string, ...any) (pgconn.CommandTag, error
 }
 
 func (t *stubTx) Query(_ context.Context, sql string, _ ...any) (pgx.Rows, error) {
+	if strings.HasPrefix(sql, "-- name: ExportIncomes :many") {
+		return &stubRows{rows: t.exportIncomesRows}, nil
+	}
+	if strings.HasPrefix(sql, "-- name: ExportExpenses :many") {
+		return &stubRows{rows: t.exportExpensesRows}, nil
+	}
 	if strings.HasPrefix(sql, "-- name: ListCategories :many") {
 		return &stubRows{rows: t.listCategoriesRows}, nil
 	}
@@ -345,6 +355,8 @@ func TestImportBudgetJSONRollsBackOnMidImportFailure(t *testing.T) {
 
 	tx := &stubTx{
 		createExpenseErr: errors.New("insert failed"),
+		exportIncomesRows: [][]any{},
+		exportExpensesRows: [][]any{},
 		listCategoriesRows: [][]any{{
 			categoryID,
 			"Food",
@@ -356,10 +368,6 @@ func TestImportBudgetJSONRollsBackOnMidImportFailure(t *testing.T) {
 	}
 	txBeginner := &stubTxBeginner{tx: tx}
 	h := NewHandler(queries, &logger, txBeginner)
-
-	// no existing records, so both incoming records are CREATE actions
-	db.exportIncomesRows = [][]any{}
-	db.exportExpensesRows = [][]any{}
 
 	bodyPayload := BudgetExportPayload{
 		Incomes: []ImportIncomeRecord{
@@ -383,6 +391,7 @@ func TestImportBudgetJSONRollsBackOnMidImportFailure(t *testing.T) {
 	require.Equal(t, http.StatusInternalServerError, rec.Code)
 
 	assert.Equal(t, 1, txBeginner.beginCalls)
+	assert.Equal(t, pgx.Serializable, txBeginner.lastTxOpts.IsoLevel)
 	assert.Equal(t, 1, tx.createIncomeCalls)
 	assert.Equal(t, 1, tx.createExpenseCalls)
 	assert.False(t, tx.commitCalled)
@@ -427,6 +436,78 @@ func TestImportBudgetJSONInvalidPayloadReturns400(t *testing.T) {
 	assert.False(t, tx.rollbackCalled)
 }
 
+func TestImportBudgetJSONValidationParityRules(t *testing.T) {
+	e := echo.New()
+	db := &stubDB{}
+	queries := sqlc.New(db)
+	logger := zerolog.Nop()
+
+	tx := &stubTx{}
+	txBeginner := &stubTxBeginner{tx: tx}
+	h := NewHandler(queries, &logger, txBeginner)
+
+	testCases := []struct {
+		name         string
+		payload      BudgetExportPayload
+		errorSnippet string
+	}{
+		{
+			name: "income end before start",
+			payload: BudgetExportPayload{Incomes: []ImportIncomeRecord{{
+				Date:          "2026-04-10",
+				Amount:        100,
+				Currency:      "USD",
+				RecurringType: stringPtr("monthly"),
+				StartDate:     stringPtr("2026-05-01"),
+				EndDate:       stringPtr("2026-04-01"),
+			}}},
+			errorSnippet: "incomes[0].end_date",
+		},
+		{
+			name: "expense recurring type invalid",
+			payload: BudgetExportPayload{Expenses: []ImportExpenseRecord{{
+				ExpenseDate:   "2026-04-10",
+				Description:   "Rent",
+				Amount:        100,
+				Currency:      "USD",
+				RecurringType: stringPtr("hourly"),
+			}}},
+			errorSnippet: "expenses[0].recurring_type",
+		},
+		{
+			name: "currency invalid format",
+			payload: BudgetExportPayload{Incomes: []ImportIncomeRecord{{
+				Date:     "2026-04-10",
+				Amount:   100,
+				Currency: "US1",
+			}}},
+			errorSnippet: "incomes[0].currency",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			bodyBytes, err := json.Marshal(tc.payload)
+			require.NoError(t, err)
+
+			req := httptest.NewRequest(http.MethodPost, "/api/budget/import", bytes.NewReader(bodyBytes))
+			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
+			setAuthenticatedUser(c, uuid.New())
+
+			err = h.ImportBudgetJSON(c)
+			require.NoError(t, err)
+			require.Equal(t, http.StatusBadRequest, rec.Code)
+			assert.Contains(t, rec.Body.String(), tc.errorSnippet)
+		})
+	}
+
+	assert.Equal(t, 0, txBeginner.beginCalls)
+	assert.False(t, tx.commitCalled)
+	assert.False(t, tx.rollbackCalled)
+}
+
 func TestImportBudgetJSONSkipAndConflictOutcomes(t *testing.T) {
 	e := echo.New()
 	db := &stubDB{}
@@ -449,7 +530,7 @@ func TestImportBudgetJSONSkipAndConflictOutcomes(t *testing.T) {
 	txBeginner := &stubTxBeginner{tx: tx}
 	h := NewHandler(queries, &logger, txBeginner)
 
-	db.exportIncomesRows = [][]any{ // existing income on exact date
+	tx.exportIncomesRows = [][]any{ // existing income on exact date
 		{
 			incomeExistingID,
 			userID,
@@ -468,7 +549,7 @@ func TestImportBudgetJSONSkipAndConflictOutcomes(t *testing.T) {
 		},
 	}
 
-	db.exportExpensesRows = [][]any{ // existing expense on exact date
+	tx.exportExpensesRows = [][]any{ // existing expense on exact date
 		{
 			expenseExistingID,
 			"Groceries",
@@ -537,6 +618,7 @@ func TestImportBudgetJSONSkipAndConflictOutcomes(t *testing.T) {
 
 	assert.Equal(t, 0, tx.createIncomeCalls)
 	assert.Equal(t, 0, tx.createExpenseCalls)
+	assert.Equal(t, pgx.Serializable, txBeginner.lastTxOpts.IsoLevel)
 	assert.True(t, tx.commitCalled)
 	assert.False(t, tx.rollbackCalled)
 }
