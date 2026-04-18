@@ -163,9 +163,7 @@ SELECT date FROM budget_incomes
 WHERE user_id = $1
     AND date >= $2
     AND date <= $3
-    AND amount < 0
-    AND recurring_type IS NULL
-    AND description LIKE 'Skipped:%'
+    AND status = 'skipped'
 ORDER BY date;
 
 -- name: GetExpensesForPeriod :one
