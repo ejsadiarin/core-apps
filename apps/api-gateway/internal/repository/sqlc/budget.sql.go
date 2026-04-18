@@ -2238,62 +2238,49 @@ func (q *Queries) UpdateTag(ctx context.Context, arg UpdateTagParams) (BudgetTag
 }
 
 const upsertSkippedExpense = `-- name: UpsertSkippedExpense :one
-WITH updated AS (
-    UPDATE budget_expenses AS be
-    SET
-        description = COALESCE(be.description, 'Skipped recurring expense'),
-        amount = 0,
-        currency = COALESCE(NULLIF(be.currency, ''), 'USD'),
-        category_id = NULL,
-        notes = COALESCE(be.notes, ''),
-        recurring_type = NULL,
-        start_date = NULL,
-        end_date = NULL,
-        priority_group_id = NULL,
-        status = 'skipped',
-        source_rule_id = $3,
-        updated_at = NOW()
-    WHERE be.user_id = $1
-        AND be.expense_date = $2
-        AND be.source_rule_id = $3
-    RETURNING id, description, amount, currency, category_id, expense_date, created_at, updated_at, notes, user_id, recurring_type, start_date, end_date, priority_group_id, status, source_rule_id
-), inserted AS (
-    INSERT INTO budget_expenses (
-        user_id,
-        description,
-        amount,
-        currency,
-        category_id,
-        expense_date,
-        notes,
-        recurring_type,
-        start_date,
-        end_date,
-        priority_group_id,
-        status,
-        source_rule_id
-    )
-    SELECT
-        $1,
-        'Skipped recurring expense',
-        0,
-        'USD',
-        NULL,
-        $2,
-        '',
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        'skipped',
-        $3
-    WHERE NOT EXISTS (SELECT 1 FROM updated)
-    RETURNING id, description, amount, currency, category_id, expense_date, created_at, updated_at, notes, user_id, recurring_type, start_date, end_date, priority_group_id, status, source_rule_id
+INSERT INTO budget_expenses (
+    user_id,
+    description,
+    amount,
+    currency,
+    category_id,
+    expense_date,
+    notes,
+    recurring_type,
+    start_date,
+    end_date,
+    priority_group_id,
+    status,
+    source_rule_id
+) VALUES (
+    $1,
+    'Skipped recurring expense',
+    0,
+    'USD',
+    NULL,
+    $2,
+    '',
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    'skipped',
+    $3
 )
-SELECT id, description, amount, currency, category_id, expense_date, created_at, updated_at, notes, user_id, recurring_type, start_date, end_date, priority_group_id, status, source_rule_id FROM updated
-UNION ALL
-SELECT id, description, amount, currency, category_id, expense_date, created_at, updated_at, notes, user_id, recurring_type, start_date, end_date, priority_group_id, status, source_rule_id FROM inserted
-LIMIT 1
+ON CONFLICT (user_id, expense_date, source_rule_id) WHERE status = 'skipped'
+DO UPDATE SET
+    description = COALESCE(budget_expenses.description, EXCLUDED.description),
+    amount = EXCLUDED.amount,
+    currency = EXCLUDED.currency,
+    category_id = NULL,
+    notes = COALESCE(budget_expenses.notes, EXCLUDED.notes),
+    recurring_type = NULL,
+    start_date = NULL,
+    end_date = NULL,
+    priority_group_id = NULL,
+    status = 'skipped',
+    updated_at = NOW()
+RETURNING id, description, amount, currency, category_id, expense_date, created_at, updated_at, notes, user_id, recurring_type, start_date, end_date, priority_group_id, status, source_rule_id
 `
 
 type UpsertSkippedExpenseParams struct {
@@ -2302,28 +2289,9 @@ type UpsertSkippedExpenseParams struct {
 	SourceRuleID pgtype.UUID `json:"source_rule_id"`
 }
 
-type UpsertSkippedExpenseRow struct {
-	ID              uuid.UUID        `json:"id"`
-	Description     string           `json:"description"`
-	Amount          pgtype.Numeric   `json:"amount"`
-	Currency        pgtype.Text      `json:"currency"`
-	CategoryID      pgtype.UUID      `json:"category_id"`
-	ExpenseDate     pgtype.Date      `json:"expense_date"`
-	CreatedAt       pgtype.Timestamp `json:"created_at"`
-	UpdatedAt       pgtype.Timestamp `json:"updated_at"`
-	Notes           pgtype.Text      `json:"notes"`
-	UserID          uuid.UUID        `json:"user_id"`
-	RecurringType   pgtype.Text      `json:"recurring_type"`
-	StartDate       pgtype.Date      `json:"start_date"`
-	EndDate         pgtype.Date      `json:"end_date"`
-	PriorityGroupID pgtype.UUID      `json:"priority_group_id"`
-	Status          string           `json:"status"`
-	SourceRuleID    pgtype.UUID      `json:"source_rule_id"`
-}
-
-func (q *Queries) UpsertSkippedExpense(ctx context.Context, arg UpsertSkippedExpenseParams) (UpsertSkippedExpenseRow, error) {
+func (q *Queries) UpsertSkippedExpense(ctx context.Context, arg UpsertSkippedExpenseParams) (BudgetExpense, error) {
 	row := q.db.QueryRow(ctx, upsertSkippedExpense, arg.UserID, arg.ExpenseDate, arg.SourceRuleID)
-	var i UpsertSkippedExpenseRow
+	var i BudgetExpense
 	err := row.Scan(
 		&i.ID,
 		&i.Description,

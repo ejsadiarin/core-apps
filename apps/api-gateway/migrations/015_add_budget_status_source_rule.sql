@@ -135,11 +135,11 @@ CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_budget_incomes_user_status_date
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_budget_expenses_user_status_expense_date
     ON budget_expenses(user_id, status, expense_date DESC);
 
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_budget_incomes_skip_check
+CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS idx_budget_incomes_skip_check
     ON budget_incomes(user_id, date, source_rule_id)
     WHERE status = 'skipped';
 
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_budget_expenses_skip_check
+CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS idx_budget_expenses_skip_check
     ON budget_expenses(user_id, expense_date, source_rule_id)
     WHERE status = 'skipped';
 

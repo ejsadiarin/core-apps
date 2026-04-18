@@ -102,6 +102,7 @@ func (a *Application) RegisterRoutes() {
 			// expenses
 			expenses := budget.Group("/expenses")
 			expenses.POST("", a.BudgetHandler.CreateExpense)
+			expenses.POST("/skip", a.BudgetHandler.SkipExpense)
 			expenses.GET("", a.BudgetHandler.ListExpenses)
 			expenses.GET("/search", a.BudgetHandler.SearchExpenses)
 			expenses.GET("/check-skipped", a.BudgetHandler.CheckSkippedExpense)
@@ -112,6 +113,7 @@ func (a *Application) RegisterRoutes() {
 			// incomes
 			incomes := budget.Group("/incomes")
 			incomes.POST("", a.BudgetHandler.CreateIncome)
+			incomes.POST("/skip", a.BudgetHandler.SkipIncome)
 			incomes.GET("", a.BudgetHandler.ListIncomes)
 			incomes.GET("/check-skipped", a.BudgetHandler.CheckSkippedIncome)
 			incomes.GET("/occurrences", a.BudgetHandler.GetIncomeOccurrences)

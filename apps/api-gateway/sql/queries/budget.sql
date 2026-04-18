@@ -508,62 +508,49 @@ SELECT EXISTS(
 );
 
 -- name: UpsertSkippedExpense :one
-WITH updated AS (
-    UPDATE budget_expenses AS be
-    SET
-        description = COALESCE(be.description, 'Skipped recurring expense'),
-        amount = 0,
-        currency = COALESCE(NULLIF(be.currency, ''), 'USD'),
-        category_id = NULL,
-        notes = COALESCE(be.notes, ''),
-        recurring_type = NULL,
-        start_date = NULL,
-        end_date = NULL,
-        priority_group_id = NULL,
-        status = 'skipped',
-        source_rule_id = $3,
-        updated_at = NOW()
-    WHERE be.user_id = $1
-        AND be.expense_date = $2
-        AND be.source_rule_id = $3
-    RETURNING *
-), inserted AS (
-    INSERT INTO budget_expenses (
-        user_id,
-        description,
-        amount,
-        currency,
-        category_id,
-        expense_date,
-        notes,
-        recurring_type,
-        start_date,
-        end_date,
-        priority_group_id,
-        status,
-        source_rule_id
-    )
-    SELECT
-        $1,
-        'Skipped recurring expense',
-        0,
-        'USD',
-        NULL,
-        $2,
-        '',
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        'skipped',
-        $3
-    WHERE NOT EXISTS (SELECT 1 FROM updated)
-    RETURNING *
+INSERT INTO budget_expenses (
+    user_id,
+    description,
+    amount,
+    currency,
+    category_id,
+    expense_date,
+    notes,
+    recurring_type,
+    start_date,
+    end_date,
+    priority_group_id,
+    status,
+    source_rule_id
+) VALUES (
+    $1,
+    'Skipped recurring expense',
+    0,
+    'USD',
+    NULL,
+    $2,
+    '',
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    'skipped',
+    $3
 )
-SELECT * FROM updated
-UNION ALL
-SELECT * FROM inserted
-LIMIT 1;
+ON CONFLICT (user_id, expense_date, source_rule_id) WHERE status = 'skipped'
+DO UPDATE SET
+    description = COALESCE(budget_expenses.description, EXCLUDED.description),
+    amount = EXCLUDED.amount,
+    currency = EXCLUDED.currency,
+    category_id = NULL,
+    notes = COALESCE(budget_expenses.notes, EXCLUDED.notes),
+    recurring_type = NULL,
+    start_date = NULL,
+    end_date = NULL,
+    priority_group_id = NULL,
+    status = 'skipped',
+    updated_at = NOW()
+RETURNING *;
 
 -- name: GetExpenseRowsForPeriod :many
 SELECT * FROM budget_expenses

@@ -868,56 +868,43 @@ func (q *Queries) UpdateIncome(ctx context.Context, arg UpdateIncomeParams) (Bud
 }
 
 const upsertSkippedIncome = `-- name: UpsertSkippedIncome :one
-WITH updated AS (
-    UPDATE budget_incomes AS bi
-    SET
-        amount = 0,
-        currency = COALESCE(NULLIF(bi.currency, ''), 'USD'),
-        description = COALESCE(bi.description, 'Skipped recurring income'),
-        recurring_type = NULL,
-        start_date = NULL,
-        end_date = NULL,
-        status = 'skipped',
-        source_rule_id = $3,
-        updated_at = NOW(),
-        exclude_from_calculations = true
-    WHERE bi.user_id = $1
-        AND bi.date = $2
-        AND bi.source_rule_id = $3
-    RETURNING id, user_id, amount, currency, date, description, recurring_type, start_date, created_at, updated_at, end_date, exclude_from_calculations, status, source_rule_id
-), inserted AS (
-    INSERT INTO budget_incomes (
-        user_id,
-        amount,
-        currency,
-        date,
-        description,
-        recurring_type,
-        start_date,
-        end_date,
-        status,
-        source_rule_id,
-        exclude_from_calculations
-    )
-    SELECT
-        $1,
-        0,
-        'USD',
-        $2,
-        'Skipped recurring income',
-        NULL,
-        NULL,
-        NULL,
-        'skipped',
-        $3,
-        true
-    WHERE NOT EXISTS (SELECT 1 FROM updated)
-    RETURNING id, user_id, amount, currency, date, description, recurring_type, start_date, created_at, updated_at, end_date, exclude_from_calculations, status, source_rule_id
+INSERT INTO budget_incomes (
+    user_id,
+    amount,
+    currency,
+    date,
+    description,
+    recurring_type,
+    start_date,
+    end_date,
+    status,
+    source_rule_id,
+    exclude_from_calculations
+) VALUES (
+    $1,
+    0,
+    'USD',
+    $2,
+    'Skipped recurring income',
+    NULL,
+    NULL,
+    NULL,
+    'skipped',
+    $3,
+    true
 )
-SELECT id, user_id, amount, currency, date, description, recurring_type, start_date, created_at, updated_at, end_date, exclude_from_calculations, status, source_rule_id FROM updated
-UNION ALL
-SELECT id, user_id, amount, currency, date, description, recurring_type, start_date, created_at, updated_at, end_date, exclude_from_calculations, status, source_rule_id FROM inserted
-LIMIT 1
+ON CONFLICT (user_id, date, source_rule_id) WHERE status = 'skipped'
+DO UPDATE SET
+    amount = EXCLUDED.amount,
+    currency = EXCLUDED.currency,
+    description = COALESCE(budget_incomes.description, EXCLUDED.description),
+    recurring_type = NULL,
+    start_date = NULL,
+    end_date = NULL,
+    status = 'skipped',
+    exclude_from_calculations = true,
+    updated_at = NOW()
+RETURNING id, user_id, amount, currency, date, description, recurring_type, start_date, created_at, updated_at, end_date, exclude_from_calculations, status, source_rule_id
 `
 
 type UpsertSkippedIncomeParams struct {
@@ -926,26 +913,9 @@ type UpsertSkippedIncomeParams struct {
 	SourceRuleID pgtype.UUID `json:"source_rule_id"`
 }
 
-type UpsertSkippedIncomeRow struct {
-	ID                      uuid.UUID        `json:"id"`
-	UserID                  uuid.UUID        `json:"user_id"`
-	Amount                  pgtype.Numeric   `json:"amount"`
-	Currency                pgtype.Text      `json:"currency"`
-	Date                    pgtype.Date      `json:"date"`
-	Description             pgtype.Text      `json:"description"`
-	RecurringType           pgtype.Text      `json:"recurring_type"`
-	StartDate               pgtype.Date      `json:"start_date"`
-	CreatedAt               pgtype.Timestamp `json:"created_at"`
-	UpdatedAt               pgtype.Timestamp `json:"updated_at"`
-	EndDate                 pgtype.Date      `json:"end_date"`
-	ExcludeFromCalculations pgtype.Bool      `json:"exclude_from_calculations"`
-	Status                  string           `json:"status"`
-	SourceRuleID            pgtype.UUID      `json:"source_rule_id"`
-}
-
-func (q *Queries) UpsertSkippedIncome(ctx context.Context, arg UpsertSkippedIncomeParams) (UpsertSkippedIncomeRow, error) {
+func (q *Queries) UpsertSkippedIncome(ctx context.Context, arg UpsertSkippedIncomeParams) (BudgetIncome, error) {
 	row := q.db.QueryRow(ctx, upsertSkippedIncome, arg.UserID, arg.Date, arg.SourceRuleID)
-	var i UpsertSkippedIncomeRow
+	var i BudgetIncome
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,

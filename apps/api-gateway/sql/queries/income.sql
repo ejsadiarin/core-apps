@@ -159,56 +159,43 @@ SELECT EXISTS(
 );
 
 -- name: UpsertSkippedIncome :one
-WITH updated AS (
-    UPDATE budget_incomes AS bi
-    SET
-        amount = 0,
-        currency = COALESCE(NULLIF(bi.currency, ''), 'USD'),
-        description = COALESCE(bi.description, 'Skipped recurring income'),
-        recurring_type = NULL,
-        start_date = NULL,
-        end_date = NULL,
-        status = 'skipped',
-        source_rule_id = $3,
-        updated_at = NOW(),
-        exclude_from_calculations = true
-    WHERE bi.user_id = $1
-        AND bi.date = $2
-        AND bi.source_rule_id = $3
-    RETURNING *
-), inserted AS (
-    INSERT INTO budget_incomes (
-        user_id,
-        amount,
-        currency,
-        date,
-        description,
-        recurring_type,
-        start_date,
-        end_date,
-        status,
-        source_rule_id,
-        exclude_from_calculations
-    )
-    SELECT
-        $1,
-        0,
-        'USD',
-        $2,
-        'Skipped recurring income',
-        NULL,
-        NULL,
-        NULL,
-        'skipped',
-        $3,
-        true
-    WHERE NOT EXISTS (SELECT 1 FROM updated)
-    RETURNING *
+INSERT INTO budget_incomes (
+    user_id,
+    amount,
+    currency,
+    date,
+    description,
+    recurring_type,
+    start_date,
+    end_date,
+    status,
+    source_rule_id,
+    exclude_from_calculations
+) VALUES (
+    $1,
+    0,
+    'USD',
+    $2,
+    'Skipped recurring income',
+    NULL,
+    NULL,
+    NULL,
+    'skipped',
+    $3,
+    true
 )
-SELECT * FROM updated
-UNION ALL
-SELECT * FROM inserted
-LIMIT 1;
+ON CONFLICT (user_id, date, source_rule_id) WHERE status = 'skipped'
+DO UPDATE SET
+    amount = EXCLUDED.amount,
+    currency = EXCLUDED.currency,
+    description = COALESCE(budget_incomes.description, EXCLUDED.description),
+    recurring_type = NULL,
+    start_date = NULL,
+    end_date = NULL,
+    status = 'skipped',
+    exclude_from_calculations = true,
+    updated_at = NOW()
+RETURNING *;
 
 -- name: GetIncomeRowsForPeriod :many
 SELECT * FROM budget_incomes
