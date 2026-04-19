@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { useCreateExpense } from '@/hooks/use-budget';
+import { useSkipExpense } from '@/hooks/use-budget';
 import { SkipForward, AlertTriangle, AlertCircle, Loader2 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { useToast } from '@/components/ui/toast';
@@ -21,7 +21,7 @@ interface SkipExpenseDialogProps {
 }
 
 export function SkipExpenseDialog({ expense, open, onOpenChange }: SkipExpenseDialogProps) {
-  const createExpense = useCreateExpense();
+  const skipExpense = useSkipExpense();
   const { showToast } = useToast();
   const [skipDate, setSkipDate] = useState('');
   const [reason, setReason] = useState('');
@@ -60,14 +60,9 @@ export function SkipExpenseDialog({ expense, open, onOpenChange }: SkipExpenseDi
     if (!expense || alreadySkipped) return;
 
     try {
-      await createExpense.mutateAsync({
-        amount: -expense.amount,
-        currency: expense.currency,
+      await skipExpense.mutateAsync({
+        source_rule_id: expense.id,
         expense_date: skipDate,
-        description: expense.description
-          ? `Skipped: ${expense.description}`
-          : 'Skipped expense',
-        notes: reason ? `Skip reason: ${reason}` : undefined,
       });
       showToast(
         `Skipped ${expense.currency} ${expense.amount.toFixed(2)} for ${format(parseISO(skipDate), 'MMM d, yyyy')}`,
@@ -94,7 +89,7 @@ export function SkipExpenseDialog({ expense, open, onOpenChange }: SkipExpenseDi
             Skip Recurring Expense
           </DialogTitle>
           <DialogDescription>
-            Skip one occurrence of your recurring expense. This will create a negative expense entry.
+            Skip one occurrence of your recurring expense.
           </DialogDescription>
         </DialogHeader>
 
@@ -155,7 +150,7 @@ export function SkipExpenseDialog({ expense, open, onOpenChange }: SkipExpenseDi
           <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-400">
             <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
             <p className="text-xs">
-              This will create a negative expense entry. You can delete it later to undo the skip.
+              This marks the selected date as skipped for the recurring rule.
             </p>
           </div>
         </div>
@@ -167,9 +162,9 @@ export function SkipExpenseDialog({ expense, open, onOpenChange }: SkipExpenseDi
           <Button
             variant="destructive"
             onClick={handleSkip}
-            disabled={createExpense.isPending || !skipDate || alreadySkipped || isChecking}
+            disabled={skipExpense.isPending || !skipDate || alreadySkipped || isChecking}
           >
-            {createExpense.isPending ? 'Skipping...' : 'Skip Expense'}
+            {skipExpense.isPending ? 'Skipping...' : 'Skip Expense'}
           </Button>
         </DialogFooter>
       </DialogContent>
