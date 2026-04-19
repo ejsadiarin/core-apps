@@ -26,11 +26,13 @@ const (
 type incomeMatchIndex struct {
 	byDate            map[string][]ImportIncomeRecord
 	byDateDescription map[string][]ImportIncomeRecord
+	byID              map[string]ImportIncomeRecord
 }
 
 type expenseMatchIndex struct {
 	byDate            map[string][]ImportExpenseRecord
 	byDateDescription map[string][]ImportExpenseRecord
+	byID              map[string]ImportExpenseRecord
 }
 
 type incomeImportDecision struct {
@@ -52,9 +54,16 @@ type expenseImportDecision struct {
 // @Success 200 {object} BudgetExportPayload
 // @Router /api/budget/export [get]
 func (h *Handler) ExportBudgetJSON(c echo.Context) error {
-	userID, err := h.getUserID(c)
+	userID, err := h.requireUser(c)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to get user context"})
+		if httpErr, ok := err.(*echo.HTTPError); ok {
+			msg, ok := httpErr.Message.(string)
+			if !ok || msg == "" {
+				msg = "Failed authorization"
+			}
+			return c.JSON(httpErr.Code, models.ErrorResponse{Error: msg})
+		}
+		return c.JSON(http.StatusForbidden, models.ErrorResponse{Error: "Guest users cannot export budget data"})
 	}
 
 	ctx := c.Request().Context()
@@ -379,6 +388,7 @@ func newIncomeMatchIndex(existing []ImportIncomeRecord) *incomeMatchIndex {
 	idx := &incomeMatchIndex{
 		byDate:            make(map[string][]ImportIncomeRecord, len(existing)),
 		byDateDescription: make(map[string][]ImportIncomeRecord, len(existing)),
+		byID:              make(map[string]ImportIncomeRecord, len(existing)),
 	}
 	for _, item := range existing {
 		idx.add(item)
@@ -389,12 +399,16 @@ func newIncomeMatchIndex(existing []ImportIncomeRecord) *incomeMatchIndex {
 func (i *incomeMatchIndex) add(item ImportIncomeRecord) {
 	i.byDate[item.Date] = append(i.byDate[item.Date], item)
 	i.byDateDescription[incomeDateDescriptionKey(item)] = append(i.byDateDescription[incomeDateDescriptionKey(item)], item)
+	if item.ID != "" {
+		i.byID[item.ID] = item
+	}
 }
 
 func newExpenseMatchIndex(existing []ImportExpenseRecord) *expenseMatchIndex {
 	idx := &expenseMatchIndex{
 		byDate:            make(map[string][]ImportExpenseRecord, len(existing)),
 		byDateDescription: make(map[string][]ImportExpenseRecord, len(existing)),
+		byID:              make(map[string]ImportExpenseRecord, len(existing)),
 	}
 	for _, item := range existing {
 		idx.add(item)
@@ -405,6 +419,9 @@ func newExpenseMatchIndex(existing []ImportExpenseRecord) *expenseMatchIndex {
 func (e *expenseMatchIndex) add(item ImportExpenseRecord) {
 	e.byDate[item.ExpenseDate] = append(e.byDate[item.ExpenseDate], item)
 	e.byDateDescription[expenseDateDescriptionKey(item)] = append(e.byDateDescription[expenseDateDescriptionKey(item)], item)
+	if item.ID != "" {
+		e.byID[item.ID] = item
+	}
 }
 
 func incomeDateDescriptionKey(in ImportIncomeRecord) string {
@@ -416,6 +433,34 @@ func expenseDateDescriptionKey(in ImportExpenseRecord) string {
 }
 
 func matchImportedIncomeIndexed(incoming ImportIncomeRecord, idx *incomeMatchIndex) ImportMatchResult {
+	if incoming.ID != "" {
+		if candidate, ok := idx.byID[incoming.ID]; ok {
+			id := candidate.ID
+			if id == "" {
+				id = incoming.ID
+			}
+
+			if candidate.Description == incoming.Description &&
+				candidate.Currency == incoming.Currency &&
+				amountsEqual(candidate.Amount, incoming.Amount) {
+				return ImportMatchResult{Action: ImportMergeActionSkipExisting, MatchedExistingID: &id}
+			}
+
+			return ImportMatchResult{
+				Action:            ImportMergeActionConflict,
+				MatchedExistingID: &id,
+				Conflict: &ImportConflictDetail{
+					Entity:      "income",
+					Date:        incoming.Date,
+					ExistingID:  id,
+					Incoming:    incoming,
+					Existing:    candidate,
+					Differences: incomeDifferences(incoming, candidate),
+				},
+			}
+		}
+	}
+
 	sameDate := idx.byDate[incoming.Date]
 	if len(sameDate) == 0 {
 		return ImportMatchResult{Action: ImportMergeActionCreate}
@@ -453,6 +498,35 @@ func matchImportedIncomeIndexed(incoming ImportIncomeRecord, idx *incomeMatchInd
 }
 
 func matchImportedExpenseIndexed(incoming ImportExpenseRecord, idx *expenseMatchIndex) ImportMatchResult {
+	if incoming.ID != "" {
+		if candidate, ok := idx.byID[incoming.ID]; ok {
+			id := candidate.ID
+			if id == "" {
+				id = incoming.ID
+			}
+
+			if candidate.Description == incoming.Description &&
+				candidate.Currency == incoming.Currency &&
+				candidate.CategoryName == incoming.CategoryName &&
+				amountsEqual(candidate.Amount, incoming.Amount) {
+				return ImportMatchResult{Action: ImportMergeActionSkipExisting, MatchedExistingID: &id}
+			}
+
+			return ImportMatchResult{
+				Action:            ImportMergeActionConflict,
+				MatchedExistingID: &id,
+				Conflict: &ImportConflictDetail{
+					Entity:      "expense",
+					Date:        incoming.ExpenseDate,
+					ExistingID:  id,
+					Incoming:    incoming,
+					Existing:    candidate,
+					Differences: expenseDifferences(incoming, candidate),
+				},
+			}
+		}
+	}
+
 	sameDate := idx.byDate[incoming.ExpenseDate]
 	if len(sameDate) == 0 {
 		return ImportMatchResult{Action: ImportMergeActionCreate}

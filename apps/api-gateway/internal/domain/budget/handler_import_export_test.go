@@ -317,6 +317,7 @@ func TestExportBudgetJSONReturnsExpectedStructure(t *testing.T) {
 		pgtype.Date{Valid: false},
 		pgtype.Date{Valid: false},
 		pgtype.UUID{Bytes: priorityID, Valid: true},
+		pgtype.Bool{Bool: false, Valid: true},
 		"posted",
 		pgtype.UUID{Valid: false},
 		pgtype.Text{String: "Housing", Valid: true},
@@ -342,6 +343,41 @@ func TestExportBudgetJSONReturnsExpectedStructure(t *testing.T) {
 	assert.Equal(t, incomeID.String(), payload.Incomes[0].ID)
 	assert.Equal(t, expenseID.String(), payload.Expenses[0].ID)
 	assert.Equal(t, priorityID.String(), *payload.Expenses[0].PriorityGroupID)
+}
+
+func TestExportBudgetJSONRequiresAuthenticatedUser(t *testing.T) {
+	e := echo.New()
+	db := &stubDB{}
+	queries := sqlc.New(db)
+	logger := zerolog.Nop()
+	h := NewHandler(queries, &logger)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/budget/export", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	err := h.ExportBudgetJSON(c)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusUnauthorized, rec.Code)
+	assert.Contains(t, rec.Body.String(), "Authentication required")
+}
+
+func TestExportBudgetJSONRejectsGuestUser(t *testing.T) {
+	e := echo.New()
+	db := &stubDB{}
+	queries := sqlc.New(db)
+	logger := zerolog.Nop()
+	h := NewHandler(queries, &logger)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/budget/export", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	setGuestUser(c)
+
+	err := h.ExportBudgetJSON(c)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusForbidden, rec.Code)
+	assert.Contains(t, rec.Body.String(), "Guest users cannot modify data")
 }
 
 func TestImportBudgetJSONRollsBackOnMidImportFailure(t *testing.T) {
@@ -565,6 +601,7 @@ func TestImportBudgetJSONSkipAndConflictOutcomes(t *testing.T) {
 			pgtype.Date{Valid: false},
 			pgtype.Date{Valid: false},
 			pgtype.UUID{Valid: false},
+			pgtype.Bool{Bool: false, Valid: true},
 			"posted",
 			pgtype.UUID{Valid: false},
 			pgtype.Text{String: "Food", Valid: true},
@@ -573,12 +610,12 @@ func TestImportBudgetJSONSkipAndConflictOutcomes(t *testing.T) {
 
 	bodyPayload := BudgetExportPayload{
 		Incomes: []ImportIncomeRecord{
-			{Date: "2026-05-01", Description: "Salary", Amount: 1000.0, Currency: "USD"}, // skip
-			{Date: "2026-05-01", Description: "Salary", Amount: 1200.0, Currency: "USD"}, // conflict
+			{ID: incomeExistingID.String(), Date: "2026-05-03", Description: "Salary", Amount: 1000.0, Currency: "USD"}, // skip via ID
+			{ID: incomeExistingID.String(), Date: "2026-05-04", Description: "Salary", Amount: 1200.0, Currency: "USD"}, // conflict via ID
 		},
 		Expenses: []ImportExpenseRecord{
-			{ExpenseDate: "2026-05-02", Description: "Groceries", Amount: 25.0, Currency: "USD", CategoryName: "Food"}, // skip
-			{ExpenseDate: "2026-05-02", Description: "Groceries", Amount: 30.0, Currency: "USD", CategoryName: "Food"}, // conflict
+			{ID: expenseExistingID.String(), ExpenseDate: "2026-05-05", Description: "Groceries", Amount: 25.0, Currency: "USD", CategoryName: "Food"}, // skip via ID
+			{ID: expenseExistingID.String(), ExpenseDate: "2026-05-06", Description: "Groceries", Amount: 30.0, Currency: "USD", CategoryName: "Food"}, // conflict via ID
 		},
 	}
 	bodyBytes, err := json.Marshal(bodyPayload)

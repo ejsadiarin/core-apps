@@ -119,6 +119,7 @@ func (d *skipStatusDB) QueryRow(_ context.Context, sql string, args ...interface
 			pgtype.Date{Valid: false},
 			pgtype.Date{Valid: false},
 			pgtype.UUID{Valid: false},
+			pgtype.Bool{Bool: false, Valid: true},
 			"skipped",
 			pgtype.UUID{Bytes: d.expenseRuleID, Valid: true},
 		}}

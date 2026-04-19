@@ -9,6 +9,38 @@ func amountsEqual(a, b float64) bool {
 }
 
 func MatchImportedIncome(incoming ImportIncomeRecord, existing []ImportIncomeRecord) ImportMatchResult {
+	if incoming.ID != "" {
+		for _, candidate := range existing {
+			if candidate.ID != incoming.ID {
+				continue
+			}
+
+			id := candidate.ID
+			if id == "" {
+				id = incoming.ID
+			}
+
+			if candidate.Description == incoming.Description &&
+				amountsEqual(candidate.Amount, incoming.Amount) &&
+				candidate.Currency == incoming.Currency {
+				return ImportMatchResult{Action: ImportMergeActionSkipExisting, MatchedExistingID: &id}
+			}
+
+			return ImportMatchResult{
+				Action:            ImportMergeActionConflict,
+				MatchedExistingID: &id,
+				Conflict: &ImportConflictDetail{
+					Entity:      "income",
+					Date:        incoming.Date,
+					ExistingID:  id,
+					Incoming:    incoming,
+					Existing:    candidate,
+					Differences: incomeDifferences(incoming, candidate),
+				},
+			}
+		}
+	}
+
 	sameDate := make([]ImportIncomeRecord, 0)
 	for _, candidate := range existing {
 		if candidate.Date == incoming.Date {
@@ -56,6 +88,39 @@ func MatchImportedIncome(incoming ImportIncomeRecord, existing []ImportIncomeRec
 }
 
 func MatchImportedExpense(incoming ImportExpenseRecord, existing []ImportExpenseRecord) ImportMatchResult {
+	if incoming.ID != "" {
+		for _, candidate := range existing {
+			if candidate.ID != incoming.ID {
+				continue
+			}
+
+			id := candidate.ID
+			if id == "" {
+				id = incoming.ID
+			}
+
+			if candidate.Description == incoming.Description &&
+				amountsEqual(candidate.Amount, incoming.Amount) &&
+				candidate.Currency == incoming.Currency &&
+				candidate.CategoryName == incoming.CategoryName {
+				return ImportMatchResult{Action: ImportMergeActionSkipExisting, MatchedExistingID: &id}
+			}
+
+			return ImportMatchResult{
+				Action:            ImportMergeActionConflict,
+				MatchedExistingID: &id,
+				Conflict: &ImportConflictDetail{
+					Entity:      "expense",
+					Date:        incoming.ExpenseDate,
+					ExistingID:  id,
+					Incoming:    incoming,
+					Existing:    candidate,
+					Differences: expenseDifferences(incoming, candidate),
+				},
+			}
+		}
+	}
+
 	sameDate := make([]ImportExpenseRecord, 0)
 	for _, candidate := range existing {
 		if candidate.ExpenseDate == incoming.ExpenseDate {

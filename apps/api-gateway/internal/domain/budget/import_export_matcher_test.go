@@ -112,6 +112,59 @@ func TestMatchImportedIncome(t *testing.T) {
 		assert.Equal(t, "income-currency", result.Conflict.ExistingID)
 		assert.True(t, hasDifferenceField(result.Conflict.Differences, "currency"))
 	})
+
+	t.Run("skip existing when id matches", func(t *testing.T) {
+		incoming := ImportIncomeRecord{
+			ID:          "income-id-1",
+			Date:        "2026-04-02",
+			Description: "Salary",
+			Amount:      4200.00,
+			Currency:    "USD",
+		}
+		existing := []ImportIncomeRecord{
+			{
+				ID:          "income-id-1",
+				Date:        "2026-04-01",
+				Description: "Salary",
+				Amount:      4200.00,
+				Currency:    "USD",
+			},
+		}
+
+		result := MatchImportedIncome(incoming, existing)
+
+		assert.Equal(t, ImportMergeActionSkipExisting, result.Action)
+		require.NotNil(t, result.MatchedExistingID)
+		assert.Equal(t, "income-id-1", *result.MatchedExistingID)
+		assert.Nil(t, result.Conflict)
+	})
+
+	t.Run("conflict when id matches but fields differ", func(t *testing.T) {
+		incoming := ImportIncomeRecord{
+			ID:          "income-id-2",
+			Date:        "2026-04-02",
+			Description: "Salary",
+			Amount:      4300.00,
+			Currency:    "USD",
+		}
+		existing := []ImportIncomeRecord{
+			{
+				ID:          "income-id-2",
+				Date:        "2026-04-01",
+				Description: "Salary",
+				Amount:      4200.00,
+				Currency:    "USD",
+			},
+		}
+
+		result := MatchImportedIncome(incoming, existing)
+
+		assert.Equal(t, ImportMergeActionConflict, result.Action)
+		require.NotNil(t, result.MatchedExistingID)
+		assert.Equal(t, "income-id-2", *result.MatchedExistingID)
+		require.NotNil(t, result.Conflict)
+		assert.True(t, hasDifferenceField(result.Conflict.Differences, "amount"))
+	})
 }
 
 func TestMatchImportedExpense(t *testing.T) {
@@ -245,5 +298,62 @@ func TestMatchImportedExpense(t *testing.T) {
 		require.NotNil(t, result.Conflict)
 		assert.Equal(t, "expense-category", result.Conflict.ExistingID)
 		assert.True(t, hasDifferenceField(result.Conflict.Differences, "category_name"))
+	})
+
+	t.Run("skip existing when id matches", func(t *testing.T) {
+		incoming := ImportExpenseRecord{
+			ID:           "expense-id-1",
+			ExpenseDate:  "2026-04-02",
+			Description:  "Rent",
+			Amount:       1500.00,
+			Currency:     "USD",
+			CategoryName: "Housing",
+		}
+		existing := []ImportExpenseRecord{
+			{
+				ID:           "expense-id-1",
+				ExpenseDate:  "2026-04-01",
+				Description:  "Rent",
+				Amount:       1500.00,
+				Currency:     "USD",
+				CategoryName: "Housing",
+			},
+		}
+
+		result := MatchImportedExpense(incoming, existing)
+
+		assert.Equal(t, ImportMergeActionSkipExisting, result.Action)
+		require.NotNil(t, result.MatchedExistingID)
+		assert.Equal(t, "expense-id-1", *result.MatchedExistingID)
+		assert.Nil(t, result.Conflict)
+	})
+
+	t.Run("conflict when id matches but fields differ", func(t *testing.T) {
+		incoming := ImportExpenseRecord{
+			ID:           "expense-id-2",
+			ExpenseDate:  "2026-04-02",
+			Description:  "Rent",
+			Amount:       1600.00,
+			Currency:     "USD",
+			CategoryName: "Housing",
+		}
+		existing := []ImportExpenseRecord{
+			{
+				ID:           "expense-id-2",
+				ExpenseDate:  "2026-04-01",
+				Description:  "Rent",
+				Amount:       1500.00,
+				Currency:     "USD",
+				CategoryName: "Housing",
+			},
+		}
+
+		result := MatchImportedExpense(incoming, existing)
+
+		assert.Equal(t, ImportMergeActionConflict, result.Action)
+		require.NotNil(t, result.MatchedExistingID)
+		assert.Equal(t, "expense-id-2", *result.MatchedExistingID)
+		require.NotNil(t, result.Conflict)
+		assert.True(t, hasDifferenceField(result.Conflict.Differences, "amount"))
 	})
 }

@@ -501,6 +501,15 @@ ORDER BY
 
 -- name: CheckSkippedExpense :one
 SELECT EXISTS(
+SELECT 1 FROM budget_expenses
+WHERE user_id = $1
+AND expense_date = $2
+AND (
+    (sqlc.narg('source_rule_id')::uuid IS NULL AND source_rule_id IS NULL)
+    OR source_rule_id = sqlc.narg('source_rule_id')::uuid
+)
+AND status = 'skipped'
+);
 
 -- name: GetDebtPaymentsForPeriod :many
 SELECT COALESCE(SUM(amount), 0::numeric) as total_amount
@@ -545,14 +554,6 @@ WHERE user_id = $1
 AND date >= $2
 AND date <= $3
 AND exclude_from_calculations = false;
-
--- name: 
-SELECT 1 FROM budget_expenses
-WHERE user_id = $1
-AND expense_date = $2
-AND (sqlc.narg('source_rule_id')::uuid IS NULL OR source_rule_id = sqlc.narg('source_rule_id')::uuid)
-AND status = 'skipped'
-);
 
 -- name: UpsertSkippedExpense :one
 INSERT INTO budget_expenses (

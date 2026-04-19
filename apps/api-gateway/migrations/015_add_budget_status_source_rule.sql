@@ -9,6 +9,7 @@ ALTER TABLE budget_expenses
     ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'posted',
     ADD COLUMN IF NOT EXISTS source_rule_id UUID NULL;
 
+-- +goose StatementBegin
 CREATE OR REPLACE FUNCTION budget_incomes_clear_source_rule_refs()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -19,7 +20,9 @@ BEGIN
     RETURN OLD;
 END;
 $$ LANGUAGE plpgsql;
+-- +goose StatementEnd
 
+-- +goose StatementBegin
 CREATE OR REPLACE FUNCTION budget_expenses_clear_source_rule_refs()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -30,6 +33,7 @@ BEGIN
     RETURN OLD;
 END;
 $$ LANGUAGE plpgsql;
+-- +goose StatementEnd
 
 CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS idx_budget_incomes_id_user_unique
     ON budget_incomes(id, user_id);
@@ -37,6 +41,7 @@ CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS idx_budget_incomes_id_user_unique
 CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS idx_budget_expenses_id_user_unique
     ON budget_expenses(id, user_id);
 
+-- +goose StatementBegin
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -62,7 +67,9 @@ BEGIN
     END IF;
 END;
 $$;
+-- +goose StatementEnd
 
+-- +goose StatementBegin
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -88,7 +95,9 @@ BEGIN
     END IF;
 END;
 $$;
+-- +goose StatementEnd
 
+-- +goose StatementBegin
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -105,7 +114,9 @@ BEGIN
     END IF;
 END;
 $$;
+-- +goose StatementEnd
 
+-- +goose StatementBegin
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -122,6 +133,7 @@ BEGIN
     END IF;
 END;
 $$;
+-- +goose StatementEnd
 
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_budget_incomes_user_source_rule
     ON budget_incomes(user_id, source_rule_id);
