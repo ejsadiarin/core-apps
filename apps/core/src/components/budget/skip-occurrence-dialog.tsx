@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,25 +27,43 @@ export function SkipOccurrenceDialog({ income, open, onOpenChange }: SkipOccurre
   const [reason, setReason] = useState('');
   const [isChecking, setIsChecking] = useState(false);
   const [alreadySkipped, setAlreadySkipped] = useState(false);
+  const checkRequestIdRef = useRef(0);
 
   useEffect(() => {
-    if (open && skipDate) {
-      checkForExistingSkip();
-    }
-  }, [skipDate, open]);
-
-  const checkForExistingSkip = async () => {
-    if (!skipDate) return;
-    setIsChecking(true);
-    try {
-      const isSkipped = await checkSkippedIncome(skipDate, income?.id);
-      setAlreadySkipped(isSkipped);
-    } catch (error) {
-      console.error('Error checking skip:', error);
-    } finally {
+    if (!open || !skipDate || !income?.id) {
+      setAlreadySkipped(false);
       setIsChecking(false);
+      return;
     }
-  };
+
+    const requestId = ++checkRequestIdRef.current;
+    let isCancelled = false;
+
+    const checkForExistingSkip = async () => {
+      setIsChecking(true);
+      try {
+        const isSkipped = await checkSkippedIncome(skipDate, income.id);
+        if (!isCancelled && requestId === checkRequestIdRef.current) {
+          setAlreadySkipped(isSkipped);
+        }
+      } catch (error) {
+        if (!isCancelled && requestId === checkRequestIdRef.current) {
+          console.error('Error checking skip:', error);
+          setAlreadySkipped(false);
+        }
+      } finally {
+        if (!isCancelled && requestId === checkRequestIdRef.current) {
+          setIsChecking(false);
+        }
+      }
+    };
+
+    checkForExistingSkip();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [skipDate, open, income?.id]);
 
   const handleOpen = (isOpen: boolean) => {
     if (isOpen && income) {

@@ -51,6 +51,23 @@ export default function SettingsPage() {
   const [importResult, setImportResult] = useState<BudgetImportResult | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
 
+  const isBudgetExportPayload = (value: unknown): value is {
+    metadata: unknown;
+    incomes: unknown[];
+    expenses: unknown[];
+  } => {
+    if (!value || typeof value !== "object") {
+      return false;
+    }
+
+    const candidate = value as Record<string, unknown>;
+    return (
+      !!candidate.metadata &&
+      Array.isArray(candidate.incomes) &&
+      Array.isArray(candidate.expenses)
+    );
+  };
+
   const handleExportBudget = async () => {
     try {
       const payload = await exportBudget.mutateAsync();
@@ -79,6 +96,11 @@ export default function SettingsPage() {
     try {
       const text = await file.text();
       const parsed = JSON.parse(text);
+
+      if (!isBudgetExportPayload(parsed)) {
+        throw new Error("Invalid export format");
+      }
+
       const result = await importBudget.mutateAsync(parsed);
       setImportResult(result);
       setImportError(null);
@@ -88,7 +110,11 @@ export default function SettingsPage() {
         showToast(error.message, "warning");
         setImportError(error.message);
       } else {
-        const message = error instanceof Error ? error.message : "Failed to import budget";
+        const message = error instanceof Error && error.message === "Invalid export format"
+          ? "Invalid export format"
+          : error instanceof Error
+            ? error.message
+            : "Failed to import budget";
         showToast(message, "error");
         setImportError(message);
       }
