@@ -29,7 +29,7 @@ type BudgetExpense struct {
 	UpdatedAt       pgtype.Timestamp `json:"updated_at"`
 	Notes           pgtype.Text      `json:"notes"`
 	UserID          uuid.UUID        `json:"user_id"`
-	RecurringType   pgtype.Text      `json:"recurring_type"`
+	RecurringType   string           `json:"recurring_type"`
 	StartDate       pgtype.Date      `json:"start_date"`
 	EndDate         pgtype.Date      `json:"end_date"`
 	PriorityGroupID pgtype.UUID      `json:"priority_group_id"`
@@ -50,7 +50,7 @@ type BudgetIncome struct {
 	Currency                pgtype.Text      `json:"currency"`
 	Date                    pgtype.Date      `json:"date"`
 	Description             pgtype.Text      `json:"description"`
-	RecurringType           pgtype.Text      `json:"recurring_type"`
+	RecurringType           string           `json:"recurring_type"`
 	StartDate               pgtype.Date      `json:"start_date"`
 	CreatedAt               pgtype.Timestamp `json:"created_at"`
 	UpdatedAt               pgtype.Timestamp `json:"updated_at"`

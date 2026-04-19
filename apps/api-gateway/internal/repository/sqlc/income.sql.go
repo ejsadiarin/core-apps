@@ -78,7 +78,7 @@ type CreateIncomeParams struct {
 	Currency      pgtype.Text    `json:"currency"`
 	Date          pgtype.Date    `json:"date"`
 	Description   pgtype.Text    `json:"description"`
-	RecurringType pgtype.Text    `json:"recurring_type"`
+	RecurringType string         `json:"recurring_type"`
 	StartDate     pgtype.Date    `json:"start_date"`
 	EndDate       pgtype.Date    `json:"end_date"`
 	UserID        uuid.UUID      `json:"user_id"`
@@ -681,7 +681,7 @@ type ListAllIncomesRow struct {
 	Currency                pgtype.Text      `json:"currency"`
 	Date                    pgtype.Date      `json:"date"`
 	Description             pgtype.Text      `json:"description"`
-	RecurringType           pgtype.Text      `json:"recurring_type"`
+	RecurringType           string           `json:"recurring_type"`
 	StartDate               pgtype.Date      `json:"start_date"`
 	CreatedAt               pgtype.Timestamp `json:"created_at"`
 	UpdatedAt               pgtype.Timestamp `json:"updated_at"`

@@ -211,7 +211,7 @@ type CreateExpenseParams struct {
 	ExpenseDate     pgtype.Date    `json:"expense_date"`
 	Notes           pgtype.Text    `json:"notes"`
 	UserID          uuid.UUID      `json:"user_id"`
-	RecurringType   pgtype.Text    `json:"recurring_type"`
+	RecurringType   string         `json:"recurring_type"`
 	StartDate       pgtype.Date    `json:"start_date"`
 	EndDate         pgtype.Date    `json:"end_date"`
 	PriorityGroupID pgtype.UUID    `json:"priority_group_id"`
@@ -367,7 +367,7 @@ type ExportExpensesRow struct {
 	UpdatedAt       pgtype.Timestamp `json:"updated_at"`
 	Notes           pgtype.Text      `json:"notes"`
 	UserID          uuid.UUID        `json:"user_id"`
-	RecurringType   pgtype.Text      `json:"recurring_type"`
+	RecurringType   string           `json:"recurring_type"`
 	StartDate       pgtype.Date      `json:"start_date"`
 	EndDate         pgtype.Date      `json:"end_date"`
 	PriorityGroupID pgtype.UUID      `json:"priority_group_id"`
@@ -1735,7 +1735,7 @@ type ListAllExpensesRow struct {
 	UpdatedAt         pgtype.Timestamp `json:"updated_at"`
 	Notes             pgtype.Text      `json:"notes"`
 	UserID            uuid.UUID        `json:"user_id"`
-	RecurringType     pgtype.Text      `json:"recurring_type"`
+	RecurringType     string           `json:"recurring_type"`
 	StartDate         pgtype.Date      `json:"start_date"`
 	EndDate           pgtype.Date      `json:"end_date"`
 	PriorityGroupID   pgtype.UUID      `json:"priority_group_id"`
@@ -1968,7 +1968,7 @@ type ListExpensesRow struct {
 	UpdatedAt         pgtype.Timestamp `json:"updated_at"`
 	Notes             pgtype.Text      `json:"notes"`
 	UserID            uuid.UUID        `json:"user_id"`
-	RecurringType     pgtype.Text      `json:"recurring_type"`
+	RecurringType     string           `json:"recurring_type"`
 	StartDate         pgtype.Date      `json:"start_date"`
 	EndDate           pgtype.Date      `json:"end_date"`
 	PriorityGroupID   pgtype.UUID      `json:"priority_group_id"`
@@ -2160,7 +2160,7 @@ type SearchExpensesRow struct {
 	UpdatedAt         pgtype.Timestamp `json:"updated_at"`
 	Notes             pgtype.Text      `json:"notes"`
 	UserID            uuid.UUID        `json:"user_id"`
-	RecurringType     pgtype.Text      `json:"recurring_type"`
+	RecurringType     string           `json:"recurring_type"`
 	StartDate         pgtype.Date      `json:"start_date"`
 	EndDate           pgtype.Date      `json:"end_date"`
 	PriorityGroupID   pgtype.UUID      `json:"priority_group_id"`
