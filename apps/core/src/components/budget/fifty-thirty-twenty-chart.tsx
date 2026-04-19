@@ -1,7 +1,9 @@
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useFiftyThirtyTwenty } from '@/hooks/use-budget';
+import { Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface FiftyThirtyTwentyChartProps {
@@ -43,6 +45,7 @@ export function FiftyThirtyTwentyChart({ startDate, endDate, className }: FiftyT
 
   const categories = [
     {
+      key: 'needs',
       label: 'Needs',
       data: data.needs,
       color: 'bg-blue-500',
@@ -50,6 +53,7 @@ export function FiftyThirtyTwentyChart({ startDate, endDate, className }: FiftyT
       target: 50
     },
     {
+      key: 'wants',
       label: 'Wants',
       data: data.wants,
       color: 'bg-purple-500',
@@ -57,8 +61,21 @@ export function FiftyThirtyTwentyChart({ startDate, endDate, className }: FiftyT
       target: 30
     },
     {
-      label: 'Savings',
-      data: data.savings,
+      key: 'investments',
+      label: (
+        <span className="flex items-center gap-1">
+          Investments
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Info className="h-3 w-3 text-muted-foreground/50 cursor-help" />
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-[220px]">
+              <p>Investments include retirement accounts, stocks, and savings. This differs from your savings rate which measures income minus expenses.</p>
+            </TooltipContent>
+          </Tooltip>
+        </span>
+      ),
+      data: data.investments,
       color: 'bg-green-500',
       textColor: 'text-green-500',
       target: 20
@@ -88,10 +105,10 @@ export function FiftyThirtyTwentyChart({ startDate, endDate, className }: FiftyT
           <div className="flex rounded-full overflow-hidden h-4">
             {categories.map((c) => (
               <div
-                key={c.label}
+                key={c.key}
                 className={cn(c.color, 'transition-all')}
                 style={{ width: `${c.data.actual_percentage || 0}%` }}
-                title={`${c.label}: ${c.data.actual_percentage.toFixed(1)}%`}
+                title={`${typeof c.label === 'string' ? c.label : 'Investments'}: ${c.data.actual_percentage.toFixed(1)}%`}
               />
             ))}
           </div>
@@ -104,7 +121,7 @@ export function FiftyThirtyTwentyChart({ startDate, endDate, className }: FiftyT
 
         <div className="space-y-3">
           {categories.map((c) => (
-            <div key={c.label} className="space-y-1">
+            <div key={c.key} className="space-y-1">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className={cn('w-3 h-3 rounded-full', c.color)} />

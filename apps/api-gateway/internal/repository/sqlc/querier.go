@@ -57,6 +57,7 @@ type Querier interface {
 	GetAllServicesStats(ctx context.Context) (GetAllServicesStatsRow, error)
 	GetAllTotalExpensesToDate(ctx context.Context, arg GetAllTotalExpensesToDateParams) (interface{}, error)
 	GetAllTotalSpending(ctx context.Context, arg GetAllTotalSpendingParams) (GetAllTotalSpendingRow, error)
+	GetAverageMonthlyExpenses(ctx context.Context, arg GetAverageMonthlyExpensesParams) (interface{}, error)
 	GetBudgetVariance(ctx context.Context, arg GetBudgetVarianceParams) ([]GetBudgetVarianceRow, error)
 	GetCategory(ctx context.Context, arg GetCategoryParams) (BudgetCategory, error)
 	GetCategoryBudget(ctx context.Context, arg GetCategoryBudgetParams) (CategoryBudget, error)
@@ -66,6 +67,8 @@ type Querier interface {
 	GetDailySpending(ctx context.Context, arg GetDailySpendingParams) ([]GetDailySpendingRow, error)
 	// Spending Velocity & Trends
 	GetDailySpendingForVelocity(ctx context.Context, arg GetDailySpendingForVelocityParams) ([]GetDailySpendingForVelocityRow, error)
+	GetDebtPaymentsForPeriod(ctx context.Context, arg GetDebtPaymentsForPeriodParams) ([]interface{}, error)
+	GetDebtRecurringPayments(ctx context.Context, arg GetDebtRecurringPaymentsParams) ([]BudgetExpense, error)
 	GetExpense(ctx context.Context, arg GetExpenseParams) (BudgetExpense, error)
 	GetExpenseByID(ctx context.Context, id uuid.UUID) (BudgetExpense, error)
 	GetExpenseTags(ctx context.Context, expenseID uuid.UUID) ([]BudgetTag, error)
@@ -82,6 +85,7 @@ type Querier interface {
 	// Budget Remaining Calculation Queries
 	// These queries fetch raw data; proration logic is handled in the application layer
 	GetOneTimeIncomeToDate(ctx context.Context, arg GetOneTimeIncomeToDateParams) (interface{}, error)
+	GetOneTimeIncomesForPeriod(ctx context.Context, arg GetOneTimeIncomesForPeriodParams) ([]BudgetIncome, error)
 	GetPriorityGroupBySlug(ctx context.Context, slug string) (BudgetPriorityGroup, error)
 	GetRecurringIncomeForPeriod(ctx context.Context, arg GetRecurringIncomeForPeriodParams) ([]BudgetIncome, error)
 	GetRecurringIncomeRules(ctx context.Context, arg GetRecurringIncomeRulesParams) ([]BudgetIncome, error)
@@ -93,6 +97,7 @@ type Querier interface {
 	GetServiceStats30d(ctx context.Context, serviceID pgtype.UUID) (GetServiceStats30dRow, error)
 	GetServiceStats7d(ctx context.Context, serviceID pgtype.UUID) (GetServiceStats7dRow, error)
 	GetSessionByTokenHash(ctx context.Context, tokenHash string) (GetSessionByTokenHashRow, error)
+	GetSkippedIncomeDatesForPeriod(ctx context.Context, arg GetSkippedIncomeDatesForPeriodParams) ([]pgtype.Date, error)
 	// Weekday Analysis
 	GetSpendingByDayOfWeek(ctx context.Context, arg GetSpendingByDayOfWeekParams) ([]GetSpendingByDayOfWeekRow, error)
 	// 50/30/20 Analysis
@@ -102,6 +107,7 @@ type Querier interface {
 	// Merchant Analysis
 	GetTopMerchants(ctx context.Context, arg GetTopMerchantsParams) ([]GetTopMerchantsRow, error)
 	GetTotalExpensesToDate(ctx context.Context, arg GetTotalExpensesToDateParams) (interface{}, error)
+	GetTotalSavings(ctx context.Context, arg GetTotalSavingsParams) (interface{}, error)
 	GetTotalSpending(ctx context.Context, arg GetTotalSpendingParams) (GetTotalSpendingRow, error)
 	GetUnclassifiedExpenseCount(ctx context.Context, arg GetUnclassifiedExpenseCountParams) (GetUnclassifiedExpenseCountRow, error)
 	// Upcoming Recurring Expenses Forecasting

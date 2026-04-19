@@ -99,3 +99,17 @@ func float64PtrToNumeric(f *float64) pgtype.Numeric {
 	}
 	return float64ToNumeric(*f)
 }
+
+func boolPtrToNullBool(b *bool) pgtype.Bool {
+	if b == nil {
+		return pgtype.Bool{Valid: false}
+	}
+	return pgtype.Bool{Bool: *b, Valid: true}
+}
+
+func nullBoolToBool(b pgtype.Bool) bool {
+	if !b.Valid {
+		return false
+	}
+	return b.Bool
+}

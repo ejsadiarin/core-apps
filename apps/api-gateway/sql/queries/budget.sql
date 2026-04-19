@@ -95,9 +95,9 @@ WHERE slug = $1 LIMIT 1;
 
 -- name: CreateExpense :one
 INSERT INTO budget_expenses (
-    description, amount, currency, category_id, expense_date, notes, user_id, recurring_type, start_date, end_date, priority_group_id
+description, amount, currency, category_id, expense_date, notes, user_id, recurring_type, start_date, end_date, priority_group_id, is_debt
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, sqlc.narg('priority_group_id')
+$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, sqlc.narg('priority_group_id'), sqlc.narg('is_debt')
 )
 RETURNING *;
 
@@ -174,17 +174,18 @@ ORDER BY e.expense_date DESC, e.created_at DESC;
 -- name: UpdateExpense :one
 UPDATE budget_expenses
 SET
-    description = COALESCE(sqlc.narg('description'), description),
-    amount = COALESCE(sqlc.narg('amount'), amount),
-    currency = COALESCE(sqlc.narg('currency'), currency),
-    category_id = COALESCE(sqlc.narg('category_id'), category_id),
-    expense_date = COALESCE(sqlc.narg('expense_date'), expense_date),
-    notes = COALESCE(sqlc.narg('notes'), notes),
-    recurring_type = COALESCE(sqlc.narg('recurring_type'), recurring_type),
-    start_date = COALESCE(sqlc.narg('start_date'), start_date),
-    end_date = COALESCE(sqlc.narg('end_date'), end_date),
-    priority_group_id = COALESCE(sqlc.narg('priority_group_id'), priority_group_id),
-    updated_at = NOW()
+description = COALESCE(sqlc.narg('description'), description),
+amount = COALESCE(sqlc.narg('amount'), amount),
+currency = COALESCE(sqlc.narg('currency'), currency),
+category_id = COALESCE(sqlc.narg('category_id'), category_id),
+expense_date = COALESCE(sqlc.narg('expense_date'), expense_date),
+notes = COALESCE(sqlc.narg('notes'), notes),
+recurring_type = COALESCE(sqlc.narg('recurring_type'), recurring_type),
+start_date = COALESCE(sqlc.narg('start_date'), start_date),
+end_date = COALESCE(sqlc.narg('end_date'), end_date),
+priority_group_id = COALESCE(sqlc.narg('priority_group_id'), priority_group_id),
+is_debt = COALESCE(sqlc.narg('is_debt'), is_debt),
+updated_at = NOW()
 WHERE id = $1 AND user_id = $2
 RETURNING *;
 
@@ -476,10 +477,54 @@ ORDER BY
 
 -- name: CheckSkippedExpense :one
 SELECT EXISTS(
-    SELECT 1 FROM budget_expenses
-    WHERE user_id = $1
-    AND expense_date = $2
-    AND amount < 0
-    AND recurring_type IS NULL
-    AND description LIKE 'Skipped:%'
+SELECT 1 FROM budget_expenses
+WHERE user_id = $1
+AND expense_date = $2
+AND amount < 0
+AND recurring_type IS NULL
+AND description LIKE 'Skipped:%'
 );
+
+-- name: GetDebtPaymentsForPeriod :many
+SELECT COALESCE(SUM(amount), 0::numeric) as total_amount
+FROM budget_expenses
+WHERE user_id = $1
+AND is_debt = true
+AND expense_date >= $2
+AND expense_date <= $3
+AND (recurring_type IS NULL OR recurring_type = 'monthly');
+
+-- name: GetDebtRecurringPayments :many
+SELECT *
+FROM budget_expenses
+WHERE user_id = $1
+AND is_debt = true
+AND recurring_type IN ('daily', 'weekly', 'monthly', 'yearly')
+AND start_date <= $2
+AND (end_date IS NULL OR end_date >= $3)
+ORDER BY start_date;
+
+-- name: GetAverageMonthlyExpenses :one
+WITH monthly_totals AS (
+SELECT DATE_TRUNC('month', expense_date) as month,
+SUM(amount) as total
+FROM budget_expenses
+WHERE user_id = $1
+AND expense_date >= $2
+AND expense_date <= $3
+GROUP BY DATE_TRUNC('month', expense_date)
+ORDER BY month DESC
+LIMIT 3
+)
+SELECT COALESCE(AVG(total), 0::numeric) as average_monthly
+FROM monthly_totals;
+
+-- name: GetTotalSavings :one
+SELECT COALESCE(SUM(
+CASE WHEN amount < 0 THEN ABS(amount) ELSE 0 END
+), 0::numeric) as total_savings
+FROM budget_incomes
+WHERE user_id = $1
+AND date >= $2
+AND date <= $3
+AND exclude_from_calculations = false;

@@ -33,6 +33,7 @@ type BudgetExpense struct {
 	StartDate       pgtype.Date      `json:"start_date"`
 	EndDate         pgtype.Date      `json:"end_date"`
 	PriorityGroupID pgtype.UUID      `json:"priority_group_id"`
+	IsDebt          pgtype.Bool      `json:"is_debt"`
 }
 
 type BudgetExpenseTag struct {

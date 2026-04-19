@@ -433,6 +433,7 @@ func (h *Handler) CreateExpense(c echo.Context) error {
 		EndDate:         stringPtrToDate(req.EndDate),
 		UserID:          userID,
 		PriorityGroupID: uuidPtrToNullUUID(req.PriorityGroupID),
+		IsDebt:          boolPtrToNullBool(req.IsDebt),
 	}
 
 	exp, err := h.queries.CreateExpense(c.Request().Context(), arg)
@@ -662,6 +663,7 @@ func (h *Handler) UpdateExpense(c echo.Context) error {
 		RecurringType:   stringPtrToText(req.RecurringType),
 		StartDate:       stringPtrToDate(req.StartDate),
 		PriorityGroupID: uuidPtrToNullUUID(req.PriorityGroupID),
+		IsDebt:          boolPtrToNullBool(req.IsDebt),
 	}
 	if req.Amount != nil {
 		arg.Amount = float64ToNumeric(*req.Amount)
@@ -935,6 +937,7 @@ func (h *Handler) getExpenseResponse(c echo.Context, id uuid.UUID, userID uuid.U
 		RecurringType: textToStringPtr(exp.RecurringType),
 		StartDate:     dateToNullableStringPtr(exp.StartDate),
 		EndDate:       dateToNullableStringPtr(exp.EndDate),
+		IsDebt:        nullBoolToBool(exp.IsDebt),
 		CreatedAt:     exp.CreatedAt.Time.Format(time.RFC3339),
 		UpdatedAt:     exp.UpdatedAt.Time.Format(time.RFC3339),
 	})

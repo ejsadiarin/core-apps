@@ -9,6 +9,7 @@ import (
 	"core-gateway/internal/repository/sqlc"
 	"core-gateway/internal/shared/models"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/labstack/echo/v4"
 )
@@ -320,6 +321,7 @@ func (h *Handler) GetSavingsRate(c echo.Context) error {
 	})
 	if err != nil {
 		h.logger.Error().Err(err).Msg("Failed to get income for period")
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to calculate savings rate"})
 	}
 
 	recurringRules, err := h.queries.GetRecurringIncomeForPeriod(c.Request().Context(), sqlc.GetRecurringIncomeForPeriodParams{
@@ -329,6 +331,7 @@ func (h *Handler) GetSavingsRate(c echo.Context) error {
 	})
 	if err != nil {
 		h.logger.Error().Err(err).Msg("Failed to get recurring income rules")
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to calculate savings rate"})
 	}
 
 	recurringIncome := calculateRecurringIncomeForPeriod(recurringRules, startDate, endDate)
@@ -342,6 +345,7 @@ func (h *Handler) GetSavingsRate(c echo.Context) error {
 	})
 	if err != nil {
 		h.logger.Error().Err(err).Msg("Failed to get expenses for period")
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to calculate savings rate"})
 	}
 	totalExpenses := interfaceToFloat64(totalExpensesResult)
 
@@ -754,7 +758,6 @@ func (h *Handler) GetHealthScore(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to get user context"})
 	}
 
-	// get user to fetch tracking_start_date
 	user, err := h.queries.GetUser(c.Request().Context(), userID)
 	if err != nil {
 		h.logger.Error().Err(err).Msg("Failed to get user")
@@ -763,7 +766,6 @@ func (h *Handler) GetHealthScore(c echo.Context) error {
 
 	now := time.Now()
 
-	// default start to tracking_start_date or first of current month
 	var startDate time.Time
 	if user.TrackingStartDate.Valid {
 		startDate = user.TrackingStartDate.Time
@@ -772,28 +774,38 @@ func (h *Handler) GetHealthScore(c echo.Context) error {
 	}
 	endDate := now
 
-	// calculate income for tracking period only (one-time + recurring, excluding pre-tracking)
-	oneTimeIncome, _ := h.queries.GetIncomeForPeriod(c.Request().Context(), sqlc.GetIncomeForPeriodParams{
+	oneTimeIncome, err := h.queries.GetIncomeForPeriod(c.Request().Context(), sqlc.GetIncomeForPeriodParams{
 		UserID: userID,
 		Date:   stringToDate(startDate.Format("2006-01-02")),
 		Date_2: stringToDate(endDate.Format("2006-01-02")),
 	})
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to get income for period")
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to calculate health score"})
+	}
 
-	recurringRules, _ := h.queries.GetRecurringIncomeForPeriod(c.Request().Context(), sqlc.GetRecurringIncomeForPeriodParams{
+	recurringRules, err := h.queries.GetRecurringIncomeForPeriod(c.Request().Context(), sqlc.GetRecurringIncomeForPeriodParams{
 		UserID:    userID,
 		StartDate: stringToDate(endDate.Format("2006-01-02")),
 		EndDate:   stringToDate(startDate.Format("2006-01-02")),
 	})
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to get recurring income")
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to calculate health score"})
+	}
 
 	recurringIncome := calculateRecurringIncomeForPeriod(recurringRules, startDate, endDate)
 	totalIncome := interfaceToFloat64(oneTimeIncome) + recurringIncome
 
-	// calculate expenses for tracking period only
-	totalExpenses, _ := h.queries.GetExpensesForPeriod(c.Request().Context(), sqlc.GetExpensesForPeriodParams{
+	totalExpenses, err := h.queries.GetExpensesForPeriod(c.Request().Context(), sqlc.GetExpensesForPeriodParams{
 		UserID:        userID,
 		ExpenseDate:   stringToDate(startDate.Format("2006-01-02")),
 		ExpenseDate_2: stringToDate(endDate.Format("2006-01-02")),
 	})
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to get expenses for period")
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to calculate health score"})
+	}
 	totalExpensesVal := interfaceToFloat64(totalExpenses)
 
 	savings := totalIncome - totalExpensesVal
@@ -802,15 +814,27 @@ func (h *Handler) GetHealthScore(c echo.Context) error {
 		savingsRate = (savings / totalIncome) * 100
 	}
 
-	// calculate health score (0-100)
-	score := 50
-	if savingsRate >= 20 {
-		score += 30
-	} else if savingsRate >= 15 {
-		score += 20
-	} else if savingsRate >= 10 {
-		score += 10
+	debtPayments, err := h.calculateMonthlyDebtPayments(c, userID, startDate, endDate)
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to calculate debt payments")
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to calculate health score"})
 	}
+	var debtToIncome float64
+	if totalIncome > 0 {
+		debtToIncome = (debtPayments / totalIncome) * 100
+	}
+
+	emergencyFundMonths, err := h.calculateEmergencyFundMonths(c, userID, startDate, endDate)
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to calculate emergency fund months")
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to calculate health score"})
+	}
+
+	savingsRateScore := calculateSavingsRateScore(savingsRate)
+	debtToIncomeScore := calculateDebtToIncomeScore(debtToIncome)
+	emergencyFundScore := calculateEmergencyFundScore(emergencyFundMonths)
+
+	score := savingsRateScore + debtToIncomeScore + emergencyFundScore
 
 	var status string
 	if score >= 80 {
@@ -823,21 +847,20 @@ func (h *Handler) GetHealthScore(c echo.Context) error {
 		status = "poor"
 	}
 
-	recommendations := []string{}
-	if savingsRate < 20 {
-		recommendations = append(recommendations, "Aim to save at least 20% of your income")
-	}
-	if savingsRate < 10 {
-		recommendations = append(recommendations, "Consider reviewing discretionary spending")
-	}
+	recommendations := generateHealthRecommendations(savingsRate, debtToIncome, emergencyFundMonths)
 
 	return c.JSON(http.StatusOK, HealthScoreResponse{
 		Score:           score,
 		Status:          status,
 		SavingsRate:     savingsRate,
-		DebtToIncome:    0.0,
-		EmergencyFund:   0.0,
+		DebtToIncome:    debtToIncome,
+		EmergencyFund:   emergencyFundMonths,
 		Recommendations: recommendations,
+		FactorScores: FactorScoreBreakdown{
+			SavingsRate:   savingsRateScore,
+			DebtToIncome:  debtToIncomeScore,
+			EmergencyFund: emergencyFundScore,
+		},
 	})
 }
 
@@ -938,7 +961,7 @@ func (h *Handler) GetFiftyThirtyTwenty(c echo.Context) error {
 			Status:   get503020Status(wantsPct, 30),
 		},
 		Savings: FiftyThirtyTwentyItem{
-			Category: "Savings",
+			Category: "Investments",
 			Amount:   savingsAmount,
 			Target:   20,
 			Actual:   savingsPct,
@@ -1464,4 +1487,145 @@ func parseDateRange(startDateParam, endDateParam string, now time.Time) (startDa
 	}
 
 	return startDate, endDate, nil
+}
+
+func (h *Handler) calculateMonthlyDebtPayments(ctx echo.Context, userID uuid.UUID, periodStart, periodEnd time.Time) (float64, error) {
+	oneTimeDebt, err := h.queries.GetDebtPaymentsForPeriod(ctx.Request().Context(), sqlc.GetDebtPaymentsForPeriodParams{
+		UserID:        userID,
+		ExpenseDate:   pgtype.Date{Time: periodStart, Valid: true},
+		ExpenseDate_2: pgtype.Date{Time: periodEnd, Valid: true},
+	})
+	if err != nil {
+		return 0, fmt.Errorf("failed to get debt payments: %w", err)
+	}
+
+	recurringDebt, err := h.queries.GetDebtRecurringPayments(ctx.Request().Context(), sqlc.GetDebtRecurringPaymentsParams{
+		UserID:    userID,
+		StartDate: pgtype.Date{Time: periodEnd, Valid: true},
+		EndDate:   pgtype.Date{Time: periodStart, Valid: true},
+	})
+	if err != nil {
+		return 0, fmt.Errorf("failed to get recurring debt payments: %w", err)
+	}
+
+	totalDebt := 0.0
+	if len(oneTimeDebt) > 0 {
+		totalDebt = interfaceToFloat64(oneTimeDebt[0])
+	}
+
+	for _, debt := range recurringDebt {
+		monthlyAmount := calculateRecurringMonthlyEquivalent(debt.RecurringType.String, numericToFloat64(debt.Amount))
+		totalDebt += monthlyAmount
+	}
+
+	return totalDebt, nil
+}
+
+func calculateRecurringMonthlyEquivalent(recurringType string, amount float64) float64 {
+	switch recurringType {
+	case "daily":
+		return amount * 30
+	case "weekly":
+		return amount * 4.33
+	case "monthly":
+		return amount
+	case "yearly":
+		return amount / 12
+	default:
+		return amount
+	}
+}
+
+func (h *Handler) calculateEmergencyFundMonths(ctx echo.Context, userID uuid.UUID, periodStart, periodEnd time.Time) (float64, error) {
+	avgMonthlyExpenses, err := h.queries.GetAverageMonthlyExpenses(ctx.Request().Context(), sqlc.GetAverageMonthlyExpensesParams{
+		UserID:        userID,
+		ExpenseDate:   pgtype.Date{Time: periodStart, Valid: true},
+		ExpenseDate_2: pgtype.Date{Time: periodEnd, Valid: true},
+	})
+	if err != nil {
+		return 0, fmt.Errorf("failed to get average monthly expenses: %w", err)
+	}
+
+	totalSavings, err := h.queries.GetTotalSavings(ctx.Request().Context(), sqlc.GetTotalSavingsParams{
+		UserID: userID,
+		Date:   pgtype.Date{Time: periodStart, Valid: true},
+		Date_2: pgtype.Date{Time: periodEnd, Valid: true},
+	})
+	if err != nil {
+		return 0, fmt.Errorf("failed to get total savings: %w", err)
+	}
+
+	avgExpensesVal := interfaceToFloat64(avgMonthlyExpenses)
+	totalSavingsVal := interfaceToFloat64(totalSavings)
+
+	if avgExpensesVal <= 0 {
+		return 0, nil
+	}
+
+	return totalSavingsVal / avgExpensesVal, nil
+}
+
+func calculateSavingsRateScore(savingsRate float64) int {
+	if savingsRate >= 20 {
+		return 40
+	} else if savingsRate >= 15 {
+		return 30
+	} else if savingsRate >= 10 {
+		return 20
+	} else {
+		return 10
+	}
+}
+
+func calculateDebtToIncomeScore(debtToIncome float64) int {
+	if debtToIncome <= 20 {
+		return 35
+	} else if debtToIncome <= 35 {
+		return 25
+	} else if debtToIncome <= 50 {
+		return 15
+	} else {
+		return 5
+	}
+}
+
+func calculateEmergencyFundScore(emergencyFundMonths float64) int {
+	if emergencyFundMonths >= 6 {
+		return 25
+	} else if emergencyFundMonths >= 3 {
+		return 20
+	} else if emergencyFundMonths >= 1 {
+		return 10
+	} else {
+		return 5
+	}
+}
+
+func generateHealthRecommendations(savingsRate, debtToIncome, emergencyFundMonths float64) []string {
+	var recommendations []string
+
+	if savingsRate < 20 {
+		recommendations = append(recommendations, "Aim to save at least 20% of your income")
+	}
+	if savingsRate < 10 {
+		recommendations = append(recommendations, "Consider reviewing discretionary spending to increase savings")
+	}
+
+	if debtToIncome > 36 {
+		recommendations = append(recommendations, "Your debt-to-income ratio is high. Consider a debt payoff strategy")
+	} else if debtToIncome > 20 {
+		recommendations = append(recommendations, "Work on reducing debt to improve your financial health")
+	}
+
+	if emergencyFundMonths < 3 {
+		recommendations = append(recommendations, "Build an emergency fund of 3-6 months of expenses")
+	} else if emergencyFundMonths < 6 {
+		recommendations = append(recommendations, "You're making progress on your emergency fund. Keep going!")
+	}
+
+	if len(recommendations) == 0 {
+		recommendations = append(recommendations, "Great job! Your financial health is in excellent shape")
+	}
+
+	return recommendations
 }

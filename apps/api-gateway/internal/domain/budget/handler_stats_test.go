@@ -1,6 +1,7 @@
 package budget
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -388,5 +389,149 @@ func TestHelperFunctions(t *testing.T) {
 		invalidText := pgtype.Text{Valid: false}
 		result = textToStringPtr(invalidText)
 		assert.Nil(t, result)
+	})
+}
+
+func TestCalculateSavingsRateScore(t *testing.T) {
+	tests := []struct {
+		name     string
+		rate     float64
+		expected int
+	}{
+		{"excellent savings rate (>=20%)", 20.0, 40},
+		{"excellent savings rate (>20%)", 25.0, 40},
+		{"good savings rate (15-19%)", 15.0, 30},
+		{"good savings rate (17%)", 17.0, 30},
+		{"fair savings rate (10-14%)", 10.0, 20},
+		{"fair savings rate (12%)", 12.0, 20},
+		{"low savings rate (<10%)", 5.0, 10},
+		{"zero savings rate", 0.0, 10},
+		{"negative savings rate", -5.0, 10},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := calculateSavingsRateScore(tt.rate)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestCalculateDebtToIncomeScore(t *testing.T) {
+	tests := []struct {
+		name     string
+		ratio    float64
+		expected int
+	}{
+		{"excellent debt-to-income (<=20%)", 20.0, 35},
+		{"excellent debt-to-income (10%)", 10.0, 35},
+		{"good debt-to-income (21-35%)", 35.0, 25},
+		{"good debt-to-income (30%)", 30.0, 25},
+		{"fair debt-to-income (36-50%)", 50.0, 15},
+		{"fair debt-to-income (40%)", 40.0, 15},
+		{"poor debt-to-income (>50%)", 55.0, 5},
+		{"high debt-to-income (75%)", 75.0, 5},
+		{"zero debt-to-income", 0.0, 35},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := calculateDebtToIncomeScore(tt.ratio)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestCalculateEmergencyFundScore(t *testing.T) {
+	tests := []struct {
+		name     string
+		months   float64
+		expected int
+	}{
+		{"excellent emergency fund (>=6 months)", 6.0, 25},
+		{"excellent emergency fund (8 months)", 8.0, 25},
+		{"good emergency fund (3-5 months)", 3.0, 20},
+		{"good emergency fund (4 months)", 4.0, 20},
+		{"good emergency fund (5 months)", 5.0, 20},
+		{"fair emergency fund (1-2 months)", 1.0, 10},
+		{"fair emergency fund (2 months)", 2.0, 10},
+		{"poor emergency fund (<1 month)", 0.5, 5},
+		{"no emergency fund", 0.0, 5},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := calculateEmergencyFundScore(tt.months)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestCalculateRecurringMonthlyEquivalent(t *testing.T) {
+	tests := []struct {
+		name          string
+		recurringType string
+		amount        float64
+		expected      float64
+	}{
+		{"daily to monthly", "daily", 10.0, 300.0},
+		{"weekly to monthly", "weekly", 100.0, 433.0},
+		{"monthly stays same", "monthly", 500.0, 500.0},
+		{"yearly to monthly", "yearly", 1200.0, 100.0},
+		{"unknown type returns amount", "biweekly", 200.0, 200.0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := calculateRecurringMonthlyEquivalent(tt.recurringType, tt.amount)
+			assert.InDelta(t, tt.expected, result, 1.0)
+		})
+	}
+}
+
+func TestGenerateHealthRecommendations(t *testing.T) {
+	t.Run("all factors good", func(t *testing.T) {
+		recommendations := generateHealthRecommendations(25.0, 15.0, 8.0)
+		assert.Len(t, recommendations, 1)
+		assert.Contains(t, recommendations[0], "Great job")
+	})
+
+	t.Run("low savings rate", func(t *testing.T) {
+		recommendations := generateHealthRecommendations(5.0, 10.0, 8.0)
+		assert.GreaterOrEqual(t, len(recommendations), 1)
+		found := false
+		for _, r := range recommendations {
+			if strings.Contains(r, "save") {
+				found = true
+			}
+		}
+		assert.True(t, found)
+	})
+
+	t.Run("high debt-to-income", func(t *testing.T) {
+		recommendations := generateHealthRecommendations(20.0, 45.0, 4.0)
+		found := false
+		for _, r := range recommendations {
+			if strings.Contains(r, "debt") {
+				found = true
+			}
+		}
+		assert.True(t, found)
+	})
+
+	t.Run("low emergency fund", func(t *testing.T) {
+		recommendations := generateHealthRecommendations(15.0, 20.0, 1.5)
+		found := false
+		for _, r := range recommendations {
+			if strings.Contains(r, "emergency") {
+				found = true
+			}
+		}
+		assert.True(t, found)
+	})
+
+	t.Run("multiple issues", func(t *testing.T) {
+		recommendations := generateHealthRecommendations(5.0, 50.0, 0.5)
+		assert.GreaterOrEqual(t, len(recommendations), 3)
 	})
 }

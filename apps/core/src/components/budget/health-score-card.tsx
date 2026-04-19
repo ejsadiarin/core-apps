@@ -90,10 +90,34 @@ export function HealthScoreCard({ className }: HealthScoreCardProps) {
             <span className="font-medium">{data.savings_rate.toFixed(1)}%</span>
           </div>
           <div className="flex justify-between text-xs">
+            <span className="text-muted-foreground">Debt-to-Income</span>
+            <span className="font-medium">{data.debt_to_income.toFixed(1)}%</span>
+          </div>
+          <div className="flex justify-between text-xs">
             <span className="text-muted-foreground">Emergency Fund</span>
             <span className="font-medium">{data.emergency_fund_months.toFixed(1)} months</span>
           </div>
         </div>
+
+        {data.factor_scores && (
+          <div className="mt-4 pt-3 border-t border-border">
+            <div className="text-xs font-medium mb-2">Factor Scores</div>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="text-center">
+                <div className="text-lg font-semibold">{data.factor_scores.savings_rate}</div>
+                <div className="text-[10px] text-muted-foreground">/40</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-semibold">{data.factor_scores.debt_to_income}</div>
+                <div className="text-[10px] text-muted-foreground">/35</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-semibold">{data.factor_scores.emergency_fund}</div>
+                <div className="text-[10px] text-muted-foreground">/25</div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {data.recommendations.length > 0 && (
           <div className="mt-4 pt-3 border-t border-border">
