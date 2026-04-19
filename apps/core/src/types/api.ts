@@ -508,11 +508,13 @@ export interface CurrentTotalMoneyResponse {
 export interface IncomeOccurrence {
     id: string;
     source_income_id: string;
+    source_rule_id?: string;
     amount: number;
     currency: string;
     date: string;
     description?: string;
     recurring_type?: 'daily' | 'weekly' | 'monthly' | null;
+    status: string;
     is_virtual: boolean;
     is_skipped: boolean;
 }
@@ -613,11 +615,9 @@ export interface BudgetImportResult {
 export interface SkipIncomeRequest {
     date: string;
     source_rule_id: string;
-    status?: string;
 }
 
 export interface SkipExpenseRequest {
     expense_date: string;
     source_rule_id: string;
-    status?: string;
 }

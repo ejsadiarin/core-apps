@@ -566,11 +566,6 @@ export function useSkipIncome() {
       if (isGuest) {
         throw new GuestBlockedError('Guest users cannot skip incomes');
       }
-
-      if (data.status === 'skipped') {
-        throw new Error('Income occurrence is already skipped');
-      }
-
       return skipIncome(data);
     },
     onSuccess: () => {
@@ -593,11 +588,6 @@ export function useSkipExpense() {
       if (isGuest) {
         throw new GuestBlockedError('Guest users cannot skip expenses');
       }
-
-      if (data.status === 'skipped') {
-        throw new Error('Expense occurrence is already skipped');
-      }
-
       return skipExpense(data);
     },
     onSuccess: () => {
