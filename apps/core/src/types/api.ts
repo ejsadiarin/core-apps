@@ -210,6 +210,8 @@ export interface Income {
     recurring_type?: "daily" | "weekly" | "monthly" | null;
     start_date?: string;
     end_date?: string;
+    status?: string;
+    source_rule_id?: string;
     exclude_from_calculations?: boolean;
     created_at: string;
     updated_at: string;
@@ -513,4 +515,107 @@ export interface IncomeOccurrence {
     recurring_type?: 'daily' | 'weekly' | 'monthly' | null;
     is_virtual: boolean;
     is_skipped: boolean;
+}
+
+// Budget Import / Export Types
+
+export interface ImportExportMetadata {
+    schema_version: string;
+    exported_at: string;
+    source: string;
+}
+
+export interface ImportIncomeRecord {
+    id?: string;
+    amount: number;
+    currency: string;
+    date: string;
+    description?: string;
+    recurring_type?: "daily" | "weekly" | "monthly" | null;
+    start_date?: string;
+    end_date?: string;
+}
+
+export interface ImportExpenseRecord {
+    id?: string;
+    description: string;
+    amount: number;
+    currency: string;
+    expense_date: string;
+    category_name?: string;
+    notes?: string;
+    recurring_type?: "daily" | "weekly" | "monthly" | "yearly" | null;
+    start_date?: string;
+    end_date?: string;
+    priority_group_id?: string;
+    is_debt: boolean;
+}
+
+export interface BudgetExportPayload {
+    metadata: ImportExportMetadata;
+    incomes: ImportIncomeRecord[];
+    expenses: ImportExpenseRecord[];
+}
+
+export type ImportMergeAction = "CREATE" | "SKIP_EXISTING" | "CONFLICT";
+
+export interface ImportFieldDifference {
+    field: string;
+    incoming: unknown;
+    existing: unknown;
+}
+
+export interface ImportConflictDetail {
+    entity: string;
+    date: string;
+    existing_id?: string;
+    incoming: unknown;
+    existing: unknown;
+    differences: ImportFieldDifference[];
+}
+
+export interface BudgetImportResultMetadata {
+    imported_at: string;
+    dry_run: boolean;
+}
+
+export interface BudgetImportSummary {
+    incomes_created: number;
+    incomes_skipped: number;
+    incomes_conflicts: number;
+    expenses_created: number;
+    expenses_skipped: number;
+    expenses_conflicts: number;
+}
+
+export interface ImportIncomeResult {
+    input_index: number;
+    action: ImportMergeAction;
+    existing_id?: string;
+    conflict?: ImportConflictDetail;
+}
+
+export interface ImportExpenseResult {
+    input_index: number;
+    action: ImportMergeAction;
+    existing_id?: string;
+    conflict?: ImportConflictDetail;
+}
+
+export interface BudgetImportResult {
+    metadata: BudgetImportResultMetadata;
+    summary: BudgetImportSummary;
+    incomes: ImportIncomeResult[];
+    expenses: ImportExpenseResult[];
+    conflicts?: ImportConflictDetail[];
+}
+
+export interface SkipIncomeRequest {
+    date: string;
+    source_rule_id: string;
+}
+
+export interface SkipExpenseRequest {
+    expense_date: string;
+    source_rule_id: string;
 }

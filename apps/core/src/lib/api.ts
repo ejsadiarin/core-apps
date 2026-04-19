@@ -45,7 +45,11 @@ import type {
   MerchantAnalysisResponse,
   SubscriptionsResponse,
   CurrentTotalMoneyResponse,
-  IncomeOccurrence
+  IncomeOccurrence,
+  BudgetExportPayload,
+  BudgetImportResult,
+  SkipIncomeRequest,
+  SkipExpenseRequest
 } from '@/types/api';
 
 const url = 'http://localhost:8080';
@@ -694,6 +698,64 @@ export async function checkSkippedExpense(date: string): Promise<boolean> {
   });
   if (!res.ok) {
     throw new Error(`Error checking skipped expense: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function exportBudgetJSON(): Promise<BudgetExportPayload> {
+  const res = await fetch(url + '/api/budget/export', {
+    credentials: 'include'
+  });
+  if (!res.ok) {
+    throw new Error(`Error exporting budget JSON: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function importBudgetJSON(payload: BudgetExportPayload): Promise<BudgetImportResult> {
+  const res = await fetch(url + '/api/budget/import', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    credentials: 'include',
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ error: 'Import failed' }));
+    throw new Error(error.error || 'Import failed');
+  }
+  return res.json();
+}
+
+export async function skipIncome(data: SkipIncomeRequest): Promise<Income> {
+  const res = await fetch(url + '/api/budget/incomes/skip', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    credentials: 'include',
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ error: 'Failed to skip income occurrence' }));
+    throw new Error(error.error || 'Failed to skip income occurrence');
+  }
+  return res.json();
+}
+
+export async function skipExpense(data: SkipExpenseRequest): Promise<Expense> {
+  const res = await fetch(url + '/api/budget/expenses/skip', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    credentials: 'include',
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ error: 'Failed to skip expense occurrence' }));
+    throw new Error(error.error || 'Failed to skip expense occurrence');
   }
   return res.json();
 }

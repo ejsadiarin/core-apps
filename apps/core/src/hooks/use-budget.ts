@@ -21,6 +21,10 @@ import {
   createIncome,
   updateIncome,
   deleteIncome,
+  exportBudgetJSON,
+  importBudgetJSON,
+  skipIncome,
+  skipExpense,
   fetchRecurringIncomes,
   fetchIncomeOccurrences,
   fetchBudgetRemaining,
@@ -49,7 +53,11 @@ import type {
   SummaryStats,
   CategoryBreakdown,
   TrendItem,
-  PaginatedResponse
+  PaginatedResponse,
+  BudgetExportPayload,
+  BudgetImportResult,
+  SkipIncomeRequest,
+  SkipExpenseRequest
 } from '@/types/api';
 import { useAuth } from '@/contexts/auth-context';
 
@@ -516,6 +524,87 @@ export function useDeleteIncome() {
     onError: (error: Error) => {
       if (!(error instanceof GuestBlockedError)) {
         console.error("Failed to delete income:", error);
+      }
+    }
+  });
+}
+
+export function useExportBudgetJSON() {
+  return useMutation({
+    mutationFn: exportBudgetJSON
+  });
+}
+
+export function useImportBudgetJSON() {
+  const queryClient = useQueryClient();
+  const { isGuest } = useAuth();
+
+  return useMutation({
+    mutationFn: (payload: BudgetExportPayload): Promise<BudgetImportResult> => {
+      if (isGuest) {
+        throw new GuestBlockedError('Guest users cannot import budget data');
+      }
+      return importBudgetJSON(payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: budgetKeys.incomes() });
+      queryClient.invalidateQueries({ queryKey: budgetKeys.expenses() });
+      queryClient.invalidateQueries({ queryKey: budgetKeys.recurringIncomes() });
+      queryClient.invalidateQueries({ queryKey: budgetKeys.budgetRemaining() });
+      queryClient.invalidateQueries({ queryKey: budgetKeys.stats() });
+    },
+    onError: (error: Error) => {
+      if (!(error instanceof GuestBlockedError)) {
+        console.error('Failed to import budget JSON:', error);
+      }
+    }
+  });
+}
+
+export function useSkipIncome() {
+  const queryClient = useQueryClient();
+  const { isGuest } = useAuth();
+
+  return useMutation({
+    mutationFn: (data: SkipIncomeRequest) => {
+      if (isGuest) {
+        throw new GuestBlockedError('Guest users cannot skip incomes');
+      }
+      return skipIncome(data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: budgetKeys.incomes() });
+      queryClient.invalidateQueries({ queryKey: budgetKeys.recurringIncomes() });
+      queryClient.invalidateQueries({ queryKey: budgetKeys.budgetRemaining() });
+      queryClient.invalidateQueries({ queryKey: budgetKeys.stats() });
+    },
+    onError: (error: Error) => {
+      if (!(error instanceof GuestBlockedError)) {
+        console.error('Failed to skip income occurrence:', error);
+      }
+    }
+  });
+}
+
+export function useSkipExpense() {
+  const queryClient = useQueryClient();
+  const { isGuest } = useAuth();
+
+  return useMutation({
+    mutationFn: (data: SkipExpenseRequest) => {
+      if (isGuest) {
+        throw new GuestBlockedError('Guest users cannot skip expenses');
+      }
+      return skipExpense(data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: budgetKeys.expenses() });
+      queryClient.invalidateQueries({ queryKey: budgetKeys.budgetRemaining() });
+      queryClient.invalidateQueries({ queryKey: budgetKeys.stats() });
+    },
+    onError: (error: Error) => {
+      if (!(error instanceof GuestBlockedError)) {
+        console.error('Failed to skip expense occurrence:', error);
       }
     }
   });
