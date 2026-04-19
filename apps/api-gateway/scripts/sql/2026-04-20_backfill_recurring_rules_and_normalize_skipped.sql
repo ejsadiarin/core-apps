@@ -16,13 +16,16 @@ SET
 WHERE description LIKE 'Skipped:%';
 
 -- 2) Materialize recurring income rules into static rows (inclusive end date)
-WITH generated_income_occurrences AS (
+WITH income_rule_occurrences AS (
     SELECT
         r.id AS rule_id,
         r.user_id,
         r.amount,
         r.currency,
         r.description,
+        r.recurring_type,
+        r.start_date,
+        r.end_date,
         gs::date AS occurrence_date
     FROM recurring_income_rules r
     CROSS JOIN LATERAL generate_series(
@@ -55,13 +58,13 @@ SELECT
     g.currency,
     g.occurrence_date,
     g.description,
-    NULL,
-    NULL,
-    NULL,
+    g.recurring_type,
+    g.start_date,
+    g.end_date,
     'posted',
     g.rule_id,
     FALSE
-FROM generated_income_occurrences g
+FROM income_rule_occurrences g
 WHERE NOT EXISTS (
     SELECT 1
     FROM budget_incomes bi
@@ -72,7 +75,7 @@ WHERE NOT EXISTS (
 );
 
 -- 3) Materialize recurring expense rules into static rows (inclusive end date)
-WITH generated_expense_occurrences AS (
+WITH expense_rule_occurrences AS (
     SELECT
         r.id AS rule_id,
         r.user_id,
@@ -81,6 +84,9 @@ WITH generated_expense_occurrences AS (
         r.currency,
         r.category_id,
         r.notes,
+        r.recurring_type,
+        r.start_date,
+        r.end_date,
         r.priority_group_id,
         r.is_debt,
         gs::date AS occurrence_date
@@ -120,14 +126,14 @@ SELECT
     g.category_id,
     g.occurrence_date,
     g.notes,
-    NULL,
-    NULL,
-    NULL,
+    g.recurring_type,
+    g.start_date,
+    g.end_date,
     g.priority_group_id,
     'posted',
     g.rule_id,
     g.is_debt
-FROM generated_expense_occurrences g
+FROM expense_rule_occurrences g
 WHERE NOT EXISTS (
     SELECT 1
     FROM budget_expenses be
