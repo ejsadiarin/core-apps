@@ -28,6 +28,7 @@ export function SkipOccurrenceDialog({ income, open, onOpenChange }: SkipOccurre
   const [isChecking, setIsChecking] = useState(false);
   const [alreadySkipped, setAlreadySkipped] = useState(false);
   const checkRequestIdRef = useRef(0);
+  const submitLockRef = useRef(false);
 
   useEffect(() => {
     if (!open || !skipDate || !income?.id) {
@@ -75,7 +76,8 @@ export function SkipOccurrenceDialog({ income, open, onOpenChange }: SkipOccurre
   };
 
   const handleSkip = async () => {
-    if (!income || alreadySkipped) return;
+    if (!income || alreadySkipped || submitLockRef.current) return;
+    submitLockRef.current = true;
 
     try {
       await skipIncome.mutateAsync({
@@ -90,6 +92,8 @@ export function SkipOccurrenceDialog({ income, open, onOpenChange }: SkipOccurre
       } else {
         showToast('Failed to skip occurrence', 'error');
       }
+    } finally {
+      submitLockRef.current = false;
     }
   };
 

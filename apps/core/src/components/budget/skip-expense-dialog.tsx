@@ -28,6 +28,7 @@ export function SkipExpenseDialog({ expense, open, onOpenChange }: SkipExpenseDi
   const [isChecking, setIsChecking] = useState(false);
   const [alreadySkipped, setAlreadySkipped] = useState(false);
   const checkRequestIdRef = useRef(0);
+  const submitLockRef = useRef(false);
 
   useEffect(() => {
     if (!open || !skipDate || !expense?.id) {
@@ -75,7 +76,8 @@ export function SkipExpenseDialog({ expense, open, onOpenChange }: SkipExpenseDi
   };
 
   const handleSkip = async () => {
-    if (!expense || alreadySkipped || isChecking) return;
+    if (!expense || alreadySkipped || isChecking || submitLockRef.current) return;
+    submitLockRef.current = true;
 
     try {
       await skipExpense.mutateAsync({
@@ -93,6 +95,8 @@ export function SkipExpenseDialog({ expense, open, onOpenChange }: SkipExpenseDi
       } else {
         showToast('Failed to skip expense', 'error');
       }
+    } finally {
+      submitLockRef.current = false;
     }
   };
 

@@ -25,6 +25,8 @@ import Link from "next/link";
 import { useToast } from "@/components/ui/toast";
 import { GuestBlockedError } from "@/hooks/use-budget";
 
+const MAX_IMPORT_FILE_BYTES = 5 * 1024 * 1024;
+
 export default function SettingsPage() {
   const { data: categories, isLoading: categoriesLoading } = useCategories();
   const { data: tags, isLoading: tagsLoading } = useTags();
@@ -90,6 +92,15 @@ export default function SettingsPage() {
   const handleImportBudget = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) {
+      return;
+    }
+
+    if (file.size > MAX_IMPORT_FILE_BYTES) {
+      const message = "Import file is too large (max 5MB)";
+      showToast(message, "error");
+      setImportResult(null);
+      setImportError(message);
+      event.target.value = "";
       return;
     }
 

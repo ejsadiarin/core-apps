@@ -19,6 +19,8 @@ import (
 const (
 	budgetImportExportSchemaVersion = "1.0"
 	budgetImportExportSource        = "core-gateway"
+	budgetImportMaxBodyBytes        = 5 * 1024 * 1024
+	budgetImportMaxRows             = 10000
 )
 
 type incomeMatchIndex struct {
@@ -106,9 +108,18 @@ func (h *Handler) ImportBudgetJSON(c echo.Context) error {
 		return c.JSON(http.StatusForbidden, models.ErrorResponse{Error: "Guest users cannot import budget data"})
 	}
 
+	c.Request().Body = http.MaxBytesReader(c.Response().Writer, c.Request().Body, budgetImportMaxBodyBytes)
+
 	var req BudgetExportPayload
 	if err := c.Bind(&req); err != nil {
+		if strings.Contains(err.Error(), "http: request body too large") {
+			return c.JSON(http.StatusRequestEntityTooLarge, models.ErrorResponse{Error: "Import payload too large"})
+		}
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid import payload"})
+	}
+
+	if len(req.Incomes)+len(req.Expenses) > budgetImportMaxRows {
+		return c.JSON(http.StatusRequestEntityTooLarge, models.ErrorResponse{Error: "Import payload has too many rows"})
 	}
 
 	if validationErr := validateImportPayload(req); validationErr != nil {
