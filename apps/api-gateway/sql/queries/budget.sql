@@ -554,6 +554,11 @@ AND date <= $3
 AND exclude_from_calculations = false;
 
 -- name: UpsertSkippedExpense :one
+WITH rule_type AS (
+    SELECT recurring_type, start_date, end_date
+    FROM recurring_expense_rules
+    WHERE id = $3
+)
 INSERT INTO budget_expenses (
     user_id,
     description,
@@ -576,9 +581,9 @@ INSERT INTO budget_expenses (
     NULL,
     $2,
     '',
-    NULL,
-    NULL,
-    NULL,
+    (SELECT recurring_type FROM rule_type),
+    (SELECT start_date FROM rule_type),
+    (SELECT end_date FROM rule_type),
     NULL,
     'skipped',
     $3
@@ -590,9 +595,9 @@ DO UPDATE SET
     currency = EXCLUDED.currency,
     category_id = NULL,
     notes = COALESCE(budget_expenses.notes, EXCLUDED.notes),
-    recurring_type = NULL,
-    start_date = NULL,
-    end_date = NULL,
+    recurring_type = COALESCE((SELECT recurring_type FROM recurring_expense_rules WHERE id = EXCLUDED.source_rule_id), EXCLUDED.recurring_type),
+    start_date = COALESCE((SELECT start_date FROM recurring_expense_rules WHERE id = EXCLUDED.source_rule_id), EXCLUDED.start_date),
+    end_date = COALESCE((SELECT end_date FROM recurring_expense_rules WHERE id = EXCLUDED.source_rule_id), EXCLUDED.end_date),
     priority_group_id = NULL,
     status = 'skipped',
     updated_at = NOW()

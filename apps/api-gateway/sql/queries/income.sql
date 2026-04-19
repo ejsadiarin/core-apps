@@ -155,6 +155,11 @@ SELECT EXISTS(
 );
 
 -- name: UpsertSkippedIncome :one
+WITH rule_type AS (
+    SELECT recurring_type, start_date, end_date
+    FROM recurring_income_rules
+    WHERE id = $3
+)
 INSERT INTO budget_incomes (
     user_id,
     amount,
@@ -173,9 +178,9 @@ INSERT INTO budget_incomes (
     'USD',
     $2,
     'Skipped recurring income',
-    NULL,
-    NULL,
-    NULL,
+    (SELECT recurring_type FROM rule_type),
+    (SELECT start_date FROM rule_type),
+    (SELECT end_date FROM rule_type),
     'skipped',
     $3,
     true
@@ -185,9 +190,9 @@ DO UPDATE SET
     amount = EXCLUDED.amount,
     currency = EXCLUDED.currency,
     description = COALESCE(budget_incomes.description, EXCLUDED.description),
-    recurring_type = NULL,
-    start_date = NULL,
-    end_date = NULL,
+    recurring_type = COALESCE((SELECT recurring_type FROM recurring_income_rules WHERE id = EXCLUDED.source_rule_id), EXCLUDED.recurring_type),
+    start_date = COALESCE((SELECT start_date FROM recurring_income_rules WHERE id = EXCLUDED.source_rule_id), EXCLUDED.start_date),
+    end_date = COALESCE((SELECT end_date FROM recurring_income_rules WHERE id = EXCLUDED.source_rule_id), EXCLUDED.end_date),
     status = 'skipped',
     exclude_from_calculations = true,
     updated_at = NOW()
