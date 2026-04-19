@@ -469,6 +469,7 @@ export function useCreateIncome() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: budgetKeys.incomes() });
+      queryClient.invalidateQueries({ queryKey: budgetKeys.recurringIncomes() });
       queryClient.invalidateQueries({ queryKey: budgetKeys.budgetRemaining() });
       queryClient.invalidateQueries({ queryKey: budgetKeys.stats() });
     },
@@ -494,6 +495,7 @@ export function useUpdateIncome() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: budgetKeys.incomes() });
       queryClient.invalidateQueries({ queryKey: budgetKeys.incomeDetail(variables.id) });
+      queryClient.invalidateQueries({ queryKey: budgetKeys.recurringIncomes() });
       queryClient.invalidateQueries({ queryKey: budgetKeys.budgetRemaining() });
       queryClient.invalidateQueries({ queryKey: budgetKeys.stats() });
     },
@@ -518,6 +520,7 @@ export function useDeleteIncome() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: budgetKeys.incomes() });
+      queryClient.invalidateQueries({ queryKey: budgetKeys.recurringIncomes() });
       queryClient.invalidateQueries({ queryKey: budgetKeys.budgetRemaining() });
       queryClient.invalidateQueries({ queryKey: budgetKeys.stats() });
     },

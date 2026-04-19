@@ -345,6 +345,7 @@ export async function fetchExpenses(
   if (params.start_date) searchParams.append('start_date', params.start_date);
   if (params.end_date) searchParams.append('end_date', params.end_date);
   if (params.category_id) searchParams.append('category_id', params.category_id);
+  if (params.recurring_type) searchParams.append('recurring_type', params.recurring_type);
 
   const res = await fetch(url + `/api/budget/expenses?${searchParams.toString()}`, {
     credentials: 'include'
@@ -697,11 +698,8 @@ export async function checkSkippedIncome(date: string, sourceRuleId?: string): P
   return res.json();
 }
 
-export async function checkSkippedExpense(date: string, sourceRuleId?: string): Promise<boolean> {
+export async function checkSkippedExpense(date: string): Promise<boolean> {
   const params = new URLSearchParams({ date });
-  if (sourceRuleId) {
-    params.set('source_rule_id', sourceRuleId);
-  }
 
   const res = await fetch(url + `/api/budget/expenses/check-skipped?${params.toString()}`, {
     credentials: 'include'
