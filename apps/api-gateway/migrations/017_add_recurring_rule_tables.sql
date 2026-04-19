@@ -50,79 +50,48 @@ CREATE INDEX IF NOT EXISTS idx_recurring_expense_rules_user_type
 CREATE INDEX IF NOT EXISTS idx_recurring_expense_rules_user_dates
     ON recurring_expense_rules(user_id, start_date, end_date);
 
-WITH income_seed AS (
-    SELECT *
-    FROM (
-        VALUES
-            ('c63736c7-932e-4738-8f1a-f2ce31ab19dc'::uuid, 500.00::numeric, 'PHP'::varchar(3), '2026-01-07'::date, 'Wed weekly allowance'::text, 'weekly'::varchar(10), '2026-01-07'::date, '2026-04-08'::date),
-            ('4caf80eb-2013-4fd2-b93e-34a924891535'::uuid, 500.00::numeric, 'PHP'::varchar(3), '2026-01-08'::date, 'Thurs weekly allowance'::text, 'weekly'::varchar(10), '2026-01-08'::date, '2026-04-09'::date),
-            ('d075d34d-14a9-4a5f-9384-6893f21b7b31'::uuid, 500.00::numeric, 'PHP'::varchar(3), '2026-01-09'::date, 'Fri weekly allowance'::text, 'weekly'::varchar(10), '2026-01-09'::date, '2026-04-10'::date),
-            ('07a53266-f693-4171-9124-12bec3aa41f1'::uuid, 500.00::numeric, 'PHP'::varchar(3), '2026-01-10'::date, 'Sat weekly allowance'::text, 'weekly'::varchar(10), '2026-01-10'::date, '2026-04-11'::date)
-    ) AS t(id, amount, currency, date, description, recurring_type, start_date, end_date)
-)
-INSERT INTO recurring_income_rules (
-    id,
-    user_id,
+-- Seed from JSON known user (first user in system)
+-- Insert recurring income rules
+INSERT INTO recurring_income_rules (id, user_id, amount, currency, date, description, recurring_type, start_date, end_date)
+SELECT
+    id::uuid,
+    (SELECT id FROM users ORDER BY created_at LIMIT 1),
     amount,
     currency,
-    date,
+    date::date,
     description,
     recurring_type,
-    start_date,
-    end_date
-)
-SELECT
-    s.id,
-    bi.user_id,
-    s.amount,
-    s.currency,
-    s.date,
-    s.description,
-    s.recurring_type,
-    s.start_date,
-    s.end_date
-FROM income_seed s
-JOIN budget_incomes bi ON bi.id = s.id
+    start_date::date,
+    end_date::date
+FROM (
+    VALUES
+        ('c63736c7-932e-4738-8f1a-f2ce31ab19dc', 500.00, 'PHP', '2026-01-07', 'Wed weekly allowance', 'weekly', '2026-01-07', '2026-04-08'),
+        ('4caf80eb-2013-4fd2-b93e-34a924891535', 500.00, 'PHP', '2026-01-08', 'Thurs weekly allowance', 'weekly', '2026-01-08', '2026-04-09'),
+        ('d075d34d-14a9-4a5f-9384-6893f21b7b31', 500.00, 'PHP', '2026-01-09', 'Fri weekly allowance', 'weekly', '2026-01-09', '2026-04-10'),
+        ('07a53266-f693-4171-9124-12bec3aa41f1', 500.00, 'PHP', '2026-01-10', 'Sat weekly allowance', 'weekly', '2026-01-10', '2026-04-11')
+) AS t(id, amount, currency, date, description, recurring_type, start_date, end_date)
 ON CONFLICT (id) DO NOTHING;
 
-WITH expense_seed AS (
-    SELECT *
-    FROM (
-        VALUES
-            ('db4b3510-2a95-4b82-bb03-4a067852220d'::uuid, 'spotify subscription'::text, 85.00::numeric, 'PHP'::varchar(3), '2026-02-23'::date, 'student plan'::text, 'monthly'::text, '2026-02-23'::date, NULL::date, FALSE)
-    ) AS t(id, description, amount, currency, expense_date, notes, recurring_type, start_date, end_date, is_debt)
-)
-INSERT INTO recurring_expense_rules (
-    id,
-    user_id,
+-- Insert recurring expense rules
+INSERT INTO recurring_expense_rules (id, user_id, description, amount, currency, category_id, expense_date, notes, recurring_type, start_date, end_date, priority_group_id, is_debt)
+SELECT
+    id::uuid,
+    (SELECT id FROM users ORDER BY created_at LIMIT 1),
     description,
     amount,
     currency,
-    category_id,
-    expense_date,
+    NULL,
+    date::date,
     notes,
     recurring_type,
-    start_date,
-    end_date,
-    priority_group_id,
-    is_debt
-)
-SELECT
-    s.id,
-    be.user_id,
-    s.description,
-    s.amount,
-    s.currency,
-    be.category_id,
-    s.expense_date,
-    s.notes,
-    s.recurring_type,
-    s.start_date,
-    s.end_date,
-    be.priority_group_id,
-    s.is_debt
-FROM expense_seed s
-JOIN budget_expenses be ON be.id = s.id
+    start_date::date,
+    end_date::date,
+    NULL,
+    is_debt::boolean
+FROM (
+    VALUES
+        ('db4b3510-2a95-4b82-bb03-4a067852220d', 'spotify subscription', 85.00, 'PHP', '2026-02-23', 'student plan', 'monthly', '2026-02-23', NULL, false)
+) AS t(id, description, amount, currency, date, notes, recurring_type, start_date, end_date, is_debt)
 ON CONFLICT (id) DO NOTHING;
 
 -- +goose Down
