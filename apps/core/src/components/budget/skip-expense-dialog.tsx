@@ -75,7 +75,7 @@ export function SkipExpenseDialog({ expense, open, onOpenChange }: SkipExpenseDi
   };
 
   const handleSkip = async () => {
-    if (!expense) return;
+    if (!expense || alreadySkipped || isChecking) return;
 
     try {
       await skipExpense.mutateAsync({
@@ -180,7 +180,7 @@ export function SkipExpenseDialog({ expense, open, onOpenChange }: SkipExpenseDi
           <Button
             variant="destructive"
             onClick={handleSkip}
-            disabled={skipExpense.isPending || !skipDate}
+            disabled={skipExpense.isPending || !skipDate || alreadySkipped || isChecking}
           >
             {skipExpense.isPending ? 'Skipping...' : 'Skip Expense'}
           </Button>
