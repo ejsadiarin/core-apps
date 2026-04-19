@@ -1,5 +1,9 @@
 -- +goose Up
 
+-- First set start_date where recurring_type would be set but start_date is NULL (CHECK constraint requires start_date when recurring_type is NOT NULL)
+UPDATE budget_expenses SET start_date = expense_date WHERE recurring_type IS NULL AND start_date IS NULL;
+UPDATE budget_incomes SET start_date = date WHERE recurring_type IS NULL AND start_date IS NULL;
+
 -- Update existing nulls to 'one-time' first (must be done before NOT NULL)
 UPDATE budget_expenses SET recurring_type = 'one-time' WHERE recurring_type IS NULL;
 UPDATE budget_incomes SET recurring_type = 'one-time' WHERE recurring_type IS NULL;
