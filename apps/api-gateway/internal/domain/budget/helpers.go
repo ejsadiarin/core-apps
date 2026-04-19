@@ -85,6 +85,20 @@ func getCurrency(t pgtype.Text) string {
 	return t.String
 }
 
+func getCurrencyFromString(s string) string {
+	if s == "" {
+		return "USD"
+	}
+	return s
+}
+
+func textToStringPtrFromString(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
+}
+
 func dateToNullableStringPtr(d pgtype.Date) *string {
 	if !d.Valid {
 		return nil

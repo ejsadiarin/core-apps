@@ -484,10 +484,8 @@ SELECT
     start_date,
     end_date,
     category_id
-FROM budget_expenses
+FROM recurring_expense_rules
 WHERE user_id = $1
-    AND recurring_type IS NOT NULL
-    AND status = 'posted'
     AND start_date <= $2
     AND (end_date IS NULL OR end_date >= CURRENT_DATE)
 ORDER BY 

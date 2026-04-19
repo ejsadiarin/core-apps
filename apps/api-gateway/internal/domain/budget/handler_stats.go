@@ -560,8 +560,8 @@ func (h *Handler) GetUpcomingBills(c echo.Context) error {
 				ID:            expense.ID,
 				Description:   expense.Description,
 				Amount:        numericToFloat64(expense.Amount),
-				Currency:      expense.Currency.String,
-				RecurringType: expense.RecurringType.String,
+				Currency:      getCurrencyFromString(expense.Currency),
+				RecurringType: expense.RecurringType,
 				DueDate:       date.Format("2006-01-02"),
 			}
 			if expense.CategoryID.Valid {
@@ -626,7 +626,7 @@ func daysInMonth(m time.Month, year int) int {
 }
 
 // calculateRecurringIncome computes total recurring income up to the target date
-func calculateRecurringIncome(recurringRules []sqlc.BudgetIncome, targetDate time.Time) float64 {
+func calculateRecurringIncome(recurringRules []sqlc.RecurringIncomeRule, targetDate time.Time) float64 {
 	recurringIncome := 0.0
 
 	for _, rule := range recurringRules {
@@ -642,7 +642,7 @@ func calculateRecurringIncome(recurringRules []sqlc.BudgetIncome, targetDate tim
 		if startDate.Before(effectiveEndDate) || startDate.Equal(effectiveEndDate) {
 			var periods float64
 
-			switch rule.RecurringType.String {
+			switch rule.RecurringType {
 			case "daily":
 				// calculate number of days from start to effective end (inclusive)
 				diff := effectiveEndDate.Sub(startDate)
@@ -672,7 +672,7 @@ func calculateRecurringIncome(recurringRules []sqlc.BudgetIncome, targetDate tim
 
 // calculateRecurringIncomeForPeriod calculates recurring income within a specific period
 // handles partial periods where rule starts/ends mid-period
-func calculateRecurringIncomeForPeriod(recurringRules []sqlc.BudgetIncome, periodStart, periodEnd time.Time) float64 {
+func calculateRecurringIncomeForPeriod(recurringRules []sqlc.RecurringIncomeRule, periodStart, periodEnd time.Time) float64 {
 	recurringIncome := 0.0
 
 	for _, rule := range recurringRules {
@@ -694,7 +694,7 @@ func calculateRecurringIncomeForPeriod(recurringRules []sqlc.BudgetIncome, perio
 
 		var periods float64
 
-		switch rule.RecurringType.String {
+		switch rule.RecurringType {
 		case "daily":
 			// calculate number of days in overlap period (inclusive)
 			diff := effectiveEnd.Sub(effectiveStart)
@@ -732,7 +732,7 @@ func calculateOccurrencesRow(expense sqlc.GetUpcomingRecurringExpensesRow, start
 	start := expense.StartDate.Time
 	if start.Before(startDate) {
 		// Calculate the next occurrence after startDate
-		start = calculateNextOccurrence(start, expense.RecurringType.String, startDate)
+		start = calculateNextOccurrence(start, expense.RecurringType, startDate)
 	}
 
 	for !start.After(endDate) {
@@ -740,7 +740,7 @@ func calculateOccurrencesRow(expense sqlc.GetUpcomingRecurringExpensesRow, start
 			break
 		}
 		occurrences = append(occurrences, start)
-		start = calculateNextOccurrence(start, expense.RecurringType.String, start)
+		start = calculateNextOccurrence(start, expense.RecurringType, start)
 	}
 
 	return occurrences
@@ -1280,7 +1280,7 @@ func (h *Handler) GetSubscriptions(c echo.Context) error {
 	for _, sub := range subscriptions {
 		amount := numericToFloat64(sub.Amount)
 		monthlyAmount := amount
-		switch sub.RecurringType.String {
+		switch sub.RecurringType {
 		case "daily":
 			monthlyAmount = amount * 30
 		case "weekly":
@@ -1294,7 +1294,7 @@ func (h *Handler) GetSubscriptions(c echo.Context) error {
 		if sub.StartDate.Valid {
 			nextDue = sub.StartDate.Time
 			for nextDue.Before(now) {
-				nextDue = calculateNextOccurrence(nextDue, sub.RecurringType.String, nextDue)
+				nextDue = calculateNextOccurrence(nextDue, sub.RecurringType, nextDue)
 			}
 		}
 
@@ -1302,8 +1302,8 @@ func (h *Handler) GetSubscriptions(c echo.Context) error {
 			ID:            sub.ID,
 			Description:   sub.Description,
 			Amount:        amount,
-			Currency:      sub.Currency.String,
-			RecurringType: sub.RecurringType.String,
+			Currency:      getCurrencyFromString(sub.Currency),
+			RecurringType: sub.RecurringType,
 			NextDueDate:   nextDue.Format("2006-01-02"),
 		}
 

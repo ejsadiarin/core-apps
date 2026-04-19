@@ -362,16 +362,16 @@ func (h *Handler) GetRecurringIncomes(c echo.Context) error {
 	today := time.Now()
 	result := make([]RecurringIncomeWithNextDate, len(recurringIncomes))
 	for i, inc := range recurringIncomes {
-		nextOccurrence := calculateNextOccurrenceFromStart(inc.StartDate.Time, inc.RecurringType.String, today)
-		monthlyEquiv := calculateMonthlyEquivalent(numericToFloat64(inc.Amount), inc.RecurringType.String)
+		nextOccurrence := calculateNextOccurrenceFromStart(inc.StartDate.Time, inc.RecurringType, today)
+		monthlyEquiv := calculateMonthlyEquivalent(numericToFloat64(inc.Amount), inc.RecurringType)
 
 		result[i] = RecurringIncomeWithNextDate{
 			ID:                inc.ID,
 			Amount:            numericToFloat64(inc.Amount),
-			Currency:          getCurrency(inc.Currency),
+			Currency:          getCurrencyFromString(inc.Currency),
 			Date:              dateToString(inc.Date),
 			Description:       textToStringPtr(inc.Description),
-			RecurringType:     textToStringPtr(inc.RecurringType),
+			RecurringType:     textToStringPtrFromString(inc.RecurringType),
 			StartDate:         dateToNullableStringPtr(inc.StartDate),
 			EndDate:           dateToNullableStringPtr(inc.EndDate),
 			NextOccurrence:    nextOccurrence.Format("2006-01-02"),

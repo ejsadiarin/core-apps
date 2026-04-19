@@ -71,9 +71,9 @@ func TestCalculateRecurringIncome(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rules := []sqlc.BudgetIncome{
+			rules := []sqlc.RecurringIncomeRule{
 				{
-					RecurringType: pgtype.Text{String: tt.recurringType, Valid: true},
+					RecurringType: tt.recurringType,
 					StartDate:     pgtype.Date{Time: tt.startDate, Valid: true},
 					Amount:        float64ToNumeric(tt.amount),
 				},
@@ -195,7 +195,7 @@ func TestCalculateOccurrences(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			expense := sqlc.GetUpcomingRecurringExpensesRow{
-				RecurringType: pgtype.Text{String: tt.recurringType, Valid: true},
+				RecurringType: tt.recurringType,
 				StartDate:     pgtype.Date{Time: tt.expenseStart, Valid: true},
 			}
 

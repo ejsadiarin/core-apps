@@ -86,6 +86,38 @@ type CategoryBudget struct {
 	UpdatedAt    pgtype.Timestamp `json:"updated_at"`
 }
 
+type RecurringExpenseRule struct {
+	ID              uuid.UUID        `json:"id"`
+	UserID          uuid.UUID        `json:"user_id"`
+	Description     string           `json:"description"`
+	Amount          pgtype.Numeric   `json:"amount"`
+	Currency        string           `json:"currency"`
+	CategoryID      pgtype.UUID      `json:"category_id"`
+	ExpenseDate     pgtype.Date      `json:"expense_date"`
+	Notes           pgtype.Text      `json:"notes"`
+	RecurringType   string           `json:"recurring_type"`
+	StartDate       pgtype.Date      `json:"start_date"`
+	EndDate         pgtype.Date      `json:"end_date"`
+	PriorityGroupID pgtype.UUID      `json:"priority_group_id"`
+	IsDebt          bool             `json:"is_debt"`
+	CreatedAt       pgtype.Timestamp `json:"created_at"`
+	UpdatedAt       pgtype.Timestamp `json:"updated_at"`
+}
+
+type RecurringIncomeRule struct {
+	ID            uuid.UUID        `json:"id"`
+	UserID        uuid.UUID        `json:"user_id"`
+	Amount        pgtype.Numeric   `json:"amount"`
+	Currency      string           `json:"currency"`
+	Date          pgtype.Date      `json:"date"`
+	Description   pgtype.Text      `json:"description"`
+	RecurringType string           `json:"recurring_type"`
+	StartDate     pgtype.Date      `json:"start_date"`
+	EndDate       pgtype.Date      `json:"end_date"`
+	CreatedAt     pgtype.Timestamp `json:"created_at"`
+	UpdatedAt     pgtype.Timestamp `json:"updated_at"`
+}
+
 type SavingsGoal struct {
 	ID            uuid.UUID        `json:"id"`
 	UserID        uuid.UUID        `json:"user_id"`

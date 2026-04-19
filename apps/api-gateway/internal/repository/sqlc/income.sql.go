@@ -197,13 +197,12 @@ func (q *Queries) GetAllOneTimeIncomeToDate(ctx context.Context, arg GetAllOneTi
 }
 
 const getAllRecurringIncomeRules = `-- name: GetAllRecurringIncomeRules :many
-SELECT id, user_id, amount, currency, date, description, recurring_type, start_date, created_at, updated_at, end_date, exclude_from_calculations, status, source_rule_id FROM budget_incomes
+SELECT id, user_id, amount, currency, date, description, recurring_type, start_date, end_date, created_at, updated_at FROM recurring_income_rules
 WHERE
     ($1::uuid IS NULL OR user_id = $1)
-    AND recurring_type IN ('daily', 'weekly', 'monthly')
+    AND recurring_type IN ('daily', 'weekly', 'monthly', 'yearly')
     AND start_date <= $2::date
     AND (end_date IS NULL OR end_date >= $2::date)
-    AND status = 'posted'
 ORDER BY start_date
 `
 
@@ -212,15 +211,15 @@ type GetAllRecurringIncomeRulesParams struct {
 	Date   pgtype.Date `json:"date"`
 }
 
-func (q *Queries) GetAllRecurringIncomeRules(ctx context.Context, arg GetAllRecurringIncomeRulesParams) ([]BudgetIncome, error) {
+func (q *Queries) GetAllRecurringIncomeRules(ctx context.Context, arg GetAllRecurringIncomeRulesParams) ([]RecurringIncomeRule, error) {
 	rows, err := q.db.Query(ctx, getAllRecurringIncomeRules, arg.UserID, arg.Date)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []BudgetIncome{}
+	items := []RecurringIncomeRule{}
 	for rows.Next() {
-		var i BudgetIncome
+		var i RecurringIncomeRule
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
@@ -230,12 +229,9 @@ func (q *Queries) GetAllRecurringIncomeRules(ctx context.Context, arg GetAllRecu
 			&i.Description,
 			&i.RecurringType,
 			&i.StartDate,
+			&i.EndDate,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.EndDate,
-			&i.ExcludeFromCalculations,
-			&i.Status,
-			&i.SourceRuleID,
 		); err != nil {
 			return nil, err
 		}
@@ -503,13 +499,11 @@ func (q *Queries) GetOneTimeIncomesForPeriod(ctx context.Context, arg GetOneTime
 }
 
 const getRecurringIncomeForPeriod = `-- name: GetRecurringIncomeForPeriod :many
-SELECT id, user_id, amount, currency, date, description, recurring_type, start_date, created_at, updated_at, end_date, exclude_from_calculations, status, source_rule_id FROM budget_incomes
+SELECT id, user_id, amount, currency, date, description, recurring_type, start_date, end_date, created_at, updated_at FROM recurring_income_rules
 WHERE user_id = $1
-    AND recurring_type IN ('daily', 'weekly', 'monthly')
+    AND recurring_type IN ('daily', 'weekly', 'monthly', 'yearly')
     AND start_date <= $2
     AND (end_date IS NULL OR end_date >= $3)
-    AND status = 'posted'
-    AND exclude_from_calculations = false
 ORDER BY start_date
 `
 
@@ -519,15 +513,15 @@ type GetRecurringIncomeForPeriodParams struct {
 	EndDate   pgtype.Date `json:"end_date"`
 }
 
-func (q *Queries) GetRecurringIncomeForPeriod(ctx context.Context, arg GetRecurringIncomeForPeriodParams) ([]BudgetIncome, error) {
+func (q *Queries) GetRecurringIncomeForPeriod(ctx context.Context, arg GetRecurringIncomeForPeriodParams) ([]RecurringIncomeRule, error) {
 	rows, err := q.db.Query(ctx, getRecurringIncomeForPeriod, arg.UserID, arg.StartDate, arg.EndDate)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []BudgetIncome{}
+	items := []RecurringIncomeRule{}
 	for rows.Next() {
-		var i BudgetIncome
+		var i RecurringIncomeRule
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
@@ -537,12 +531,9 @@ func (q *Queries) GetRecurringIncomeForPeriod(ctx context.Context, arg GetRecurr
 			&i.Description,
 			&i.RecurringType,
 			&i.StartDate,
+			&i.EndDate,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.EndDate,
-			&i.ExcludeFromCalculations,
-			&i.Status,
-			&i.SourceRuleID,
 		); err != nil {
 			return nil, err
 		}
@@ -555,13 +546,12 @@ func (q *Queries) GetRecurringIncomeForPeriod(ctx context.Context, arg GetRecurr
 }
 
 const getRecurringIncomeRules = `-- name: GetRecurringIncomeRules :many
-SELECT id, user_id, amount, currency, date, description, recurring_type, start_date, created_at, updated_at, end_date, exclude_from_calculations, status, source_rule_id FROM budget_incomes
+SELECT id, user_id, amount, currency, date, description, recurring_type, start_date, end_date, created_at, updated_at FROM recurring_income_rules
 WHERE
     user_id = $1
-    AND recurring_type IN ('daily', 'weekly', 'monthly')
+    AND recurring_type IN ('daily', 'weekly', 'monthly', 'yearly')
     AND start_date <= $2
     AND (end_date IS NULL OR end_date >= $2)
-    AND status = 'posted'
 ORDER BY start_date
 `
 
@@ -570,15 +560,15 @@ type GetRecurringIncomeRulesParams struct {
 	StartDate pgtype.Date `json:"start_date"`
 }
 
-func (q *Queries) GetRecurringIncomeRules(ctx context.Context, arg GetRecurringIncomeRulesParams) ([]BudgetIncome, error) {
+func (q *Queries) GetRecurringIncomeRules(ctx context.Context, arg GetRecurringIncomeRulesParams) ([]RecurringIncomeRule, error) {
 	rows, err := q.db.Query(ctx, getRecurringIncomeRules, arg.UserID, arg.StartDate)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []BudgetIncome{}
+	items := []RecurringIncomeRule{}
 	for rows.Next() {
-		var i BudgetIncome
+		var i RecurringIncomeRule
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
@@ -588,12 +578,9 @@ func (q *Queries) GetRecurringIncomeRules(ctx context.Context, arg GetRecurringI
 			&i.Description,
 			&i.RecurringType,
 			&i.StartDate,
+			&i.EndDate,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.EndDate,
-			&i.ExcludeFromCalculations,
-			&i.Status,
-			&i.SourceRuleID,
 		); err != nil {
 			return nil, err
 		}

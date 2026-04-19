@@ -93,23 +93,21 @@ WHERE
     AND exclude_from_calculations = false;
 
 -- name: GetRecurringIncomeRules :many
-SELECT * FROM budget_incomes
+SELECT * FROM recurring_income_rules
 WHERE
     user_id = $1
-    AND recurring_type IN ('daily', 'weekly', 'monthly')
+    AND recurring_type IN ('daily', 'weekly', 'monthly', 'yearly')
     AND start_date <= $2
     AND (end_date IS NULL OR end_date >= $2)
-    AND status = 'posted'
 ORDER BY start_date;
 
 -- name: GetAllRecurringIncomeRules :many
-SELECT * FROM budget_incomes
+SELECT * FROM recurring_income_rules
 WHERE
     (sqlc.narg('user_id')::uuid IS NULL OR user_id = sqlc.narg('user_id'))
-    AND recurring_type IN ('daily', 'weekly', 'monthly')
+    AND recurring_type IN ('daily', 'weekly', 'monthly', 'yearly')
     AND start_date <= sqlc.narg('date')::date
     AND (end_date IS NULL OR end_date >= sqlc.narg('date')::date)
-    AND status = 'posted'
 ORDER BY start_date;
 
 -- name: GetTotalExpensesToDate :one
@@ -140,13 +138,11 @@ WHERE user_id = $1
     AND exclude_from_calculations = false;
 
 -- name: GetRecurringIncomeForPeriod :many
-SELECT * FROM budget_incomes
+SELECT * FROM recurring_income_rules
 WHERE user_id = $1
-    AND recurring_type IN ('daily', 'weekly', 'monthly')
+    AND recurring_type IN ('daily', 'weekly', 'monthly', 'yearly')
     AND start_date <= $2
     AND (end_date IS NULL OR end_date >= $3)
-    AND status = 'posted'
-    AND exclude_from_calculations = false
 ORDER BY start_date;
 
 -- name: CheckSkippedIncome :one
