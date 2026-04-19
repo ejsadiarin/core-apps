@@ -96,6 +96,7 @@ export const budgetKeys = {
     [...budgetKeys.incomes(), 'occurrences', { startDate, endDate }] as const,
   recurringIncomes: () => [...budgetKeys.all, 'recurringIncomes'] as const,
 
+  budgetRemainingRoot: () => [...budgetKeys.all, 'budgetRemaining'] as const,
   budgetRemaining: (date?: string) => [...budgetKeys.all, 'budgetRemaining', date] as const,
 
   stats: () => [...budgetKeys.all, 'stats'] as const,
@@ -111,6 +112,7 @@ export const budgetKeys = {
   spendingVelocity: (startDate?: string, endDate?: string) =>
     [...budgetKeys.stats(), 'spendingVelocity', { startDate, endDate }] as const,
   upcomingBills: (days: 7 | 30) => [...budgetKeys.all, 'upcomingBills', days] as const,
+  categoryBudgetsRoot: () => [...budgetKeys.all, 'categoryBudgets'] as const,
   categoryBudgets: (month?: string) => [...budgetKeys.all, 'categoryBudgets', month] as const,
 
   // Financial Health
@@ -335,7 +337,7 @@ export function useCreateExpense() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: budgetKeys.expenses() });
-      queryClient.invalidateQueries({ queryKey: budgetKeys.budgetRemaining() });
+      queryClient.invalidateQueries({ queryKey: budgetKeys.budgetRemainingRoot() });
       queryClient.invalidateQueries({ queryKey: budgetKeys.stats() });
     },
     onError: (error: Error) => {
@@ -360,7 +362,7 @@ export function useUpdateExpense() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: budgetKeys.expenses() });
       queryClient.invalidateQueries({ queryKey: budgetKeys.expenseDetail(variables.id) });
-      queryClient.invalidateQueries({ queryKey: budgetKeys.budgetRemaining() });
+      queryClient.invalidateQueries({ queryKey: budgetKeys.budgetRemainingRoot() });
       queryClient.invalidateQueries({ queryKey: budgetKeys.stats() });
     },
     onError: (error: Error) => {
@@ -384,7 +386,7 @@ export function useDeleteExpense() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: budgetKeys.expenses() });
-      queryClient.invalidateQueries({ queryKey: budgetKeys.budgetRemaining() });
+      queryClient.invalidateQueries({ queryKey: budgetKeys.budgetRemainingRoot() });
       queryClient.invalidateQueries({ queryKey: budgetKeys.stats() });
     },
     onError: (error: Error) => {
@@ -470,7 +472,7 @@ export function useCreateIncome() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: budgetKeys.incomes() });
       queryClient.invalidateQueries({ queryKey: budgetKeys.recurringIncomes() });
-      queryClient.invalidateQueries({ queryKey: budgetKeys.budgetRemaining() });
+      queryClient.invalidateQueries({ queryKey: budgetKeys.budgetRemainingRoot() });
       queryClient.invalidateQueries({ queryKey: budgetKeys.stats() });
     },
     onError: (error: Error) => {
@@ -496,7 +498,7 @@ export function useUpdateIncome() {
       queryClient.invalidateQueries({ queryKey: budgetKeys.incomes() });
       queryClient.invalidateQueries({ queryKey: budgetKeys.incomeDetail(variables.id) });
       queryClient.invalidateQueries({ queryKey: budgetKeys.recurringIncomes() });
-      queryClient.invalidateQueries({ queryKey: budgetKeys.budgetRemaining() });
+      queryClient.invalidateQueries({ queryKey: budgetKeys.budgetRemainingRoot() });
       queryClient.invalidateQueries({ queryKey: budgetKeys.stats() });
     },
     onError: (error: Error) => {
@@ -521,7 +523,7 @@ export function useDeleteIncome() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: budgetKeys.incomes() });
       queryClient.invalidateQueries({ queryKey: budgetKeys.recurringIncomes() });
-      queryClient.invalidateQueries({ queryKey: budgetKeys.budgetRemaining() });
+      queryClient.invalidateQueries({ queryKey: budgetKeys.budgetRemainingRoot() });
       queryClient.invalidateQueries({ queryKey: budgetKeys.stats() });
     },
     onError: (error: Error) => {
@@ -723,7 +725,7 @@ export function useCreateCategoryBudget() {
       return createCategoryBudget(data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: budgetKeys.categoryBudgets() });
+      queryClient.invalidateQueries({ queryKey: budgetKeys.categoryBudgetsRoot() });
     },
     onError: (error: Error) => {
       if (!(error instanceof GuestBlockedError)) {
@@ -745,7 +747,7 @@ export function useUpdateCategoryBudget() {
       return updateCategoryBudget(id, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: budgetKeys.categoryBudgets() });
+      queryClient.invalidateQueries({ queryKey: budgetKeys.categoryBudgetsRoot() });
     },
     onError: (error: Error) => {
       if (!(error instanceof GuestBlockedError)) {
@@ -767,7 +769,7 @@ export function useDeleteCategoryBudget() {
       return deleteCategoryBudget(id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: budgetKeys.categoryBudgets() });
+      queryClient.invalidateQueries({ queryKey: budgetKeys.categoryBudgetsRoot() });
     },
     onError: (error: Error) => {
       if (!(error instanceof GuestBlockedError)) {
