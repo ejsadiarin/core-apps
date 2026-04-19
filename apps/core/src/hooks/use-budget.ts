@@ -547,11 +547,7 @@ export function useImportBudgetJSON() {
       return importBudgetJSON(payload);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: budgetKeys.incomes() });
-      queryClient.invalidateQueries({ queryKey: budgetKeys.expenses() });
-      queryClient.invalidateQueries({ queryKey: budgetKeys.recurringIncomes() });
-      queryClient.invalidateQueries({ queryKey: budgetKeys.budgetRemaining() });
-      queryClient.invalidateQueries({ queryKey: budgetKeys.stats() });
+      queryClient.invalidateQueries({ queryKey: budgetKeys.all });
     },
     onError: (error: Error) => {
       if (!(error instanceof GuestBlockedError)) {
@@ -570,13 +566,15 @@ export function useSkipIncome() {
       if (isGuest) {
         throw new GuestBlockedError('Guest users cannot skip incomes');
       }
+
+      if (data.status === 'skipped') {
+        throw new Error('Income occurrence is already skipped');
+      }
+
       return skipIncome(data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: budgetKeys.incomes() });
-      queryClient.invalidateQueries({ queryKey: budgetKeys.recurringIncomes() });
-      queryClient.invalidateQueries({ queryKey: budgetKeys.budgetRemaining() });
-      queryClient.invalidateQueries({ queryKey: budgetKeys.stats() });
+      queryClient.invalidateQueries({ queryKey: budgetKeys.all });
     },
     onError: (error: Error) => {
       if (!(error instanceof GuestBlockedError)) {
@@ -595,12 +593,15 @@ export function useSkipExpense() {
       if (isGuest) {
         throw new GuestBlockedError('Guest users cannot skip expenses');
       }
+
+      if (data.status === 'skipped') {
+        throw new Error('Expense occurrence is already skipped');
+      }
+
       return skipExpense(data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: budgetKeys.expenses() });
-      queryClient.invalidateQueries({ queryKey: budgetKeys.budgetRemaining() });
-      queryClient.invalidateQueries({ queryKey: budgetKeys.stats() });
+      queryClient.invalidateQueries({ queryKey: budgetKeys.all });
     },
     onError: (error: Error) => {
       if (!(error instanceof GuestBlockedError)) {

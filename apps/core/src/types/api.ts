@@ -613,9 +613,11 @@ export interface BudgetImportResult {
 export interface SkipIncomeRequest {
     date: string;
     source_rule_id: string;
+    status?: string;
 }
 
 export interface SkipExpenseRequest {
     expense_date: string;
     source_rule_id: string;
+    status?: string;
 }
