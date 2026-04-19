@@ -58,7 +58,7 @@ export function FiftyThirtyTwentyChart({ startDate, endDate, className }: FiftyT
     },
     {
       label: 'Savings',
-      data: data.savings,
+      data: data.investments,
       color: 'bg-green-500',
       textColor: 'text-green-500',
       target: 20

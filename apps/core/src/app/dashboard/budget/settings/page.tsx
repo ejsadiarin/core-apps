@@ -20,7 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, Trash2, Edit2, Save, X, ArrowLeft, Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import type { Category, Tag, BudgetImportResult } from "@/types/api";
+import type { Category, Tag, BudgetExportPayload, BudgetImportResult } from "@/types/api";
 import Link from "next/link";
 import { useToast } from "@/components/ui/toast";
 import { GuestBlockedError } from "@/hooks/use-budget";
@@ -53,11 +53,7 @@ export default function SettingsPage() {
   const [importResult, setImportResult] = useState<BudgetImportResult | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
 
-  const isBudgetExportPayload = (value: unknown): value is {
-    metadata: unknown;
-    incomes: unknown[];
-    expenses: unknown[];
-  } => {
+  const isBudgetExportPayload = (value: unknown): value is BudgetExportPayload => {
     if (!value || typeof value !== "object") {
       return false;
     }
