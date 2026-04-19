@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { useCreateExpense } from '@/hooks/use-budget';
+import { useSkipExpense } from '@/hooks/use-budget';
 import { SkipForward, AlertTriangle, AlertCircle, Loader2 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { useToast } from '@/components/ui/toast';
@@ -21,31 +21,50 @@ interface SkipExpenseDialogProps {
 }
 
 export function SkipExpenseDialog({ expense, open, onOpenChange }: SkipExpenseDialogProps) {
-  const createExpense = useCreateExpense();
+  const skipExpense = useSkipExpense();
   const { showToast } = useToast();
   const [skipDate, setSkipDate] = useState('');
   const [reason, setReason] = useState('');
   const [isChecking, setIsChecking] = useState(false);
   const [alreadySkipped, setAlreadySkipped] = useState(false);
+  const checkRequestIdRef = useRef(0);
+  const submitLockRef = useRef(false);
 
   useEffect(() => {
-    if (open && skipDate) {
-      checkForExistingSkip();
-    }
-  }, [skipDate, open]);
-
-  const checkForExistingSkip = async () => {
-    if (!skipDate) return;
-    setIsChecking(true);
-    try {
-      const isSkipped = await checkSkippedExpense(skipDate);
-      setAlreadySkipped(isSkipped);
-    } catch (error) {
-      console.error('Error checking skip:', error);
-    } finally {
+    if (!open || !skipDate || !expense?.id) {
+      setAlreadySkipped(false);
       setIsChecking(false);
+      return;
     }
-  };
+
+    const requestId = ++checkRequestIdRef.current;
+    let isCancelled = false;
+
+    const checkForExistingSkip = async () => {
+      setIsChecking(true);
+      try {
+        const isSkipped = await checkSkippedExpense(skipDate, expense.id);
+        if (!isCancelled && requestId === checkRequestIdRef.current) {
+          setAlreadySkipped(isSkipped);
+        }
+      } catch (error) {
+        if (!isCancelled && requestId === checkRequestIdRef.current) {
+          console.error('Error checking skip:', error);
+          setAlreadySkipped(false);
+        }
+      } finally {
+        if (!isCancelled && requestId === checkRequestIdRef.current) {
+          setIsChecking(false);
+        }
+      }
+    };
+
+    checkForExistingSkip();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [skipDate, open, expense?.id]);
 
   const handleOpen = (isOpen: boolean) => {
     if (isOpen && expense) {
@@ -57,17 +76,13 @@ export function SkipExpenseDialog({ expense, open, onOpenChange }: SkipExpenseDi
   };
 
   const handleSkip = async () => {
-    if (!expense || alreadySkipped) return;
+    if (!expense || alreadySkipped || isChecking || submitLockRef.current) return;
+    submitLockRef.current = true;
 
     try {
-      await createExpense.mutateAsync({
-        amount: -expense.amount,
-        currency: expense.currency,
+      await skipExpense.mutateAsync({
+        source_rule_id: expense.id,
         expense_date: skipDate,
-        description: expense.description
-          ? `Skipped: ${expense.description}`
-          : 'Skipped expense',
-        notes: reason ? `Skip reason: ${reason}` : undefined,
       });
       showToast(
         `Skipped ${expense.currency} ${expense.amount.toFixed(2)} for ${format(parseISO(skipDate), 'MMM d, yyyy')}`,
@@ -80,6 +95,8 @@ export function SkipExpenseDialog({ expense, open, onOpenChange }: SkipExpenseDi
       } else {
         showToast('Failed to skip expense', 'error');
       }
+    } finally {
+      submitLockRef.current = false;
     }
   };
 
@@ -94,7 +111,7 @@ export function SkipExpenseDialog({ expense, open, onOpenChange }: SkipExpenseDi
             Skip Recurring Expense
           </DialogTitle>
           <DialogDescription>
-            Skip one occurrence of your recurring expense. This will create a negative expense entry.
+            Skip one occurrence of your recurring expense.
           </DialogDescription>
         </DialogHeader>
 
@@ -155,7 +172,7 @@ export function SkipExpenseDialog({ expense, open, onOpenChange }: SkipExpenseDi
           <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-400">
             <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
             <p className="text-xs">
-              This will create a negative expense entry. You can delete it later to undo the skip.
+              This marks the selected date as skipped for the recurring rule.
             </p>
           </div>
         </div>
@@ -167,9 +184,9 @@ export function SkipExpenseDialog({ expense, open, onOpenChange }: SkipExpenseDi
           <Button
             variant="destructive"
             onClick={handleSkip}
-            disabled={createExpense.isPending || !skipDate || alreadySkipped || isChecking}
+            disabled={skipExpense.isPending || !skipDate || alreadySkipped || isChecking}
           >
-            {createExpense.isPending ? 'Skipping...' : 'Skip Expense'}
+            {skipExpense.isPending ? 'Skipping...' : 'Skip Expense'}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -51,6 +51,8 @@ type Querier interface {
 	DeleteTag(ctx context.Context, arg DeleteTagParams) error
 	DeleteUser(ctx context.Context, id uuid.UUID) error
 	DeleteUserSessions(ctx context.Context, userID uuid.UUID) error
+	ExportExpenses(ctx context.Context, userID uuid.UUID) ([]ExportExpensesRow, error)
+	ExportIncomes(ctx context.Context, userID uuid.UUID) ([]BudgetIncome, error)
 	GetAllCategorySpending(ctx context.Context, arg GetAllCategorySpendingParams) ([]GetAllCategorySpendingRow, error)
 	GetAllOneTimeIncomeToDate(ctx context.Context, arg GetAllOneTimeIncomeToDateParams) (interface{}, error)
 	GetAllRecurringIncomeRules(ctx context.Context, arg GetAllRecurringIncomeRulesParams) ([]BudgetIncome, error)
@@ -71,6 +73,7 @@ type Querier interface {
 	GetDebtRecurringPayments(ctx context.Context, arg GetDebtRecurringPaymentsParams) ([]BudgetExpense, error)
 	GetExpense(ctx context.Context, arg GetExpenseParams) (BudgetExpense, error)
 	GetExpenseByID(ctx context.Context, id uuid.UUID) (BudgetExpense, error)
+	GetExpenseRowsForPeriod(ctx context.Context, arg GetExpenseRowsForPeriodParams) ([]BudgetExpense, error)
 	GetExpenseTags(ctx context.Context, expenseID uuid.UUID) ([]BudgetTag, error)
 	// Statistics (filtered by user)
 	GetExpensesByDateRange(ctx context.Context, arg GetExpensesByDateRangeParams) ([]BudgetExpense, error)
@@ -79,6 +82,7 @@ type Querier interface {
 	GetIncomeByID(ctx context.Context, id uuid.UUID) (BudgetIncome, error)
 	// Savings Rate Calculation
 	GetIncomeForPeriod(ctx context.Context, arg GetIncomeForPeriodParams) (interface{}, error)
+	GetIncomeRowsForPeriod(ctx context.Context, arg GetIncomeRowsForPeriodParams) ([]BudgetIncome, error)
 	GetMerchantSpendingTrend(ctx context.Context, arg GetMerchantSpendingTrendParams) ([]GetMerchantSpendingTrendRow, error)
 	GetMonthToDateSpending(ctx context.Context, arg GetMonthToDateSpendingParams) (GetMonthToDateSpendingRow, error)
 	GetMonthlySpending(ctx context.Context, userID uuid.UUID) ([]GetMonthlySpendingRow, error)
@@ -141,6 +145,8 @@ type Querier interface {
 	UpdateService(ctx context.Context, arg UpdateServiceParams) (Service, error)
 	UpdateTag(ctx context.Context, arg UpdateTagParams) (BudgetTag, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
+	UpsertSkippedExpense(ctx context.Context, arg UpsertSkippedExpenseParams) (BudgetExpense, error)
+	UpsertSkippedIncome(ctx context.Context, arg UpsertSkippedIncomeParams) (BudgetIncome, error)
 }
 
 var _ Querier = (*Queries)(nil)

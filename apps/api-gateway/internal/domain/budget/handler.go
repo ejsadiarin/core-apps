@@ -1,6 +1,7 @@
 package budget
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -10,20 +11,37 @@ import (
 	"core-gateway/internal/shared/validator"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog"
 )
 
-type Handler struct {
-	queries *sqlc.Queries
-	logger  *zerolog.Logger
+type txBeginner interface {
+	BeginTx(ctx context.Context, txOptions pgx.TxOptions) (pgx.Tx, error)
 }
 
-func NewHandler(queries *sqlc.Queries, logger *zerolog.Logger) *Handler {
+type Handler struct {
+	queries    *sqlc.Queries
+	logger     *zerolog.Logger
+	txBeginner txBeginner
+}
+
+type skipExpenseRequest struct {
+	ExpenseDate  string    `json:"expense_date" validate:"required,datetime=2006-01-02"`
+	SourceRuleID uuid.UUID `json:"source_rule_id" validate:"required"`
+}
+
+func NewHandler(queries *sqlc.Queries, logger *zerolog.Logger, txBeginners ...txBeginner) *Handler {
+	var beginner txBeginner
+	if len(txBeginners) > 0 {
+		beginner = txBeginners[0]
+	}
+
 	return &Handler{
-		queries: queries,
-		logger:  logger,
+		queries:    queries,
+		logger:     logger,
+		txBeginner: beginner,
 	}
 }
 
@@ -720,6 +738,53 @@ func (h *Handler) DeleteExpense(c echo.Context) error {
 	}
 
 	return c.NoContent(http.StatusNoContent)
+}
+
+// SkipExpense godoc
+// @Summary Skip an expense occurrence for a source recurring rule
+// @Tags budget
+// @Accept json
+// @Produce json
+// @Param skip body skipExpenseRequest true "Skip payload"
+// @Success 200 {object} ExpenseResponse
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 403 {object} models.ErrorResponse
+// @Router /api/budget/expenses/skip [post]
+func (h *Handler) SkipExpense(c echo.Context) error {
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return c.JSON(http.StatusForbidden, models.ErrorResponse{Error: "Guest users cannot skip expenses"})
+	}
+
+	req, err := validator.BindAndValidate[skipExpenseRequest](c)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: err.Error()})
+	}
+
+	exp, err := h.queries.UpsertSkippedExpense(c.Request().Context(), sqlc.UpsertSkippedExpenseParams{
+		UserID:       userID,
+		ExpenseDate:  stringToDate(req.ExpenseDate),
+		SourceRuleID: pgtype.UUID{Bytes: req.SourceRuleID, Valid: true},
+	})
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to skip expense occurrence")
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to skip expense occurrence"})
+	}
+
+	return c.JSON(http.StatusOK, ExpenseResponse{
+		ID:            exp.ID,
+		Description:   exp.Description,
+		Amount:        numericToFloat64(exp.Amount),
+		Currency:      getCurrency(exp.Currency),
+		ExpenseDate:   dateToString(exp.ExpenseDate),
+		Notes:         textToStringPtr(exp.Notes),
+		RecurringType: textToStringPtr(exp.RecurringType),
+		StartDate:     dateToNullableStringPtr(exp.StartDate),
+		EndDate:       dateToNullableStringPtr(exp.EndDate),
+		IsDebt:        false,
+		CreatedAt:     exp.CreatedAt.Time.Format(time.RFC3339),
+		UpdatedAt:     exp.UpdatedAt.Time.Format(time.RFC3339),
+	})
 }
 
 // SearchExpenses godoc

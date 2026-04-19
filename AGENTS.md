@@ -135,3 +135,5 @@ ENV=development
 ```
 
 Run postgres: `make db-up`
+
+For anything openspec-related, don't create a local openspec folder here. The openspec folder is at the root level.

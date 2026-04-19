@@ -34,6 +34,8 @@ type BudgetExpense struct {
 	EndDate         pgtype.Date      `json:"end_date"`
 	PriorityGroupID pgtype.UUID      `json:"priority_group_id"`
 	IsDebt          pgtype.Bool      `json:"is_debt"`
+	Status          string           `json:"status"`
+	SourceRuleID    pgtype.UUID      `json:"source_rule_id"`
 }
 
 type BudgetExpenseTag struct {
@@ -54,6 +56,8 @@ type BudgetIncome struct {
 	UpdatedAt               pgtype.Timestamp `json:"updated_at"`
 	EndDate                 pgtype.Date      `json:"end_date"`
 	ExcludeFromCalculations pgtype.Bool      `json:"exclude_from_calculations"`
+	Status                  string           `json:"status"`
+	SourceRuleID            pgtype.UUID      `json:"source_rule_id"`
 }
 
 type BudgetPriorityGroup struct {

@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { useCreateIncome } from '@/hooks/use-budget';
+import { useSkipIncome } from '@/hooks/use-budget';
 import { SkipForward, AlertTriangle, AlertCircle, Loader2 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { useToast } from '@/components/ui/toast';
@@ -21,31 +21,50 @@ interface SkipOccurrenceDialogProps {
 }
 
 export function SkipOccurrenceDialog({ income, open, onOpenChange }: SkipOccurrenceDialogProps) {
-  const createIncome = useCreateIncome();
+  const skipIncome = useSkipIncome();
   const { showToast } = useToast();
   const [skipDate, setSkipDate] = useState('');
   const [reason, setReason] = useState('');
   const [isChecking, setIsChecking] = useState(false);
   const [alreadySkipped, setAlreadySkipped] = useState(false);
+  const checkRequestIdRef = useRef(0);
+  const submitLockRef = useRef(false);
 
   useEffect(() => {
-    if (open && skipDate) {
-      checkForExistingSkip();
-    }
-  }, [skipDate, open]);
-
-  const checkForExistingSkip = async () => {
-    if (!skipDate) return;
-    setIsChecking(true);
-    try {
-      const isSkipped = await checkSkippedIncome(skipDate);
-      setAlreadySkipped(isSkipped);
-    } catch (error) {
-      console.error('Error checking skip:', error);
-    } finally {
+    if (!open || !skipDate || !income?.id) {
+      setAlreadySkipped(false);
       setIsChecking(false);
+      return;
     }
-  };
+
+    const requestId = ++checkRequestIdRef.current;
+    let isCancelled = false;
+
+    const checkForExistingSkip = async () => {
+      setIsChecking(true);
+      try {
+        const isSkipped = await checkSkippedIncome(skipDate, income.id);
+        if (!isCancelled && requestId === checkRequestIdRef.current) {
+          setAlreadySkipped(isSkipped);
+        }
+      } catch (error) {
+        if (!isCancelled && requestId === checkRequestIdRef.current) {
+          console.error('Error checking skip:', error);
+          setAlreadySkipped(false);
+        }
+      } finally {
+        if (!isCancelled && requestId === checkRequestIdRef.current) {
+          setIsChecking(false);
+        }
+      }
+    };
+
+    checkForExistingSkip();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [skipDate, open, income?.id]);
 
   const handleOpen = (isOpen: boolean) => {
     if (isOpen && income) {
@@ -57,17 +76,13 @@ export function SkipOccurrenceDialog({ income, open, onOpenChange }: SkipOccurre
   };
 
   const handleSkip = async () => {
-    if (!income || alreadySkipped) return;
+    if (!income || alreadySkipped || submitLockRef.current) return;
+    submitLockRef.current = true;
 
     try {
-      await createIncome.mutateAsync({
-        amount: -income.amount,
-        currency: income.currency,
+      await skipIncome.mutateAsync({
+        source_rule_id: income.id,
         date: skipDate,
-        description: income.description 
-          ? `Skipped: ${income.description}` 
-          : 'Skipped income',
-        notes: reason ? `Skip reason: ${reason}` : undefined,
       });
       showToast(`Skipped ${income.currency} ${income.amount.toFixed(2)} for ${format(parseISO(skipDate), 'MMM d, yyyy')}`, 'success');
       handleOpen(false);
@@ -77,6 +92,8 @@ export function SkipOccurrenceDialog({ income, open, onOpenChange }: SkipOccurre
       } else {
         showToast('Failed to skip occurrence', 'error');
       }
+    } finally {
+      submitLockRef.current = false;
     }
   };
 
@@ -91,7 +108,7 @@ export function SkipOccurrenceDialog({ income, open, onOpenChange }: SkipOccurre
             Skip Recurring Income
           </DialogTitle>
           <DialogDescription>
-            Skip one occurrence of your recurring income. This will create a negative income entry.
+            Skip one occurrence of your recurring income.
           </DialogDescription>
         </DialogHeader>
 
@@ -152,7 +169,7 @@ export function SkipOccurrenceDialog({ income, open, onOpenChange }: SkipOccurre
           <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-400">
             <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
             <p className="text-xs">
-              This will create a negative income entry. You can delete it later to undo the skip.
+              This marks the selected date as skipped for the recurring rule.
             </p>
           </div>
         </div>
@@ -164,9 +181,9 @@ export function SkipOccurrenceDialog({ income, open, onOpenChange }: SkipOccurre
           <Button 
             variant="destructive" 
             onClick={handleSkip}
-            disabled={createIncome.isPending || !skipDate || alreadySkipped || isChecking}
+            disabled={skipIncome.isPending || !skipDate || alreadySkipped || isChecking}
           >
-            {createIncome.isPending ? 'Skipping...' : 'Skip Income'}
+            {skipIncome.isPending ? 'Skipping...' : 'Skip Income'}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1321,6 +1321,7 @@ func (h *Handler) GetSubscriptions(c echo.Context) error {
 // @Summary Check if an expense occurrence has been skipped for a specific date
 // @Tags budget
 // @Param date query string true "Date to check (YYYY-MM-DD)"
+// @Param source_rule_id query string false "Source recurring rule ID"
 // @Produce json
 // @Success 200 {boolean} true if skipped, false otherwise
 // @Router /api/budget/expenses/check-skipped [get]
@@ -1341,9 +1342,20 @@ func (h *Handler) CheckSkippedExpense(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid date format. Use YYYY-MM-DD"})
 	}
 
+	var sourceRuleID pgtype.UUID
+	sourceRuleIDStr := c.QueryParam("source_rule_id")
+	if sourceRuleIDStr != "" {
+		sourceRule, parseErr := uuid.Parse(sourceRuleIDStr)
+		if parseErr != nil {
+			return c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "Invalid source_rule_id format"})
+		}
+		sourceRuleID = pgtype.UUID{Bytes: sourceRule, Valid: true}
+	}
+
 	exists, err := h.queries.CheckSkippedExpense(c.Request().Context(), sqlc.CheckSkippedExpenseParams{
-		UserID:      userID,
-		ExpenseDate: pgtype.Date{Time: date, Valid: true},
+		UserID:       userID,
+		ExpenseDate:  pgtype.Date{Time: date, Valid: true},
+		SourceRuleID: sourceRuleID,
 	})
 	if err != nil {
 		h.logger.Error().Err(err).Msg("Failed to check skipped expense")
