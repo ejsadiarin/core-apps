@@ -30,7 +30,7 @@ export function SkipExpenseDialog({ expense, open, onOpenChange }: SkipExpenseDi
   const checkRequestIdRef = useRef(0);
 
   useEffect(() => {
-    if (!open || !skipDate) {
+    if (!open || !skipDate || !expense?.id) {
       setAlreadySkipped(false);
       setIsChecking(false);
       return;
@@ -42,7 +42,7 @@ export function SkipExpenseDialog({ expense, open, onOpenChange }: SkipExpenseDi
     const checkForExistingSkip = async () => {
       setIsChecking(true);
       try {
-        const isSkipped = await checkSkippedExpense(skipDate);
+        const isSkipped = await checkSkippedExpense(skipDate, expense.id);
         if (!isCancelled && requestId === checkRequestIdRef.current) {
           setAlreadySkipped(isSkipped);
         }
@@ -63,7 +63,7 @@ export function SkipExpenseDialog({ expense, open, onOpenChange }: SkipExpenseDi
     return () => {
       isCancelled = true;
     };
-  }, [skipDate, open]);
+  }, [skipDate, open, expense?.id]);
 
   const handleOpen = (isOpen: boolean) => {
     if (isOpen && expense) {

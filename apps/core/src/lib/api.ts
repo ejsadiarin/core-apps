@@ -698,8 +698,11 @@ export async function checkSkippedIncome(date: string, sourceRuleId?: string): P
   return res.json();
 }
 
-export async function checkSkippedExpense(date: string): Promise<boolean> {
+export async function checkSkippedExpense(date: string, sourceRuleId?: string): Promise<boolean> {
   const params = new URLSearchParams({ date });
+  if (sourceRuleId) {
+    params.set('source_rule_id', sourceRuleId);
+  }
 
   const res = await fetch(url + `/api/budget/expenses/check-skipped?${params.toString()}`, {
     credentials: 'include'
