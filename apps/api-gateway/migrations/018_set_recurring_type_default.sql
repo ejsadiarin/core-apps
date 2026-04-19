@@ -24,6 +24,16 @@ ALTER TABLE budget_expenses ALTER COLUMN recurring_type SET NOT NULL;
 ALTER TABLE budget_incomes ALTER COLUMN recurring_type SET DEFAULT 'one-time';
 ALTER TABLE budget_incomes ALTER COLUMN recurring_type SET NOT NULL;
 
+-- Change source_rule_id FK to point to recurring rule tables
+ALTER TABLE budget_incomes DROP CONSTRAINT IF EXISTS budget_incomes_source_rule_id_fkey;
+ALTER TABLE budget_expenses DROP CONSTRAINT IF EXISTS budget_expenses_source_rule_id_fkey;
+
+ALTER TABLE budget_incomes ADD CONSTRAINT budget_incomes_source_rule_id_fkey 
+    FOREIGN KEY (source_rule_id) REFERENCES recurring_income_rules(id) ON DELETE SET NULL;
+
+ALTER TABLE budget_expenses ADD CONSTRAINT budget_expenses_source_rule_id_fkey 
+    FOREIGN KEY (source_rule_id) REFERENCES recurring_expense_rules(id) ON DELETE SET NULL;
+
 -- +goose Down
 
 -- Revert to NULL allowed
@@ -43,3 +53,13 @@ CHECK (recurring_type IN ('daily', 'weekly', 'monthly', 'yearly') OR recurring_t
 ALTER TABLE budget_incomes DROP CONSTRAINT budget_incomes_recurring_type_check;
 ALTER TABLE budget_incomes ADD CONSTRAINT budget_incomes_recurring_type_check
 CHECK (recurring_type IN ('daily', 'weekly', 'monthly') OR recurring_type IS NULL);
+
+-- Revert FK to point back to self-referencing
+ALTER TABLE budget_incomes DROP CONSTRAINT IF EXISTS budget_incomes_source_rule_id_fkey;
+ALTER TABLE budget_expenses DROP CONSTRAINT IF EXISTS budget_expenses_source_rule_id_fkey;
+
+ALTER TABLE budget_incomes ADD CONSTRAINT budget_incomes_source_rule_id_fkey 
+    FOREIGN KEY (source_rule_id, user_id) REFERENCES budget_incomes(id, user_id) ON DELETE SET NULL;
+
+ALTER TABLE budget_expenses ADD CONSTRAINT budget_expenses_source_rule_id_fkey 
+    FOREIGN KEY (source_rule_id, user_id) REFERENCES budget_expenses(id, user_id) ON DELETE SET NULL;
