@@ -2,10 +2,10 @@
 -- PostgreSQL database dump
 --
 
-\restrict aiD7CJs2kfOWER3ENfJt2doPUwurfuoOp7SYNRjqMK47OINmhZHHQV4ZI6C5Ezo
+\restrict 11bS5LqjLyDgH7G7HK3x3CPPdg2Z77zurLwhvjxJBAGCUgLPUKxI0v53yVM7DbR
 
--- Dumped from database version 17.8 (6108b59)
--- Dumped by pg_dump version 17.6
+-- Dumped from database version 17.8 (a48d9ca)
+-- Dumped by pg_dump version 17.9
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -22,16 +22,24 @@ SET row_security = off;
 ALTER TABLE IF EXISTS ONLY public.sessions DROP CONSTRAINT IF EXISTS sessions_user_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.service_health_history DROP CONSTRAINT IF EXISTS service_health_history_service_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.savings_goals DROP CONSTRAINT IF EXISTS savings_goals_user_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.recurring_income_rules DROP CONSTRAINT IF EXISTS recurring_income_rules_user_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.recurring_expense_rules DROP CONSTRAINT IF EXISTS recurring_expense_rules_user_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.recurring_expense_rules DROP CONSTRAINT IF EXISTS recurring_expense_rules_priority_group_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.recurring_expense_rules DROP CONSTRAINT IF EXISTS recurring_expense_rules_category_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.category_budgets DROP CONSTRAINT IF EXISTS category_budgets_user_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.category_budgets DROP CONSTRAINT IF EXISTS category_budgets_category_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.budget_tags DROP CONSTRAINT IF EXISTS budget_tags_user_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.budget_incomes DROP CONSTRAINT IF EXISTS budget_incomes_user_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.budget_incomes DROP CONSTRAINT IF EXISTS budget_incomes_source_rule_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.budget_expenses DROP CONSTRAINT IF EXISTS budget_expenses_user_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.budget_expenses DROP CONSTRAINT IF EXISTS budget_expenses_source_rule_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.budget_expenses DROP CONSTRAINT IF EXISTS budget_expenses_priority_group_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.budget_expenses DROP CONSTRAINT IF EXISTS budget_expenses_category_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.budget_expense_tags DROP CONSTRAINT IF EXISTS budget_expense_tags_tag_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.budget_expense_tags DROP CONSTRAINT IF EXISTS budget_expense_tags_expense_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.budget_categories DROP CONSTRAINT IF EXISTS budget_categories_user_id_fkey;
+DROP TRIGGER IF EXISTS budget_incomes_clear_source_rule_refs_before_delete ON public.budget_incomes;
+DROP TRIGGER IF EXISTS budget_expenses_clear_source_rule_refs_before_delete ON public.budget_expenses;
 DROP INDEX IF EXISTS public.idx_users_role;
 DROP INDEX IF EXISTS public.idx_users_email;
 DROP INDEX IF EXISTS public.idx_sessions_user;
@@ -42,10 +50,15 @@ DROP INDEX IF EXISTS public.idx_service_health_service_id;
 DROP INDEX IF EXISTS public.idx_service_health_checked_at;
 DROP INDEX IF EXISTS public.idx_savings_goals_user;
 DROP INDEX IF EXISTS public.idx_savings_goals_deadline;
+DROP INDEX IF EXISTS public.idx_recurring_income_rules_user_type;
+DROP INDEX IF EXISTS public.idx_recurring_income_rules_user_dates;
+DROP INDEX IF EXISTS public.idx_recurring_expense_rules_user_type;
+DROP INDEX IF EXISTS public.idx_recurring_expense_rules_user_dates;
 DROP INDEX IF EXISTS public.idx_incomes_user_date;
 DROP INDEX IF EXISTS public.idx_incomes_recurring;
 DROP INDEX IF EXISTS public.idx_incomes_pagination;
 DROP INDEX IF EXISTS public.idx_expenses_pagination;
+DROP INDEX IF EXISTS public.idx_expenses_is_debt;
 DROP INDEX IF EXISTS public.idx_expenses_date;
 DROP INDEX IF EXISTS public.idx_expenses_category;
 DROP INDEX IF EXISTS public.idx_expense_tags_tag;
@@ -53,9 +66,17 @@ DROP INDEX IF EXISTS public.idx_expense_tags_expense;
 DROP INDEX IF EXISTS public.idx_category_budgets_user_month;
 DROP INDEX IF EXISTS public.idx_category_budgets_category;
 DROP INDEX IF EXISTS public.idx_budget_tags_user;
+DROP INDEX IF EXISTS public.idx_budget_incomes_user_status_date;
+DROP INDEX IF EXISTS public.idx_budget_incomes_user_source_rule;
+DROP INDEX IF EXISTS public.idx_budget_incomes_skip_check;
+DROP INDEX IF EXISTS public.idx_budget_incomes_id_user_unique;
 DROP INDEX IF EXISTS public.idx_budget_incomes_exclude;
+DROP INDEX IF EXISTS public.idx_budget_expenses_user_status_expense_date;
+DROP INDEX IF EXISTS public.idx_budget_expenses_user_source_rule;
 DROP INDEX IF EXISTS public.idx_budget_expenses_user;
+DROP INDEX IF EXISTS public.idx_budget_expenses_skip_check;
 DROP INDEX IF EXISTS public.idx_budget_expenses_priority_group;
+DROP INDEX IF EXISTS public.idx_budget_expenses_id_user_unique;
 DROP INDEX IF EXISTS public.idx_budget_categories_user;
 ALTER TABLE IF EXISTS ONLY public.users DROP CONSTRAINT IF EXISTS users_pkey;
 ALTER TABLE IF EXISTS ONLY public.users DROP CONSTRAINT IF EXISTS users_email_key;
@@ -64,6 +85,8 @@ ALTER TABLE IF EXISTS ONLY public.sessions DROP CONSTRAINT IF EXISTS sessions_pk
 ALTER TABLE IF EXISTS ONLY public.services DROP CONSTRAINT IF EXISTS services_pkey;
 ALTER TABLE IF EXISTS ONLY public.service_health_history DROP CONSTRAINT IF EXISTS service_health_history_pkey;
 ALTER TABLE IF EXISTS ONLY public.savings_goals DROP CONSTRAINT IF EXISTS savings_goals_pkey;
+ALTER TABLE IF EXISTS ONLY public.recurring_income_rules DROP CONSTRAINT IF EXISTS recurring_income_rules_pkey;
+ALTER TABLE IF EXISTS ONLY public.recurring_expense_rules DROP CONSTRAINT IF EXISTS recurring_expense_rules_pkey;
 ALTER TABLE IF EXISTS ONLY public.goose_db_version DROP CONSTRAINT IF EXISTS goose_db_version_pkey;
 ALTER TABLE IF EXISTS ONLY public.category_budgets DROP CONSTRAINT IF EXISTS category_budgets_user_id_category_id_month_key;
 ALTER TABLE IF EXISTS ONLY public.category_budgets DROP CONSTRAINT IF EXISTS category_budgets_pkey;
@@ -80,6 +103,8 @@ DROP TABLE IF EXISTS public.sessions;
 DROP TABLE IF EXISTS public.services;
 DROP TABLE IF EXISTS public.service_health_history;
 DROP TABLE IF EXISTS public.savings_goals;
+DROP TABLE IF EXISTS public.recurring_income_rules;
+DROP TABLE IF EXISTS public.recurring_expense_rules;
 DROP TABLE IF EXISTS public.goose_db_version;
 DROP TABLE IF EXISTS public.category_budgets;
 DROP TABLE IF EXISTS public.budget_tags;
@@ -88,6 +113,42 @@ DROP TABLE IF EXISTS public.budget_incomes;
 DROP TABLE IF EXISTS public.budget_expenses;
 DROP TABLE IF EXISTS public.budget_expense_tags;
 DROP TABLE IF EXISTS public.budget_categories;
+DROP FUNCTION IF EXISTS public.budget_incomes_clear_source_rule_refs();
+DROP FUNCTION IF EXISTS public.budget_expenses_clear_source_rule_refs();
+--
+-- Name: budget_expenses_clear_source_rule_refs(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.budget_expenses_clear_source_rule_refs() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    UPDATE budget_expenses
+    SET source_rule_id = NULL
+    WHERE source_rule_id = OLD.id
+      AND user_id = OLD.user_id;
+    RETURN OLD;
+END;
+$$;
+
+
+--
+-- Name: budget_incomes_clear_source_rule_refs(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.budget_incomes_clear_source_rule_refs() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    UPDATE budget_incomes
+    SET source_rule_id = NULL
+    WHERE source_rule_id = OLD.id
+      AND user_id = OLD.user_id;
+    RETURN OLD;
+END;
+$$;
+
+
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
@@ -135,8 +196,12 @@ CREATE TABLE public.budget_expenses (
     start_date date,
     end_date date,
     priority_group_id uuid,
+    is_debt boolean DEFAULT false,
+    status text DEFAULT 'posted'::text NOT NULL,
+    source_rule_id uuid,
     CONSTRAINT budget_expenses_recurring_start_date_check CHECK (((recurring_type IS NULL) OR (start_date IS NOT NULL))),
-    CONSTRAINT budget_expenses_recurring_type_check CHECK (((recurring_type = ANY (ARRAY['daily'::text, 'weekly'::text, 'monthly'::text, 'yearly'::text])) OR (recurring_type IS NULL)))
+    CONSTRAINT budget_expenses_recurring_type_check CHECK (((recurring_type = ANY (ARRAY['daily'::text, 'weekly'::text, 'monthly'::text, 'yearly'::text])) OR (recurring_type IS NULL))),
+    CONSTRAINT budget_expenses_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'posted'::text, 'skipped'::text])))
 );
 
 
@@ -157,8 +222,11 @@ CREATE TABLE public.budget_incomes (
     updated_at timestamp without time zone DEFAULT now(),
     end_date date,
     exclude_from_calculations boolean DEFAULT false,
+    status text DEFAULT 'posted'::text NOT NULL,
+    source_rule_id uuid,
     CONSTRAINT budget_incomes_recurring_start_date_check CHECK (((recurring_type IS NULL) OR (start_date IS NOT NULL))),
-    CONSTRAINT budget_incomes_recurring_type_check CHECK ((((recurring_type)::text = ANY ((ARRAY['daily'::character varying, 'weekly'::character varying, 'monthly'::character varying])::text[])) OR (recurring_type IS NULL)))
+    CONSTRAINT budget_incomes_recurring_type_check CHECK ((((recurring_type)::text = ANY ((ARRAY['daily'::character varying, 'weekly'::character varying, 'monthly'::character varying])::text[])) OR (recurring_type IS NULL))),
+    CONSTRAINT budget_incomes_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'posted'::text, 'skipped'::text])))
 );
 
 
@@ -226,6 +294,54 @@ ALTER TABLE public.goose_db_version ALTER COLUMN id ADD GENERATED BY DEFAULT AS 
     NO MINVALUE
     NO MAXVALUE
     CACHE 1
+);
+
+
+--
+-- Name: recurring_expense_rules; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.recurring_expense_rules (
+    id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    description text NOT NULL,
+    amount numeric(10,2) NOT NULL,
+    currency character varying(3) DEFAULT 'USD'::character varying NOT NULL,
+    category_id uuid,
+    expense_date date NOT NULL,
+    notes text,
+    recurring_type text NOT NULL,
+    start_date date NOT NULL,
+    end_date date,
+    priority_group_id uuid,
+    is_debt boolean DEFAULT false NOT NULL,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    CONSTRAINT recurring_expense_rules_amount_check CHECK ((amount > (0)::numeric)),
+    CONSTRAINT recurring_expense_rules_date_range_check CHECK (((end_date IS NULL) OR (start_date <= end_date))),
+    CONSTRAINT recurring_expense_rules_recurring_type_check CHECK ((recurring_type = ANY (ARRAY['daily'::text, 'weekly'::text, 'monthly'::text, 'yearly'::text])))
+);
+
+
+--
+-- Name: recurring_income_rules; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.recurring_income_rules (
+    id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    amount numeric(10,2) NOT NULL,
+    currency character varying(3) DEFAULT 'USD'::character varying NOT NULL,
+    date date NOT NULL,
+    description text,
+    recurring_type character varying(10) NOT NULL,
+    start_date date NOT NULL,
+    end_date date,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    CONSTRAINT recurring_income_rules_amount_check CHECK ((amount > (0)::numeric)),
+    CONSTRAINT recurring_income_rules_date_range_check CHECK (((end_date IS NULL) OR (start_date <= end_date))),
+    CONSTRAINT recurring_income_rules_recurring_type_check CHECK (((recurring_type)::text = ANY ((ARRAY['daily'::character varying, 'weekly'::character varying, 'monthly'::character varying, 'yearly'::character varying])::text[])))
 );
 
 
@@ -402,6 +518,22 @@ ALTER TABLE ONLY public.goose_db_version
 
 
 --
+-- Name: recurring_expense_rules recurring_expense_rules_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.recurring_expense_rules
+    ADD CONSTRAINT recurring_expense_rules_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: recurring_income_rules recurring_income_rules_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.recurring_income_rules
+    ADD CONSTRAINT recurring_income_rules_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: savings_goals savings_goals_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -465,10 +597,24 @@ CREATE INDEX idx_budget_categories_user ON public.budget_categories USING btree 
 
 
 --
+-- Name: idx_budget_expenses_id_user_unique; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_budget_expenses_id_user_unique ON public.budget_expenses USING btree (id, user_id);
+
+
+--
 -- Name: idx_budget_expenses_priority_group; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_budget_expenses_priority_group ON public.budget_expenses USING btree (priority_group_id);
+
+
+--
+-- Name: idx_budget_expenses_skip_check; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_budget_expenses_skip_check ON public.budget_expenses USING btree (user_id, expense_date, source_rule_id) WHERE (status = 'skipped'::text);
 
 
 --
@@ -479,10 +625,52 @@ CREATE INDEX idx_budget_expenses_user ON public.budget_expenses USING btree (use
 
 
 --
+-- Name: idx_budget_expenses_user_source_rule; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_budget_expenses_user_source_rule ON public.budget_expenses USING btree (user_id, source_rule_id);
+
+
+--
+-- Name: idx_budget_expenses_user_status_expense_date; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_budget_expenses_user_status_expense_date ON public.budget_expenses USING btree (user_id, status, expense_date DESC);
+
+
+--
 -- Name: idx_budget_incomes_exclude; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_budget_incomes_exclude ON public.budget_incomes USING btree (exclude_from_calculations) WHERE (exclude_from_calculations = true);
+
+
+--
+-- Name: idx_budget_incomes_id_user_unique; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_budget_incomes_id_user_unique ON public.budget_incomes USING btree (id, user_id);
+
+
+--
+-- Name: idx_budget_incomes_skip_check; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_budget_incomes_skip_check ON public.budget_incomes USING btree (user_id, date, source_rule_id) WHERE (status = 'skipped'::text);
+
+
+--
+-- Name: idx_budget_incomes_user_source_rule; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_budget_incomes_user_source_rule ON public.budget_incomes USING btree (user_id, source_rule_id);
+
+
+--
+-- Name: idx_budget_incomes_user_status_date; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_budget_incomes_user_status_date ON public.budget_incomes USING btree (user_id, status, date DESC);
 
 
 --
@@ -535,6 +723,13 @@ CREATE INDEX idx_expenses_date ON public.budget_expenses USING btree (expense_da
 
 
 --
+-- Name: idx_expenses_is_debt; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_expenses_is_debt ON public.budget_expenses USING btree (is_debt) WHERE (is_debt = true);
+
+
+--
 -- Name: idx_expenses_pagination; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -560,6 +755,34 @@ CREATE INDEX idx_incomes_recurring ON public.budget_incomes USING btree (user_id
 --
 
 CREATE INDEX idx_incomes_user_date ON public.budget_incomes USING btree (user_id, date DESC);
+
+
+--
+-- Name: idx_recurring_expense_rules_user_dates; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_recurring_expense_rules_user_dates ON public.recurring_expense_rules USING btree (user_id, start_date, end_date);
+
+
+--
+-- Name: idx_recurring_expense_rules_user_type; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_recurring_expense_rules_user_type ON public.recurring_expense_rules USING btree (user_id, recurring_type);
+
+
+--
+-- Name: idx_recurring_income_rules_user_dates; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_recurring_income_rules_user_dates ON public.recurring_income_rules USING btree (user_id, start_date, end_date);
+
+
+--
+-- Name: idx_recurring_income_rules_user_type; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_recurring_income_rules_user_type ON public.recurring_income_rules USING btree (user_id, recurring_type);
 
 
 --
@@ -633,6 +856,20 @@ CREATE INDEX idx_users_role ON public.users USING btree (role);
 
 
 --
+-- Name: budget_expenses budget_expenses_clear_source_rule_refs_before_delete; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER budget_expenses_clear_source_rule_refs_before_delete BEFORE DELETE ON public.budget_expenses FOR EACH ROW EXECUTE FUNCTION public.budget_expenses_clear_source_rule_refs();
+
+
+--
+-- Name: budget_incomes budget_incomes_clear_source_rule_refs_before_delete; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER budget_incomes_clear_source_rule_refs_before_delete BEFORE DELETE ON public.budget_incomes FOR EACH ROW EXECUTE FUNCTION public.budget_incomes_clear_source_rule_refs();
+
+
+--
 -- Name: budget_categories budget_categories_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -673,11 +910,27 @@ ALTER TABLE ONLY public.budget_expenses
 
 
 --
+-- Name: budget_expenses budget_expenses_source_rule_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.budget_expenses
+    ADD CONSTRAINT budget_expenses_source_rule_id_fkey FOREIGN KEY (source_rule_id, user_id) REFERENCES public.budget_expenses(id, user_id);
+
+
+--
 -- Name: budget_expenses budget_expenses_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.budget_expenses
     ADD CONSTRAINT budget_expenses_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: budget_incomes budget_incomes_source_rule_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.budget_incomes
+    ADD CONSTRAINT budget_incomes_source_rule_id_fkey FOREIGN KEY (source_rule_id, user_id) REFERENCES public.budget_incomes(id, user_id);
 
 
 --
@@ -710,6 +963,38 @@ ALTER TABLE ONLY public.category_budgets
 
 ALTER TABLE ONLY public.category_budgets
     ADD CONSTRAINT category_budgets_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: recurring_expense_rules recurring_expense_rules_category_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.recurring_expense_rules
+    ADD CONSTRAINT recurring_expense_rules_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.budget_categories(id) ON DELETE SET NULL;
+
+
+--
+-- Name: recurring_expense_rules recurring_expense_rules_priority_group_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.recurring_expense_rules
+    ADD CONSTRAINT recurring_expense_rules_priority_group_id_fkey FOREIGN KEY (priority_group_id) REFERENCES public.budget_priority_groups(id) ON DELETE SET NULL;
+
+
+--
+-- Name: recurring_expense_rules recurring_expense_rules_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.recurring_expense_rules
+    ADD CONSTRAINT recurring_expense_rules_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: recurring_income_rules recurring_income_rules_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.recurring_income_rules
+    ADD CONSTRAINT recurring_income_rules_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
 --
@@ -754,5 +1039,5 @@ ALTER DEFAULT PRIVILEGES FOR ROLE cloud_admin IN SCHEMA public GRANT ALL ON TABL
 -- PostgreSQL database dump complete
 --
 
-\unrestrict aiD7CJs2kfOWER3ENfJt2doPUwurfuoOp7SYNRjqMK47OINmhZHHQV4ZI6C5Ezo
+\unrestrict 11bS5LqjLyDgH7G7HK3x3CPPdg2Z77zurLwhvjxJBAGCUgLPUKxI0v53yVM7DbR
 
