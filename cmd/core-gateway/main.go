@@ -15,10 +15,11 @@
 package main
 
 import (
-	"core-gateway/internal/app"
 	"net/http"
 	"os"
 	"time"
+
+	"core-gateway/internal/app"
 
 	_ "core-gateway/docs"
 
