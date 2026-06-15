@@ -1,0 +1,4 @@
+[submodule "coreban"]
+	path = services/coreban
+    url = git@github.com:ejsadiarin/coreban.git
+    ; url = ssh://git@codeberg.org/ejsadiarin/coreban.git ; for codeberg
