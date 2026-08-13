@@ -1,5 +1,5 @@
 -- name: CreateService :one
-INSERT INTO services (
+INSERT INTO coregateway.services (
     name, url, icon, description, service_type,
     health_check_interval, health_check_method,
     expected_status_codes, timeout
@@ -8,7 +8,7 @@ INSERT INTO services (
 ) RETURNING *;
 
 -- name: GetService :one
-SELECT * FROM services
+SELECT * FROM coregateway.services
 WHERE id = $1 LIMIT 1;
 
 -- name: ListServices :many
@@ -17,10 +17,10 @@ SELECT
     COALESCE(h.status, 'unknown') as current_status,
     h.checked_at as last_check,
     h.response_time
-FROM services s
+FROM coregateway.services s
 LEFT JOIN LATERAL (
     SELECT status, checked_at, response_time
-    FROM service_health_history
+    FROM coregateway.service_health_history
     WHERE service_id = s.id
     ORDER BY checked_at DESC
     LIMIT 1
@@ -29,7 +29,7 @@ WHERE s.is_active = true
 ORDER BY s.name;
 
 -- name: UpdateService :one
-UPDATE services
+UPDATE coregateway.services
 SET 
     name = COALESCE(sqlc.narg('name'), name),
     url = COALESCE(sqlc.narg('url'), url),
@@ -46,23 +46,23 @@ WHERE id = sqlc.arg('id')
 RETURNING *;
 
 -- name: DeleteService :exec
-DELETE FROM services
+DELETE FROM coregateway.services
 WHERE id = $1;
 
 -- name: ListActiveServicesForHealthCheck :many
 SELECT id, name, url, health_check_method, expected_status_codes, timeout
-FROM services
+FROM coregateway.services
 WHERE is_active = true;
 
 -- name: CreateHealthHistory :one
-INSERT INTO service_health_history (
+INSERT INTO coregateway.service_health_history (
     service_id, status, response_time, status_code, error_message
 ) VALUES (
     $1, $2, $3, $4, $5
 ) RETURNING *;
 
 -- name: GetServiceHistory :many
-SELECT * FROM service_health_history
+SELECT * FROM coregateway.service_health_history
 WHERE service_id = $1
 ORDER BY checked_at DESC
 LIMIT $2;
@@ -72,21 +72,21 @@ SELECT
     COUNT(*) as total_checks,
     COUNT(CASE WHEN status = 'online' THEN 1 END) as successful_checks,
     COALESCE(AVG(CASE WHEN response_time IS NOT NULL THEN response_time ELSE 0 END), 0) as avg_response_time
-FROM service_health_history
+FROM coregateway.service_health_history
 WHERE service_id = $1 AND checked_at >= NOW() - INTERVAL '24 hours';
 
 -- name: GetServiceStats7d :one
 SELECT 
     COUNT(*) as total_checks,
     COUNT(CASE WHEN status = 'online' THEN 1 END) as successful_checks
-FROM service_health_history
+FROM coregateway.service_health_history
 WHERE service_id = $1 AND checked_at >= NOW() - INTERVAL '7 days';
 
 -- name: GetServiceStats30d :one
 SELECT 
     COUNT(*) as total_checks,
     COUNT(CASE WHEN status = 'online' THEN 1 END) as successful_checks
-FROM service_health_history
+FROM coregateway.service_health_history
 WHERE service_id = $1 AND checked_at >= NOW() - INTERVAL '30 days';
 
 -- name: GetAllServicesStats :one
@@ -95,5 +95,5 @@ SELECT
     COUNT(*) as total_checks,
     COUNT(CASE WHEN status = 'online' THEN 1 END) as successful_checks,
     COALESCE(AVG(CASE WHEN response_time IS NOT NULL THEN response_time ELSE 0 END), 0) as avg_response_time
-FROM service_health_history
+FROM coregateway.service_health_history
 WHERE checked_at >= NOW() - INTERVAL '24 hours';
