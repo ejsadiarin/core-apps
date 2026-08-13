@@ -1,3 +1,7 @@
 go 1.26.3
 
+use .
+
 use ./services/coreban
+
+use ./services/corefinance

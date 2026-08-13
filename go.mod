@@ -1,6 +1,6 @@
-module core-gateway
+module github.com/ejsadiarin/coregateway
 
-go 1.25.5
+go 1.26.3
 
 require (
 	github.com/go-playground/validator/v10 v10.30.1
@@ -26,6 +26,7 @@ require (
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.12 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
+	github.com/go-chi/chi/v5 v5.3.1 // indirect
 	github.com/go-openapi/jsonpointer v0.22.4 // indirect
 	github.com/go-openapi/jsonreference v0.21.4 // indirect
 	github.com/go-openapi/spec v0.22.3 // indirect
