@@ -1,0 +1,6 @@
+syntax = "proto3";
+package monitor.v1;
+option go_package = "github.com/ejsadiarin/coregateway/internal/domain/monitor/v1;monitortypes";
+
+message Service {
+}

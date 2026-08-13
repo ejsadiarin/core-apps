@@ -1,0 +1,24 @@
+syntax = "proto3";
+package auth.v1;
+option go_package = "github.com/ejsadiarin/coregateway/internal/domain/auth/v1;authtypes";
+
+import "user/v1/user.proto";
+
+message RegisterRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message LoginRequest {
+  string email = 1;
+  string password = 2;
+  bool remember_me = 3;
+}
+
+message LoginResponse {
+  user.v1.User user = 1;
+}
+
+message MeResponse {
+  user.v1.User user = 1;
+}

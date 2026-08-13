@@ -1,0 +1,12 @@
+---
+version: v2
+
+plugins:
+  - remote: buf.build/protocolbuffers/go
+    out: ../internal/domain
+    opt: paths=source_relative
+
+# NOTE: only needed if using gRPC
+# - remote: buf.build/grpc/go
+#   out: ../internal
+#   opt: paths=source_relative
