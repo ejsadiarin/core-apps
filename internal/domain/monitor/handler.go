@@ -1,18 +1,17 @@
-package services
+package service
 
 import (
 	"context"
 	"database/sql"
 	"net/http"
 
-	"core-gateway/internal/repository/sqlc"
-	"core-gateway/internal/shared/models"
-	"core-gateway/internal/shared/validator"
+	"github.com/ejsadiarin/coregateway/internal/repository/sqlc"
+	"github.com/ejsadiarin/coregateway/internal/validator"
+	"github.com/labstack/echo/v4"
+	"github.com/rs/zerolog"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/labstack/echo/v4"
-	"github.com/rs/zerolog"
 )
 
 type Handler struct {
@@ -92,7 +91,6 @@ func (h *Handler) CreateService(c echo.Context) error {
 		ExpectedStatusCodes: expectedStatusCodes,
 		Timeout:             pgtype.Int4{Int32: timeout, Valid: true},
 	})
-
 	if err != nil {
 		h.logger.Error().Err(err).Msg("Failed to create service")
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{

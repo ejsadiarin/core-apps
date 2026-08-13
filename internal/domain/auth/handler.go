@@ -1,13 +1,13 @@
 package auth
 
 import (
+	"core-gateway/internal/shared/models"
+	"core-gateway/internal/shared/validator"
 	"net/http"
 	"strings"
 	"time"
 
-	"core-gateway/internal/repository/sqlc"
-	"core-gateway/internal/shared/models"
-	"core-gateway/internal/shared/validator"
+	"github.com/ejsadiarin/coregateway/internal/repository/sqlc"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/labstack/echo/v4"

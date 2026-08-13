@@ -1,12 +1,11 @@
-package services
+package service
 
 import (
 	"context"
+	"core-gateway/internal/repository/sqlc"
 	"fmt"
 	"net/http"
 	"time"
-
-	"core-gateway/internal/repository/sqlc"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"

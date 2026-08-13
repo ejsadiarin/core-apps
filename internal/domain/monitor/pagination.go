@@ -1,4 +1,4 @@
-package models
+package service
 
 // Pagination default values
 const (

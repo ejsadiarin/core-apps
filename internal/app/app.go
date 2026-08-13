@@ -4,11 +4,11 @@ import (
 	"context"
 	"time"
 
-	"core-gateway/internal/domain/auth"
-	"core-gateway/internal/domain/budget"
-	"core-gateway/internal/domain/services"
-	"core-gateway/internal/domain/user"
-	"core-gateway/internal/repository/sqlc"
+	"github.com/ejsadiarin/coregateway/internal/domain/auth"
+	"github.com/ejsadiarin/coregateway/internal/domain/budget"
+	"github.com/ejsadiarin/coregateway/internal/domain/services"
+	"github.com/ejsadiarin/coregateway/internal/domain/user"
+	"github.com/ejsadiarin/coregateway/internal/repository/sqlc"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/labstack/echo/v4"
@@ -28,17 +28,6 @@ type Application struct {
 	UserHandler    *user.Handler
 	ServiceHandler *services.Handler
 	BudgetHandler  *budget.Handler
-}
-
-// Config holds application configuration
-type Config struct {
-	DatabaseURL         string
-	Port                string
-	Env                 string
-	FrontendURL         string
-	HealthCheckInterval time.Duration
-	AdminEmail          string
-	AdminPassword       string
 }
 
 // New creates a new Application instance with all dependencies initialized
