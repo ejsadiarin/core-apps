@@ -5,20 +5,17 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/go-playground/validator/v10"
+	"buf.build/go/protovalidate"
+	"google.golang.org/protobuf/proto"
 )
 
-var validate = validator.New()
-
-func BindAndValidate[T any](r *http.Request) (*T, error) {
-	// decode, validate struct
+func Bind[T proto.Message](r *http.Request) (*T, error) {
 	var v T
 	if err := json.NewDecoder(r.Body).Decode(&v); err != nil {
 		return nil, fmt.Errorf("invalid request: %v", err)
 	}
-	if err := validate.Struct(v); err != nil {
-		return nil, fmt.Errorf("invalid validation: %v", err)
+	if err := protovalidate.GlobalValidator.Validate(v); err != nil {
+		return nil, fmt.Errorf("validation failed: %v", err)
 	}
-
 	return &v, nil
 }

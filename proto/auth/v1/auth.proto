@@ -2,16 +2,17 @@ syntax = "proto3";
 package auth.v1;
 option go_package = "github.com/ejsadiarin/coregateway/internal/domain/auth/v1;authtypes";
 
+import "buf/validate/validate.proto";
 import "user/v1/user.proto";
 
 message RegisterRequest {
-  string email = 1;
-  string password = 2;
+  string email = 1 [(buf.validate.field).string.email = true];
+  string password = 2 [(buf.validate.field).string.min_len = 8];
 }
 
 message LoginRequest {
-  string email = 1;
-  string password = 2;
+  string email = 1 [(buf.validate.field).string.email = true];
+  string password = 2 [(buf.validate.field).string.min_len = 1];
   bool remember_me = 3;
 }
 

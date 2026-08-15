@@ -2,6 +2,8 @@ syntax = "proto3";
 package user.v1;
 option go_package = "github.com/ejsadiarin/coregateway/internal/domain/user/v1;usertypes";
 
+import "buf/validate/validate.proto";
+
 message User {
   string id = 1;
   string email = 2;
@@ -11,15 +13,15 @@ message User {
 }
 
 message CreateUserRequest {
-  string email = 1;
-  string password = 2;
-  string role = 3;
+  string email = 1 [(buf.validate.field).string.email = true];
+  string password = 2 [(buf.validate.field).string.min_len = 8];
+  string role = 3 [(buf.validate.field).string = {in: ["admin", "user", "moderator"]}];
 }
 
 message UpdateUserRequest {
-  string email = 1;
-  string password = 2;
-  string role = 3;
+  string email = 1 [(buf.validate.field).string.email = true];
+  string password = 2 [(buf.validate.field).string.min_len = 8];
+  string role = 3 [(buf.validate.field).string = {in: ["admin", "user", "moderator"]}];
 }
 
 message UserResponse {

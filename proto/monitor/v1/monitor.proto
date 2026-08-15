@@ -2,5 +2,40 @@ syntax = "proto3";
 package monitor.v1;
 option go_package = "github.com/ejsadiarin/coregateway/internal/domain/monitor/v1;monitortypes";
 
+import "buf/validate/validate.proto";
+
 message Service {
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  string name = 2 [(buf.validate.field).string.min_len = 1];
+  string url = 3 [(buf.validate.field).string.uri = true];
+  bool is_active = 4;
+}
+
+message CreateServiceRequest {
+  string name = 1 [(buf.validate.field).string.min_len = 1];
+  string url = 2 [(buf.validate.field).string.uri = true];
+}
+
+message UpdateServiceRequest {
+  string name = 1 [(buf.validate.field).string.min_len = 1];
+  string url = 2 [(buf.validate.field).string.uri = true];
+  bool is_active = 3;
+}
+
+message ServiceResponse {
+  string id = 1;
+  string name = 2;
+  string url = 3;
+  bool is_active = 4;
+}
+
+message CheckHealthRequest {
+  string service_id = 1 [(buf.validate.field).string.uuid = true];
+}
+
+message CheckHealthResponse {
+  string service_id = 1;
+  bool is_healthy = 2;
+  string checked_at = 3;
+  string latency_ms = 4;
 }
