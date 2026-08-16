@@ -1,6 +1,6 @@
 # Coregateway Refactoring Tracker
 
-> Removing Application struct, manual DI, Echo, zerolog. Adopting Chi, slog, protovalidate, sqlc, clean architecture.
+> Removing Application struct, manual DI, Echo, zerolog. Adopting Chi, slog, protovalidate, sqlc.
 
 ## Architecture
 
