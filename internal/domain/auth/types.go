@@ -38,11 +38,4 @@ type LoginRequest struct {
 	RememberMe bool   `json:"remember_me"`
 }
 
-// response DTOs
 
-type UserResponse struct {
-	ID        uuid.UUID `json:"id"`
-	Email     string    `json:"email"`
-	Role      string    `json:"role"`
-	CreatedAt string    `json:"created_at"`
-}

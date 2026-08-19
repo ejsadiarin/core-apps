@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func GetUserByEmail(ctx context.Context, user usertypes.User) (*usertypes.User, error) {
+func GetUserByEmail(ctx context.Context, user *usertypes.User) (*usertypes.User, error) {
 	return nil, nil
 }
 

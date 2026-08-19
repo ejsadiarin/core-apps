@@ -8,7 +8,7 @@ import (
 )
 
 type UserRepository interface {
-	GetUserByEmail(ctx context.Context, user usertypes.User) (*usertypes.User, error)
+	GetUserByEmail(ctx context.Context, user *usertypes.User) (*usertypes.User, error)
 	GetUserByID(ctx context.Context, id uuid.UUID) (*usertypes.User, error)
 	CreateUser(ctx context.Context, email, passwordHash, role string) (*usertypes.User, error)
 }

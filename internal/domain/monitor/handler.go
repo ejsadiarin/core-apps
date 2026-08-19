@@ -7,14 +7,42 @@ import (
 	"net/http"
 
 	sqlc "github.com/ejsadiarin/coregateway/internal/db/sqlc"
-	"github.com/ejsadiarin/coregateway/internal/shared/models"
-	"github.com/ejsadiarin/coregateway/internal/shared/validator"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
+
+// ErrorResponse represents an API error response
+type ErrorResponse struct {
+	Error   string      `json:"error"`
+	Details interface{} `json:"details,omitempty"`
+}
+
+// bindAndValidate binds the request body to a typed struct and validates it
+func bindAndValidate[T any](c echo.Context) (*T, error) {
+	var req T
+	if err := c.Bind(&req); err != nil {
+		return nil, err
+	}
+	if err := c.Validate(&req); err != nil {
+		return nil, err
+	}
+	return &req, nil
+}
+
+// formatValidationErrors formats validator errors into a user-friendly map
+func formatValidationErrors(err error) map[string]string {
+	errors := make(map[string]string)
+	if validationErrs, ok := err.(validator.ValidationErrors); ok {
+		for _, e := range validationErrs {
+			errors[e.Field()] = e.Tag()
+		}
+	}
+	return errors
+}
 
 type Handler struct {
 	queries *sqlc.Queries
@@ -36,14 +64,14 @@ func NewHandler(queries *sqlc.Queries, logger *slog.Logger) *Handler {
 // @Produce json
 // @Param service body CreateServiceRequest true "Service to create"
 // @Success 201 {object} sqlc.Service
-// @Failure 400 {object} models.ErrorResponse
-// @Failure 500 {object} models.ErrorResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
 // @Router /api/services [post]
 func (h *Handler) CreateService(c echo.Context) error {
-	req, err := validator.BindAndValidate[CreateServiceRequest](c)
+	req, err := bindAndValidate[CreateServiceRequest](c)
 	if err != nil {
-		validationErrors := validator.FormatValidationErrors(err)
-		return c.JSON(http.StatusBadRequest, models.ErrorResponse{
+		validationErrors := formatValidationErrors(err)
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
 			Error:   "Validation failed",
 			Details: validationErrors,
 		})
@@ -95,7 +123,7 @@ func (h *Handler) CreateService(c echo.Context) error {
 	})
 	if err != nil {
 		h.logger.Error("Failed to create service", "error", err)
-		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{
 			Error: "Failed to create service",
 		})
 	}
@@ -109,13 +137,13 @@ func (h *Handler) CreateService(c echo.Context) error {
 // @Tags services
 // @Produce json
 // @Success 200 {array} sqlc.ListServicesRow
-// @Failure 500 {object} models.ErrorResponse
+// @Failure 500 {object} ErrorResponse
 // @Router /api/services/list [get]
 func (h *Handler) ListServices(c echo.Context) error {
 	services, err := h.queries.ListServices(context.Background())
 	if err != nil {
 		h.logger.Error("Failed to list services", "error", err)
-		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{
 			Error: "Failed to list services",
 		})
 	}
@@ -134,15 +162,15 @@ func (h *Handler) ListServices(c echo.Context) error {
 // @Produce json
 // @Param id path string true "Service ID"
 // @Success 200 {object} sqlc.Service
-// @Failure 400 {object} models.ErrorResponse
-// @Failure 404 {object} models.ErrorResponse
-// @Failure 500 {object} models.ErrorResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
 // @Router /api/services/{id} [get]
 func (h *Handler) GetService(c echo.Context) error {
 	idParam := c.Param("id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, models.ErrorResponse{
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
 			Error: "Invalid service ID",
 		})
 	}
@@ -150,12 +178,12 @@ func (h *Handler) GetService(c echo.Context) error {
 	service, err := h.queries.GetService(context.Background(), id)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return c.JSON(http.StatusNotFound, models.ErrorResponse{
+			return c.JSON(http.StatusNotFound, ErrorResponse{
 				Error: "Service not found",
 			})
 		}
 		h.logger.Error("Failed to get service", "error", err, "id", id.String())
-		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{
 			Error: "Failed to get service",
 		})
 	}
@@ -172,23 +200,23 @@ func (h *Handler) GetService(c echo.Context) error {
 // @Param id path string true "Service ID"
 // @Param service body UpdateServiceRequest true "Service updates"
 // @Success 200 {object} sqlc.Service
-// @Failure 400 {object} models.ErrorResponse
-// @Failure 404 {object} models.ErrorResponse
-// @Failure 500 {object} models.ErrorResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
 // @Router /api/services/{id} [put]
 func (h *Handler) UpdateService(c echo.Context) error {
 	idParam := c.Param("id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, models.ErrorResponse{
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
 			Error: "Invalid service ID",
 		})
 	}
 
-	req, err := validator.BindAndValidate[UpdateServiceRequest](c)
+	req, err := bindAndValidate[UpdateServiceRequest](c)
 	if err != nil {
-		validationErrors := validator.FormatValidationErrors(err)
-		return c.JSON(http.StatusBadRequest, models.ErrorResponse{
+		validationErrors := formatValidationErrors(err)
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
 			Error:   "Validation failed",
 			Details: validationErrors,
 		})
@@ -233,12 +261,12 @@ func (h *Handler) UpdateService(c echo.Context) error {
 	service, err := h.queries.UpdateService(context.Background(), params)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return c.JSON(http.StatusNotFound, models.ErrorResponse{
+			return c.JSON(http.StatusNotFound, ErrorResponse{
 				Error: "Service not found",
 			})
 		}
 		h.logger.Error("Failed to update service", "error", err, "id", id.String())
-		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{
 			Error: "Failed to update service",
 		})
 	}
@@ -252,15 +280,15 @@ func (h *Handler) UpdateService(c echo.Context) error {
 // @Tags services
 // @Param id path string true "Service ID"
 // @Success 204
-// @Failure 400 {object} models.ErrorResponse
-// @Failure 404 {object} models.ErrorResponse
-// @Failure 500 {object} models.ErrorResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
 // @Router /api/services/{id} [delete]
 func (h *Handler) DeleteService(c echo.Context) error {
 	idParam := c.Param("id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, models.ErrorResponse{
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
 			Error: "Invalid service ID",
 		})
 	}
@@ -268,12 +296,12 @@ func (h *Handler) DeleteService(c echo.Context) error {
 	err = h.queries.DeleteService(context.Background(), id)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return c.JSON(http.StatusNotFound, models.ErrorResponse{
+			return c.JSON(http.StatusNotFound, ErrorResponse{
 				Error: "Service not found",
 			})
 		}
 		h.logger.Error("Failed to delete service", "error", err, "id", id.String())
-		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{
 			Error: "Failed to delete service",
 		})
 	}
@@ -289,14 +317,14 @@ func (h *Handler) DeleteService(c echo.Context) error {
 // @Param id path string true "Service ID"
 // @Param limit query int false "Limit" default(100)
 // @Success 200 {array} sqlc.ServiceHealthHistory
-// @Failure 400 {object} models.ErrorResponse
-// @Failure 500 {object} models.ErrorResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
 // @Router /api/services/{id}/history [get]
 func (h *Handler) GetServiceHistory(c echo.Context) error {
 	idParam := c.Param("id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, models.ErrorResponse{
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
 			Error: "Invalid service ID",
 		})
 	}
@@ -309,7 +337,7 @@ func (h *Handler) GetServiceHistory(c echo.Context) error {
 	})
 	if err != nil {
 		h.logger.Error("Failed to get service history", "error", err, "id", id.String())
-		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{
 			Error: "Failed to get service history",
 		})
 	}
@@ -328,14 +356,14 @@ func (h *Handler) GetServiceHistory(c echo.Context) error {
 // @Produce json
 // @Param id path string true "Service ID"
 // @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} models.ErrorResponse
-// @Failure 500 {object} models.ErrorResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
 // @Router /api/services/{id}/stats [get]
 func (h *Handler) GetServiceStats(c echo.Context) error {
 	idParam := c.Param("id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, models.ErrorResponse{
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
 			Error: "Invalid service ID",
 		})
 	}
@@ -345,7 +373,7 @@ func (h *Handler) GetServiceStats(c echo.Context) error {
 	stats24h, err := h.queries.GetServiceStats24h(context.Background(), pgID)
 	if err != nil {
 		h.logger.Error("Failed to get 24h stats", "error", err, "id", id.String())
-		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{
 			Error: "Failed to get service stats",
 		})
 	}
@@ -385,13 +413,13 @@ func (h *Handler) GetServiceStats(c echo.Context) error {
 // @Tags services
 // @Produce json
 // @Success 200 {object} map[string]interface{}
-// @Failure 500 {object} models.ErrorResponse
+// @Failure 500 {object} ErrorResponse
 // @Router /api/services/stats/all [get]
 func (h *Handler) GetAllServicesStats(c echo.Context) error {
 	stats, err := h.queries.GetAllServicesStats(context.Background())
 	if err != nil {
 		h.logger.Error("Failed to get all services stats", "error", err)
-		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{
 			Error: "Failed to get services stats",
 		})
 	}
