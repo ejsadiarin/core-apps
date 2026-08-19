@@ -2,22 +2,23 @@ package service
 
 import (
 	"context"
-	"core-gateway/internal/repository/sqlc"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"time"
 
+	sqlc "github.com/ejsadiarin/coregateway/internal/db/sqlc"
+
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/rs/zerolog"
 )
 
 type HealthChecker struct {
 	queries *sqlc.Queries
-	logger  *zerolog.Logger
+	logger  *slog.Logger
 }
 
-func NewHealthChecker(queries *sqlc.Queries, logger *zerolog.Logger) *HealthChecker {
+func NewHealthChecker(queries *sqlc.Queries, logger *slog.Logger) *HealthChecker {
 	return &HealthChecker{
 		queries: queries,
 		logger:  logger,
@@ -101,26 +102,26 @@ func (ch *HealthChecker) saveHealthCheck(serviceID uuid.UUID, status string, res
 
 	_, err := ch.queries.CreateHealthHistory(context.Background(), params)
 	if err != nil {
-		ch.logger.Error().Err(err).Msg("Failed to save health check")
+		ch.logger.Error("Failed to save health check", "error", err)
 		return
 	}
 
-	ch.logger.Info().
-		Str("service_id", serviceID.String()).
-		Str("status", status).
-		Int32("response_time", responseTime).
-		Msg("Health check completed")
+	ch.logger.Info("Health check completed",
+		"service_id", serviceID.String(),
+		"status", status,
+		"response_time", responseTime,
+	)
 }
 
 // CheckAllServices performs health checks on all active services
 func (ch *HealthChecker) CheckAllServices() {
 	services, err := ch.queries.ListActiveServicesForHealthCheck(context.Background())
 	if err != nil {
-		ch.logger.Error().Err(err).Msg("Failed to fetch services for health check")
+		ch.logger.Error("Failed to fetch services for health check", "error", err)
 		return
 	}
 
-	ch.logger.Info().Int("count", len(services)).Msg("Starting health checks")
+	ch.logger.Info("Starting health checks", "count", len(services))
 
 	// perform health checks concurrently
 	for _, service := range services {
@@ -141,5 +142,5 @@ func (ch *HealthChecker) StartHealthCheckScheduler(interval time.Duration) {
 		}
 	}()
 
-	ch.logger.Info().Dur("interval", interval).Msg("Health check scheduler started")
+	ch.logger.Info("Health check scheduler started", "interval", interval)
 }

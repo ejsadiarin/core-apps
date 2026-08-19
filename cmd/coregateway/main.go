@@ -1,71 +1,87 @@
-// @title Core Homelab API
-// @version 2.0
-// @description API for Core Homelab Dashboard with service monitoring and budget tracking
-// @termsOfService http://swagger.io/terms/
-
-// @contact.name API Support
-// @contact.email support@example.com
-
-// @license.name MIT
-// @license.url https://opensource.org/licenses/MIT
-
-// @host localhost:8080
-// @schemes http https
-
 package main
 
 import (
-	"net/http"
+	"context"
+	"fmt"
+	"log"
+	"log/slog"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
-	"core-gateway/internal/app"
-
-	_ "core-gateway/docs"
-
-	_ "github.com/joho/godotenv/autoload"
-	"github.com/rs/zerolog"
+	"github.com/ejsadiarin/coregateway/internal/server"
+	"github.com/joho/godotenv"
 )
 
 func main() {
-	// initialize zerolog
-	logger := zerolog.New(os.Stdout).With().Timestamp().Logger()
-	if os.Getenv("ENV") == "production" {
-		zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	} else {
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-		logger = logger.Output(zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.RFC3339})
-	}
+	// load .env file
+	_ = godotenv.Load()
 
-	logger.Info().Msg("Starting Core Homelab API")
+	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelDebug,
+	}))
 
-	// build configuration from environment
-	cfg := app.Config{
-		DatabaseURL:         getEnvOrDefault("DATABASE_URL", "postgresql://core:core@postgres:5432/core?sslmode=disable"),
-		Port:                getEnvOrDefault("PORT", "8080"),
-		Env:                 getEnvOrDefault("ENV", "development"),
-		FrontendURL:         os.Getenv("FRONTEND_URL"),
+	cfg := server.Config{
+		Port:               getEnvOrDefaultInt("PORT", 8080),
+		DatabaseURL:        getEnvOrDefault("DATABASE_URL", "postgresql://core:core@localhost:5432/core?sslmode=disable"),
+		FrontendURL:        os.Getenv("FRONTEND_URL"),
 		HealthCheckInterval: 60 * time.Second,
-		AdminEmail:          os.Getenv("ADMIN_EMAIL"),
-		AdminPassword:       os.Getenv("ADMIN_PASSWORD"),
+		AdminEmail:         os.Getenv("ADMIN_EMAIL"),
+		AdminPassword:      os.Getenv("ADMIN_PASSWORD"),
 	}
 
-	// create application
-	application, err := app.New(cfg, &logger)
+	srv, err := server.New(cfg, logger)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("Failed to create application")
+		log.Fatalf("Failed to create server: %v", err)
 	}
-	defer application.Close()
+	defer srv.Close()
 
-	// start server
-	if err := application.Start(cfg.Port); err != nil && err != http.ErrServerClosed {
-		logger.Fatal().Err(err).Msg("Server failed to start")
+	done := make(chan bool, 1)
+	go gracefulShutdown(srv, done)
+
+	logger.Info("Starting coregateway...", "port", cfg.Port)
+	if err := srv.Start(fmt.Sprintf("%d", cfg.Port)); err != nil {
+		logger.Error("Server error", "error", err)
 	}
+
+	<-done
+	logger.Info("Graceful shutdown complete")
+}
+
+func gracefulShutdown(srv *server.Server, done chan bool) {
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	<-ctx.Done()
+
+	log.Println("shutting down gracefully, press Ctrl+C again to force")
+	stop()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := srv.Echo.Shutdown(ctx); err != nil {
+		log.Printf("Server forced to shutdown with error: %v", err)
+	}
+
+	log.Println("Server exiting")
+	done <- true
 }
 
 func getEnvOrDefault(key, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {
 		return value
+	}
+	return defaultValue
+}
+
+func getEnvOrDefaultInt(key string, defaultValue int) int {
+	if value := os.Getenv(key); value != "" {
+		var n int
+		if _, err := fmt.Sscanf(value, "%d", &n); err == nil {
+			return n
+		}
 	}
 	return defaultValue
 }

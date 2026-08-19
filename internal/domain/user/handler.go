@@ -1,27 +1,27 @@
 package user
 
 import (
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
 
-	"core-gateway/internal/domain/auth"
-	"core-gateway/internal/repository/sqlc"
-	"core-gateway/internal/shared/models"
-	"core-gateway/internal/shared/validator"
+	"github.com/ejsadiarin/coregateway/internal/domain/auth"
+	sqlc "github.com/ejsadiarin/coregateway/internal/db/sqlc"
+	"github.com/ejsadiarin/coregateway/internal/shared/models"
+	"github.com/ejsadiarin/coregateway/internal/shared/validator"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/labstack/echo/v4"
-	"github.com/rs/zerolog"
 )
 
 type Handler struct {
 	queries *sqlc.Queries
-	logger  *zerolog.Logger
+	logger  *slog.Logger
 }
 
-func NewHandler(queries *sqlc.Queries, logger *zerolog.Logger) *Handler {
+func NewHandler(queries *sqlc.Queries, logger *slog.Logger) *Handler {
 	return &Handler{
 		queries: queries,
 		logger:  logger,
@@ -40,7 +40,7 @@ func NewHandler(queries *sqlc.Queries, logger *zerolog.Logger) *Handler {
 func (h *Handler) ListUsers(c echo.Context) error {
 	users, err := h.queries.ListUsers(c.Request().Context())
 	if err != nil {
-		h.logger.Error().Err(err).Msg("Failed to list users")
+		h.logger.Error("Failed to list users", "error", err)
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to list users"})
 	}
 
@@ -88,7 +88,7 @@ func (h *Handler) CreateUser(c echo.Context) error {
 	// hash password
 	hashedPassword, err := auth.HashPassword(req.Password)
 	if err != nil {
-		h.logger.Error().Err(err).Msg("Failed to hash password")
+		h.logger.Error("Failed to hash password", "error", err)
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to create user"})
 	}
 
@@ -99,11 +99,11 @@ func (h *Handler) CreateUser(c echo.Context) error {
 		Role:         req.Role,
 	})
 	if err != nil {
-		h.logger.Error().Err(err).Msg("Failed to create user")
+		h.logger.Error("Failed to create user", "error", err)
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to create user"})
 	}
 
-	h.logger.Info().Str("email", email).Str("role", req.Role).Msg("User created by admin")
+	h.logger.Info("User created by admin", "email", email, "role", req.Role)
 
 	return c.JSON(http.StatusCreated, UserResponse{
 		ID:        user.ID,
@@ -213,7 +213,7 @@ func (h *Handler) UpdateUser(c echo.Context) error {
 	if req.Password != nil {
 		hashedPassword, err := auth.HashPassword(*req.Password)
 		if err != nil {
-			h.logger.Error().Err(err).Msg("Failed to hash password")
+			h.logger.Error("Failed to hash password", "error", err)
 			return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to update user"})
 		}
 		updateParams.PasswordHash = pgtype.Text{String: hashedPassword, Valid: true}
@@ -225,11 +225,11 @@ func (h *Handler) UpdateUser(c echo.Context) error {
 
 	user, err := h.queries.UpdateUser(c.Request().Context(), updateParams)
 	if err != nil {
-		h.logger.Error().Err(err).Msg("Failed to update user")
+		h.logger.Error("Failed to update user", "error", err)
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to update user"})
 	}
 
-	h.logger.Info().Str("user_id", id.String()).Msg("User updated")
+	h.logger.Info("User updated", "user_id", id.String())
 
 	return c.JSON(http.StatusOK, UserResponse{
 		ID:        user.ID,
@@ -279,16 +279,16 @@ func (h *Handler) DeleteUser(c echo.Context) error {
 
 	// delete all user sessions first
 	if err := h.queries.DeleteUserSessions(c.Request().Context(), id); err != nil {
-		h.logger.Warn().Err(err).Str("user_id", id.String()).Msg("Failed to delete user sessions")
+		h.logger.Warn("Failed to delete user sessions", "error", err, "user_id", id.String())
 	}
 
 	// delete user
 	if err := h.queries.DeleteUser(c.Request().Context(), id); err != nil {
-		h.logger.Error().Err(err).Msg("Failed to delete user")
+		h.logger.Error("Failed to delete user", "error", err)
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to delete user"})
 	}
 
-	h.logger.Info().Str("user_id", id.String()).Msg("User deleted")
+	h.logger.Info("User deleted", "user_id", id.String())
 
 	return c.NoContent(http.StatusNoContent)
 }

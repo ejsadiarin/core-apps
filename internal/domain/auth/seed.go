@@ -2,12 +2,12 @@ package auth
 
 import (
 	"context"
+	"log/slog"
 
-	"core-gateway/internal/repository/sqlc"
+	sqlc "github.com/ejsadiarin/coregateway/internal/db/sqlc"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/rs/zerolog"
 )
 
 const (
@@ -18,7 +18,7 @@ const (
 )
 
 // SeedUsers creates the initial admin and demo users if they don't exist
-func SeedUsers(ctx context.Context, queries *sqlc.Queries, logger *zerolog.Logger, adminEmail, adminPassword string) error {
+func SeedUsers(ctx context.Context, queries *sqlc.Queries, logger *slog.Logger, adminEmail, adminPassword string) error {
 	// seed admin user from env vars
 	if err := seedAdminUser(ctx, queries, logger, adminEmail, adminPassword); err != nil {
 		return err
@@ -32,16 +32,16 @@ func SeedUsers(ctx context.Context, queries *sqlc.Queries, logger *zerolog.Logge
 	return nil
 }
 
-func seedAdminUser(ctx context.Context, queries *sqlc.Queries, logger *zerolog.Logger, adminEmail, adminPassword string) error {
+func seedAdminUser(ctx context.Context, queries *sqlc.Queries, logger *slog.Logger, adminEmail, adminPassword string) error {
 	if adminEmail == "" || adminPassword == "" {
-		logger.Warn().Msg("ADMIN_EMAIL or ADMIN_PASSWORD not set, skipping admin user seed")
+		logger.Warn("ADMIN_EMAIL or ADMIN_PASSWORD not set, skipping admin user seed")
 		return nil
 	}
 
 	// check if admin already exists
 	_, err := queries.GetUserByEmail(ctx, adminEmail)
 	if err == nil {
-		logger.Debug().Str("email", adminEmail).Msg("Admin user already exists")
+		logger.Debug("Admin user already exists", "email", adminEmail)
 		return nil
 	}
 
@@ -61,15 +61,15 @@ func seedAdminUser(ctx context.Context, queries *sqlc.Queries, logger *zerolog.L
 		return err
 	}
 
-	logger.Info().Str("email", adminEmail).Msg("Admin user created")
+	logger.Info("Admin user created", "email", adminEmail)
 	return nil
 }
 
-func seedDemoUser(ctx context.Context, queries *sqlc.Queries, logger *zerolog.Logger) error {
+func seedDemoUser(ctx context.Context, queries *sqlc.Queries, logger *slog.Logger) error {
 	// check if demo user already exists
 	_, err := queries.GetUserByEmail(ctx, DemoUserEmail)
 	if err == nil {
-		logger.Debug().Str("email", DemoUserEmail).Msg("Demo user already exists")
+		logger.Debug("Demo user already exists", "email", DemoUserEmail)
 		return nil
 	}
 
@@ -83,7 +83,7 @@ func seedDemoUser(ctx context.Context, queries *sqlc.Queries, logger *zerolog.Lo
 		return err
 	}
 
-	logger.Info().Str("email", DemoUserEmail).Msg("Demo user created")
+	logger.Info("Demo user created", "email", DemoUserEmail)
 	return nil
 }
 

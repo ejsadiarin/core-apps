@@ -3,12 +3,14 @@ package service
 import (
 	"context"
 	"database/sql"
+	"log/slog"
 	"net/http"
 
-	"github.com/ejsadiarin/coregateway/internal/repository/sqlc"
-	"github.com/ejsadiarin/coregateway/internal/validator"
+	sqlc "github.com/ejsadiarin/coregateway/internal/db/sqlc"
+	"github.com/ejsadiarin/coregateway/internal/shared/models"
+	"github.com/ejsadiarin/coregateway/internal/shared/validator"
+
 	"github.com/labstack/echo/v4"
-	"github.com/rs/zerolog"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -16,10 +18,10 @@ import (
 
 type Handler struct {
 	queries *sqlc.Queries
-	logger  *zerolog.Logger
+	logger  *slog.Logger
 }
 
-func NewHandler(queries *sqlc.Queries, logger *zerolog.Logger) *Handler {
+func NewHandler(queries *sqlc.Queries, logger *slog.Logger) *Handler {
 	return &Handler{
 		queries: queries,
 		logger:  logger,
@@ -92,7 +94,7 @@ func (h *Handler) CreateService(c echo.Context) error {
 		Timeout:             pgtype.Int4{Int32: timeout, Valid: true},
 	})
 	if err != nil {
-		h.logger.Error().Err(err).Msg("Failed to create service")
+		h.logger.Error("Failed to create service", "error", err)
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error: "Failed to create service",
 		})
@@ -112,7 +114,7 @@ func (h *Handler) CreateService(c echo.Context) error {
 func (h *Handler) ListServices(c echo.Context) error {
 	services, err := h.queries.ListServices(context.Background())
 	if err != nil {
-		h.logger.Error().Err(err).Msg("Failed to list services")
+		h.logger.Error("Failed to list services", "error", err)
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error: "Failed to list services",
 		})
@@ -152,7 +154,7 @@ func (h *Handler) GetService(c echo.Context) error {
 				Error: "Service not found",
 			})
 		}
-		h.logger.Error().Err(err).Str("id", id.String()).Msg("Failed to get service")
+		h.logger.Error("Failed to get service", "error", err, "id", id.String())
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error: "Failed to get service",
 		})
@@ -235,7 +237,7 @@ func (h *Handler) UpdateService(c echo.Context) error {
 				Error: "Service not found",
 			})
 		}
-		h.logger.Error().Err(err).Str("id", id.String()).Msg("Failed to update service")
+		h.logger.Error("Failed to update service", "error", err, "id", id.String())
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error: "Failed to update service",
 		})
@@ -270,7 +272,7 @@ func (h *Handler) DeleteService(c echo.Context) error {
 				Error: "Service not found",
 			})
 		}
-		h.logger.Error().Err(err).Str("id", id.String()).Msg("Failed to delete service")
+		h.logger.Error("Failed to delete service", "error", err, "id", id.String())
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error: "Failed to delete service",
 		})
@@ -306,14 +308,14 @@ func (h *Handler) GetServiceHistory(c echo.Context) error {
 		Limit:     limit,
 	})
 	if err != nil {
-		h.logger.Error().Err(err).Str("id", id.String()).Msg("Failed to get service history")
+		h.logger.Error("Failed to get service history", "error", err, "id", id.String())
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error: "Failed to get service history",
 		})
 	}
 
 	if history == nil {
-		history = []sqlc.ServiceHealthHistory{}
+		history = []sqlc.CoregatewayServiceHealthHistory{}
 	}
 
 	return c.JSON(http.StatusOK, history)
@@ -342,7 +344,7 @@ func (h *Handler) GetServiceStats(c echo.Context) error {
 
 	stats24h, err := h.queries.GetServiceStats24h(context.Background(), pgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("id", id.String()).Msg("Failed to get 24h stats")
+		h.logger.Error("Failed to get 24h stats", "error", err, "id", id.String())
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error: "Failed to get service stats",
 		})
@@ -388,7 +390,7 @@ func (h *Handler) GetServiceStats(c echo.Context) error {
 func (h *Handler) GetAllServicesStats(c echo.Context) error {
 	stats, err := h.queries.GetAllServicesStats(context.Background())
 	if err != nil {
-		h.logger.Error().Err(err).Msg("Failed to get all services stats")
+		h.logger.Error("Failed to get all services stats", "error", err)
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error: "Failed to get services stats",
 		})

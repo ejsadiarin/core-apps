@@ -1,6 +1,17 @@
 package user
 
-import "github.com/google/uuid"
+import (
+	"context"
+
+	usertypes "github.com/ejsadiarin/coregateway/internal/domain/user/v1"
+	"github.com/google/uuid"
+)
+
+type UserRepository interface {
+	GetUserByEmail(ctx context.Context, user usertypes.User) (*usertypes.User, error)
+	GetUserByID(ctx context.Context, id uuid.UUID) (*usertypes.User, error)
+	CreateUser(ctx context.Context, email, passwordHash, role string) (*usertypes.User, error)
+}
 
 // User management requests (admin)
 

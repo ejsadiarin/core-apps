@@ -1,25 +1,25 @@
 package auth
 
 import (
-	"core-gateway/internal/shared/models"
-	"core-gateway/internal/shared/validator"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/ejsadiarin/coregateway/internal/repository/sqlc"
+	sqlc "github.com/ejsadiarin/coregateway/internal/db/sqlc"
+	"github.com/ejsadiarin/coregateway/internal/shared/models"
+	"github.com/ejsadiarin/coregateway/internal/shared/validator"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/labstack/echo/v4"
-	"github.com/rs/zerolog"
 )
 
 type Handler struct {
 	queries *sqlc.Queries
-	logger  *zerolog.Logger
+	logger  *slog.Logger
 }
 
-func NewHandler(queries *sqlc.Queries, logger *zerolog.Logger) *Handler {
+func NewHandler(queries *sqlc.Queries, logger *slog.Logger) *Handler {
 	return &Handler{
 		queries: queries,
 		logger:  logger,
@@ -55,7 +55,7 @@ func (h *Handler) Register(c echo.Context) error {
 	// hash password
 	hashedPassword, err := HashPassword(req.Password)
 	if err != nil {
-		h.logger.Error().Err(err).Msg("Failed to hash password")
+		h.logger.Error("Failed to hash password", "error", err)
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to create user"})
 	}
 
@@ -66,11 +66,11 @@ func (h *Handler) Register(c echo.Context) error {
 		Role:         RoleUser,
 	})
 	if err != nil {
-		h.logger.Error().Err(err).Msg("Failed to create user")
+		h.logger.Error("Failed to create user", "error", err)
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to create user"})
 	}
 
-	h.logger.Info().Str("email", email).Msg("User registered")
+	h.logger.Info("User registered", "email", email)
 
 	return c.JSON(http.StatusCreated, UserResponse{
 		ID:        user.ID,
@@ -119,7 +119,7 @@ func (h *Handler) Login(c echo.Context) error {
 	// generate session token
 	token, tokenHash, err := GenerateSessionToken()
 	if err != nil {
-		h.logger.Error().Err(err).Msg("Failed to generate session token")
+		h.logger.Error("Failed to generate session token", "error", err)
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to create session"})
 	}
 
@@ -137,14 +137,14 @@ func (h *Handler) Login(c echo.Context) error {
 		ExpiresAt: pgtype.Timestamp{Time: expiresAt, Valid: true},
 	})
 	if err != nil {
-		h.logger.Error().Err(err).Msg("Failed to create session")
+		h.logger.Error("Failed to create session", "error", err)
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to create session"})
 	}
 
 	// set session cookie
 	SetSessionCookie(c, token, expiry)
 
-	h.logger.Info().Str("email", email).Msg("User logged in")
+	h.logger.Info("User logged in", "email", email)
 
 	return c.JSON(http.StatusOK, UserResponse{
 		ID:        user.ID,
@@ -173,13 +173,13 @@ func (h *Handler) Logout(c echo.Context) error {
 	tokenHash := HashSessionToken(token)
 	err = h.queries.DeleteSessionByTokenHash(c.Request().Context(), tokenHash)
 	if err != nil {
-		h.logger.Warn().Err(err).Msg("Failed to delete session from database")
+		h.logger.Warn("Failed to delete session from database", "error", err)
 	}
 
 	// clear cookie
 	ClearSessionCookie(c)
 
-	h.logger.Info().Msg("User logged out")
+	h.logger.Info("User logged out")
 
 	return c.JSON(http.StatusOK, map[string]string{"message": "Logged out"})
 }
@@ -201,7 +201,7 @@ func (h *Handler) Me(c echo.Context) error {
 	// fetch full user details from database
 	dbUser, err := h.queries.GetUser(c.Request().Context(), user.ID)
 	if err != nil {
-		h.logger.Error().Err(err).Msg("Failed to get user from database")
+		h.logger.Error("Failed to get user from database", "error", err)
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to get user"})
 	}
 
@@ -225,14 +225,14 @@ func (h *Handler) LoginAsDemo(c echo.Context) error {
 	// get demo user
 	user, err := h.queries.GetUserByEmail(c.Request().Context(), DemoUserEmail)
 	if err != nil {
-		h.logger.Error().Err(err).Msg("Demo user not found")
+		h.logger.Error("Demo user not found", "error", err)
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Demo user not available"})
 	}
 
 	// generate session token
 	token, tokenHash, err := GenerateSessionToken()
 	if err != nil {
-		h.logger.Error().Err(err).Msg("Failed to generate session token")
+		h.logger.Error("Failed to generate session token", "error", err)
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to create session"})
 	}
 
@@ -245,14 +245,14 @@ func (h *Handler) LoginAsDemo(c echo.Context) error {
 		ExpiresAt: pgtype.Timestamp{Time: expiresAt, Valid: true},
 	})
 	if err != nil {
-		h.logger.Error().Err(err).Msg("Failed to create session")
+		h.logger.Error("Failed to create session", "error", err)
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to create session"})
 	}
 
 	// set session cookie
 	SetSessionCookie(c, token, SessionExpiry)
 
-	h.logger.Info().Msg("Demo user logged in")
+	h.logger.Info("Demo user logged in")
 
 	return c.JSON(http.StatusOK, UserResponse{
 		ID:        user.ID,
