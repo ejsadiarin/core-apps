@@ -2,13 +2,12 @@ package auth
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 
 	sqlc "github.com/ejsadiarin/coregateway/internal/db/sqlc"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/labstack/echo/v4"
 )
 
 // context keys for user info
@@ -27,114 +26,102 @@ type UserContext struct {
 }
 
 // AuthMiddleware extracts session cookie, validates it, and loads user into context
-func AuthMiddleware(queries *sqlc.Queries) echo.MiddlewareFunc {
-	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
-			// try to get session token from cookie
-			token, err := GetSessionToken(c)
+func AuthMiddleware(queries *sqlc.Queries) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			token, err := GetSessionToken(r)
 			if err != nil {
-				// no session cookie - continue as guest
-				return next(c)
+				next.ServeHTTP(w, r)
+				return
 			}
 
-			// hash the token and look up the session
 			tokenHash := HashSessionToken(token)
-			session, err := queries.GetSessionByTokenHash(c.Request().Context(), tokenHash)
+			session, err := queries.GetSessionByTokenHash(r.Context(), tokenHash)
 			if err != nil {
-				// invalid or expired session - clear cookie and continue as guest
-				ClearSessionCookie(c)
-				return next(c)
+				ClearSessionCookie(w)
+				next.ServeHTTP(w, r)
+				return
 			}
 
-			// set user context
 			userCtx := &UserContext{
 				ID:    session.UserID,
 				Email: session.Email,
 				Role:  session.Role,
 			}
 
-			// store in echo context
-			c.Set(string(userContextKey), userCtx)
-			c.Set(string(userIDContextKey), session.UserID)
-
-			return next(c)
-		}
+			ctx := context.WithValue(r.Context(), userContextKey, userCtx)
+			ctx = context.WithValue(ctx, userIDContextKey, session.UserID)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
 	}
 }
 
 // RequireAuth middleware returns 401 if no valid session exists
-func RequireAuth() echo.MiddlewareFunc {
-	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
-			user := GetUserFromContext(c)
+func RequireAuth() func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			user := GetUserFromContext(r)
 			if user == nil {
-				return c.JSON(http.StatusUnauthorized, map[string]string{
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusUnauthorized)
+				json.NewEncoder(w).Encode(map[string]string{
 					"error": "Authentication required",
 				})
+				return
 			}
-			return next(c)
-		}
+			next.ServeHTTP(w, r)
+		})
 	}
 }
 
 // RequireRole middleware checks if user has one of the allowed roles
-func RequireRole(allowedRoles ...string) echo.MiddlewareFunc {
-	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
-			user := GetUserFromContext(c)
+func RequireRole(allowedRoles ...string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			user := GetUserFromContext(r)
 			if user == nil {
-				return c.JSON(http.StatusUnauthorized, map[string]string{
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusUnauthorized)
+				json.NewEncoder(w).Encode(map[string]string{
 					"error": "Authentication required",
 				})
+				return
 			}
 
-			// check if user's role is in allowed roles
 			for _, role := range allowedRoles {
 				if user.Role == role {
-					return next(c)
+					next.ServeHTTP(w, r)
+					return
 				}
 			}
 
-			return c.JSON(http.StatusForbidden, map[string]string{
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusForbidden)
+			json.NewEncoder(w).Encode(map[string]string{
 				"error": "Insufficient permissions",
 			})
-		}
+		})
 	}
 }
 
-// GetUserFromContext retrieves the user from echo context
-func GetUserFromContext(c echo.Context) *UserContext {
-	user, ok := c.Get(string(userContextKey)).(*UserContext)
+// GetUserFromContext retrieves the user from request context
+func GetUserFromContext(r *http.Request) *UserContext {
+	user, ok := r.Context().Value(userContextKey).(*UserContext)
 	if !ok {
 		return nil
 	}
 	return user
 }
 
-// GetUserIDFromContext retrieves the user ID from echo context as pgtype.UUID
-func GetUserIDFromContext(c echo.Context) pgtype.UUID {
-	userID, ok := c.Get(string(userIDContextKey)).(pgtype.UUID)
-	if !ok {
-		return pgtype.UUID{}
-	}
-	return userID
-}
-
 // IsAuthenticated returns true if user is logged in
-func IsAuthenticated(c echo.Context) bool {
-	return GetUserFromContext(c) != nil
+func IsAuthenticated(r *http.Request) bool {
+	return GetUserFromContext(r) != nil
 }
 
 // IsAdmin returns true if user has admin role
-func IsAdmin(c echo.Context) bool {
-	user := GetUserFromContext(c)
+func IsAdmin(r *http.Request) bool {
+	user := GetUserFromContext(r)
 	return user != nil && user.Role == RoleAdmin
-}
-
-// IsGuest returns true if user is not authenticated or has guest role
-func IsGuest(c echo.Context) bool {
-	user := GetUserFromContext(c)
-	return user == nil || user.Role == RoleGuest
 }
 
 // ContextWithUser adds user to standard context (for passing to services)

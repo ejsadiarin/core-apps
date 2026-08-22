@@ -4,22 +4,24 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"time"
 
+	sqlc "github.com/ejsadiarin/coregateway/internal/db/sqlc"
 	"github.com/ejsadiarin/coregateway/internal/domain/auth"
 	monitor "github.com/ejsadiarin/coregateway/internal/domain/monitor"
 	"github.com/ejsadiarin/coregateway/internal/domain/user"
-	sqlc "github.com/ejsadiarin/coregateway/internal/db/sqlc"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/labstack/echo/v4"
 )
 
 // Server holds all the application dependencies
 type Server struct {
 	port int
 
-	Echo    *echo.Echo
+	router *chi.Mux
+	http   *http.Server
 	DB      *pgxpool.Pool
 	Queries *sqlc.Queries
 	Logger  *slog.Logger
@@ -32,17 +34,16 @@ type Server struct {
 
 // Config holds server configuration
 type Config struct {
-	Port               int
-	DatabaseURL        string
-	AdminEmail         string
-	AdminPassword      string
+	Port                int
+	DatabaseURL         string
+	AdminEmail          string
+	AdminPassword       string
 	HealthCheckInterval time.Duration
-	FrontendURL        string
+	FrontendURL         string
 }
 
 // New creates a new Server instance with all dependencies initialized
 func New(cfg Config, logger *slog.Logger) (*Server, error) {
-	// initialize database connection pool
 	poolConfig, err := pgxpool.ParseConfig(cfg.DatabaseURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse database config: %w", err)
@@ -53,7 +54,6 @@ func New(cfg Config, logger *slog.Logger) (*Server, error) {
 		return nil, fmt.Errorf("failed to create database pool: %w", err)
 	}
 
-	// test the connection
 	if err = dbPool.Ping(context.Background()); err != nil {
 		dbPool.Close()
 		return nil, fmt.Errorf("failed to ping database: %w", err)
@@ -61,32 +61,26 @@ func New(cfg Config, logger *slog.Logger) (*Server, error) {
 
 	logger.Info("Database connection established")
 
-	// initialize sqlc queries
 	queries := sqlc.New(dbPool)
 
-	// seed initial users (admin and demo)
 	if err := auth.SeedUsers(context.Background(), queries, logger, cfg.AdminEmail, cfg.AdminPassword); err != nil {
 		logger.Warn("Failed to seed users", "error", err)
 	}
 
-	// initialize health checker
 	healthChecker := monitor.NewHealthChecker(queries, logger)
 	if cfg.HealthCheckInterval > 0 {
 		healthChecker.StartHealthCheckScheduler(cfg.HealthCheckInterval)
 	}
 
-	// initialize handlers
 	authHandler := auth.NewHandler(queries, logger)
 	userHandler := user.NewHandler(queries, logger)
 	serviceHandler := monitor.NewHandler(queries, logger)
 
-	// initialize Echo
-	e := echo.New()
-	e.HideBanner = true
+	router := chi.NewRouter()
 
 	s := &Server{
 		port:           cfg.Port,
-		Echo:           e,
+		router:         router,
 		DB:             dbPool,
 		Queries:        queries,
 		Logger:         logger,
@@ -96,11 +90,17 @@ func New(cfg Config, logger *slog.Logger) (*Server, error) {
 		ServiceHandler: serviceHandler,
 	}
 
-	// setup middleware and routes
 	s.setupMiddleware(cfg)
 	s.RegisterRoutes()
 
-	// start background jobs
+	s.http = &http.Server{
+		Addr:         fmt.Sprintf(":%d", cfg.Port),
+		Handler:      router,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 30 * time.Second,
+		IdleTimeout:  1 * time.Minute,
+	}
+
 	go s.startSessionCleanupScheduler()
 
 	return s, nil
@@ -114,9 +114,14 @@ func (s *Server) Close() {
 }
 
 // Start starts the HTTP server
-func (s *Server) Start(port string) error {
-	s.Logger.Info("Server starting", "port", port)
-	return s.Echo.Start(":" + port)
+func (s *Server) Start() error {
+	s.Logger.Info("Server starting", "addr", s.http.Addr)
+	return s.http.ListenAndServe()
+}
+
+// Shutdown gracefully shuts down the HTTP server
+func (s *Server) Shutdown(ctx context.Context) error {
+	return s.http.Shutdown(ctx)
 }
 
 // startSessionCleanupScheduler runs a background goroutine that periodically deletes expired sessions

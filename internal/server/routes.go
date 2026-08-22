@@ -1,14 +1,14 @@
 package server
 
 import (
+	"encoding/json"
 	"math/rand"
 	"net/http"
 	"time"
 
 	"github.com/ejsadiarin/coregateway/internal/domain/auth"
-
-	"github.com/labstack/echo/v4"
-	echoSwagger "github.com/swaggo/echo-swagger"
+	"github.com/go-chi/chi/v5"
+	swagger "github.com/swaggo/http-swagger"
 )
 
 // legacy types for backwards compatibility
@@ -33,52 +33,54 @@ type serviceStatus struct {
 // RegisterRoutes sets up all API routes
 func (s *Server) RegisterRoutes() {
 	// swagger documentation
-	s.Echo.GET("/swagger/*", echoSwagger.WrapHandler)
+	s.router.Get("/swagger/*", swagger.WrapHandler)
 
 	// health endpoint
-	s.Echo.GET("/health", s.healthCheck)
+	s.router.Get("/health", s.healthCheck)
 
-	// legacy endpoints (for backwards compatibility)
-	s.Echo.GET("/api/system/stats", s.getSystemStats)
-	s.Echo.GET("/api/services", s.getLegacyServices)
+	// legacy endpoints
+	s.router.Get("/api/system/stats", s.getSystemStats)
+	s.router.Get("/api/legacy/services", s.getLegacyServices)
 
 	// API v1
-	api := s.Echo.Group("/api")
-	{
+	s.router.Route("/api", func(r chi.Router) {
 		// auth routes (public)
-		authGroup := api.Group("/auth")
-		{
-			authGroup.POST("/register", s.AuthHandler.Register)
-			authGroup.POST("/login", s.AuthHandler.Login)
-			authGroup.POST("/logout", s.AuthHandler.Logout)
-			authGroup.POST("/demo", s.AuthHandler.LoginAsDemo)
-			authGroup.GET("/me", s.AuthHandler.Me)
-		}
+		r.Route("/auth", func(r chi.Router) {
+			r.Post("/register", s.AuthHandler.Register)
+			r.Post("/login", s.AuthHandler.Login)
+			r.Post("/logout", s.AuthHandler.Logout)
+			r.Post("/demo", s.AuthHandler.LoginAsDemo)
+			r.Get("/me", s.AuthHandler.Me)
+		})
 
-		// user management routes (admin only, except get/update own)
-		users := api.Group("/users")
-		users.Use(auth.RequireAuth())
-		{
-			users.GET("", s.UserHandler.ListUsers, auth.RequireRole(auth.RoleAdmin))
-			users.POST("", s.UserHandler.CreateUser, auth.RequireRole(auth.RoleAdmin))
-			users.GET("/:id", s.UserHandler.GetUser)
-			users.PUT("/:id", s.UserHandler.UpdateUser)
-			users.DELETE("/:id", s.UserHandler.DeleteUser, auth.RequireRole(auth.RoleAdmin))
-		}
+		// user management routes (require auth)
+		r.Group(func(r chi.Router) {
+			r.Use(auth.RequireAuth())
+
+			r.Get("/users", s.UserHandler.ListUsers)
+			r.Post("/users", s.UserHandler.CreateUser)
+			r.Get("/users/{id}", s.UserHandler.GetUser)
+			r.Put("/users/{id}", s.UserHandler.UpdateUser)
+
+			// admin-only routes
+			r.Group(func(r chi.Router) {
+				r.Use(auth.RequireRole(auth.RoleAdmin))
+				r.Delete("/users/{id}", s.UserHandler.DeleteUser)
+			})
+		})
 
 		// service monitoring routes
-		services := api.Group("/services")
-		{
-			services.POST("", s.ServiceHandler.CreateService)
-			services.GET("/list", s.ServiceHandler.ListServices)
-			services.GET("/:id", s.ServiceHandler.GetService)
-			services.PUT("/:id", s.ServiceHandler.UpdateService)
-			services.DELETE("/:id", s.ServiceHandler.DeleteService)
-			services.GET("/:id/history", s.ServiceHandler.GetServiceHistory)
-			services.GET("/:id/stats", s.ServiceHandler.GetServiceStats)
-			services.GET("/stats/all", s.ServiceHandler.GetAllServicesStats)
-		}
-	}
+		r.Route("/services", func(r chi.Router) {
+			r.Post("", s.ServiceHandler.CreateService)
+			r.Get("/list", s.ServiceHandler.ListServices)
+			r.Get("/stats/all", s.ServiceHandler.GetAllServicesStats)
+			r.Get("/{id}", s.ServiceHandler.GetService)
+			r.Put("/{id}", s.ServiceHandler.UpdateService)
+			r.Delete("/{id}", s.ServiceHandler.DeleteService)
+			r.Get("/{id}/history", s.ServiceHandler.GetServiceHistory)
+			r.Get("/{id}/stats", s.ServiceHandler.GetServiceStats)
+		})
+	})
 }
 
 // healthCheck godoc
@@ -88,8 +90,9 @@ func (s *Server) RegisterRoutes() {
 // @Produce json
 // @Success 200 {object} map[string]string
 // @Router /health [get]
-func (s *Server) healthCheck(c echo.Context) error {
-	return c.JSON(http.StatusOK, map[string]string{
+func (s *Server) healthCheck(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
 		"status": "healthy",
 		"time":   time.Now().Format(time.RFC3339),
 	})
@@ -102,7 +105,7 @@ func (s *Server) healthCheck(c echo.Context) error {
 // @Produce json
 // @Success 200 {object} systemStats
 // @Router /api/system/stats [get]
-func (s *Server) getSystemStats(c echo.Context) error {
+func (s *Server) getSystemStats(w http.ResponseWriter, r *http.Request) {
 	rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	stats := systemStats{
@@ -120,7 +123,8 @@ func (s *Server) getSystemStats(c echo.Context) error {
 		},
 	}
 
-	return c.JSON(http.StatusOK, stats)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(stats)
 }
 
 // getLegacyServices godoc
@@ -130,8 +134,8 @@ func (s *Server) getSystemStats(c echo.Context) error {
 // @Produce json
 // @Success 200 {array} serviceStatus
 // @Deprecated true
-// @Router /api/services [get]
-func (s *Server) getLegacyServices(c echo.Context) error {
+// @Router /api/legacy/services [get]
+func (s *Server) getLegacyServices(w http.ResponseWriter, r *http.Request) {
 	services := []serviceStatus{
 		{Name: "Docker Manager", Type: "Container", Status: "online"},
 		{Name: "PostgreSQL", Type: "Database", Status: "online"},
@@ -141,5 +145,6 @@ func (s *Server) getLegacyServices(c echo.Context) error {
 		{Name: "Mail Server", Type: "Email", Status: "maintenance"},
 	}
 
-	return c.JSON(http.StatusOK, services)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(services)
 }

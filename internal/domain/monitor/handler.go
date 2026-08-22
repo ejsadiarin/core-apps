@@ -3,14 +3,13 @@ package service
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"log/slog"
 	"net/http"
 
 	sqlc "github.com/ejsadiarin/coregateway/internal/db/sqlc"
 
-	"github.com/go-playground/validator/v10"
-	"github.com/labstack/echo/v4"
-
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -19,29 +18,6 @@ import (
 type ErrorResponse struct {
 	Error   string      `json:"error"`
 	Details interface{} `json:"details,omitempty"`
-}
-
-// bindAndValidate binds the request body to a typed struct and validates it
-func bindAndValidate[T any](c echo.Context) (*T, error) {
-	var req T
-	if err := c.Bind(&req); err != nil {
-		return nil, err
-	}
-	if err := c.Validate(&req); err != nil {
-		return nil, err
-	}
-	return &req, nil
-}
-
-// formatValidationErrors formats validator errors into a user-friendly map
-func formatValidationErrors(err error) map[string]string {
-	errors := make(map[string]string)
-	if validationErrs, ok := err.(validator.ValidationErrors); ok {
-		for _, e := range validationErrs {
-			errors[e.Field()] = e.Tag()
-		}
-	}
-	return errors
 }
 
 type Handler struct {
@@ -67,17 +43,15 @@ func NewHandler(queries *sqlc.Queries, logger *slog.Logger) *Handler {
 // @Failure 400 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /api/services [post]
-func (h *Handler) CreateService(c echo.Context) error {
-	req, err := bindAndValidate[CreateServiceRequest](c)
-	if err != nil {
-		validationErrors := formatValidationErrors(err)
-		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error:   "Validation failed",
-			Details: validationErrors,
-		})
+func (h *Handler) CreateService(w http.ResponseWriter, r *http.Request) {
+	var req CreateServiceRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: err.Error()})
+		return
 	}
 
-	// set defaults
 	healthCheckInterval := int32(60)
 	if req.HealthCheckInterval != nil {
 		healthCheckInterval = *req.HealthCheckInterval
@@ -98,7 +72,6 @@ func (h *Handler) CreateService(c echo.Context) error {
 		expectedStatusCodes = req.ExpectedStatusCodes
 	}
 
-	// convert to pgtype.Text for nullable fields
 	var icon, description, serviceType pgtype.Text
 	if req.Icon != nil {
 		icon = pgtype.Text{String: *req.Icon, Valid: true}
@@ -123,12 +96,15 @@ func (h *Handler) CreateService(c echo.Context) error {
 	})
 	if err != nil {
 		h.logger.Error("Failed to create service", "error", err)
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Error: "Failed to create service",
-		})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Failed to create service"})
+		return
 	}
 
-	return c.JSON(http.StatusCreated, service)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(service)
 }
 
 // ListServices godoc
@@ -139,20 +115,22 @@ func (h *Handler) CreateService(c echo.Context) error {
 // @Success 200 {array} sqlc.ListServicesRow
 // @Failure 500 {object} ErrorResponse
 // @Router /api/services/list [get]
-func (h *Handler) ListServices(c echo.Context) error {
+func (h *Handler) ListServices(w http.ResponseWriter, r *http.Request) {
 	services, err := h.queries.ListServices(context.Background())
 	if err != nil {
 		h.logger.Error("Failed to list services", "error", err)
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Error: "Failed to list services",
-		})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Failed to list services"})
+		return
 	}
 
 	if services == nil {
 		services = []sqlc.ListServicesRow{}
 	}
 
-	return c.JSON(http.StatusOK, services)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(services)
 }
 
 // GetService godoc
@@ -166,29 +144,32 @@ func (h *Handler) ListServices(c echo.Context) error {
 // @Failure 404 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /api/services/{id} [get]
-func (h *Handler) GetService(c echo.Context) error {
-	idParam := c.Param("id")
-	id, err := uuid.Parse(idParam)
+func (h *Handler) GetService(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error: "Invalid service ID",
-		})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Invalid service ID"})
+		return
 	}
 
 	service, err := h.queries.GetService(context.Background(), id)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return c.JSON(http.StatusNotFound, ErrorResponse{
-				Error: "Service not found",
-			})
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(ErrorResponse{Error: "Service not found"})
+			return
 		}
 		h.logger.Error("Failed to get service", "error", err, "id", id.String())
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Error: "Failed to get service",
-		})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Failed to get service"})
+		return
 	}
 
-	return c.JSON(http.StatusOK, service)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(service)
 }
 
 // UpdateService godoc
@@ -204,28 +185,24 @@ func (h *Handler) GetService(c echo.Context) error {
 // @Failure 404 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /api/services/{id} [put]
-func (h *Handler) UpdateService(c echo.Context) error {
-	idParam := c.Param("id")
-	id, err := uuid.Parse(idParam)
+func (h *Handler) UpdateService(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error: "Invalid service ID",
-		})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Invalid service ID"})
+		return
 	}
 
-	req, err := bindAndValidate[UpdateServiceRequest](c)
-	if err != nil {
-		validationErrors := formatValidationErrors(err)
-		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error:   "Validation failed",
-			Details: validationErrors,
-		})
+	var req UpdateServiceRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: err.Error()})
+		return
 	}
 
-	// build params with nullable types
-	params := sqlc.UpdateServiceParams{
-		ID: id,
-	}
+	params := sqlc.UpdateServiceParams{ID: id}
 
 	if req.Name != nil {
 		params.Name = pgtype.Text{String: *req.Name, Valid: true}
@@ -261,17 +238,20 @@ func (h *Handler) UpdateService(c echo.Context) error {
 	service, err := h.queries.UpdateService(context.Background(), params)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return c.JSON(http.StatusNotFound, ErrorResponse{
-				Error: "Service not found",
-			})
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(ErrorResponse{Error: "Service not found"})
+			return
 		}
 		h.logger.Error("Failed to update service", "error", err, "id", id.String())
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Error: "Failed to update service",
-		})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Failed to update service"})
+		return
 	}
 
-	return c.JSON(http.StatusOK, service)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(service)
 }
 
 // DeleteService godoc
@@ -284,29 +264,31 @@ func (h *Handler) UpdateService(c echo.Context) error {
 // @Failure 404 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /api/services/{id} [delete]
-func (h *Handler) DeleteService(c echo.Context) error {
-	idParam := c.Param("id")
-	id, err := uuid.Parse(idParam)
+func (h *Handler) DeleteService(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error: "Invalid service ID",
-		})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Invalid service ID"})
+		return
 	}
 
 	err = h.queries.DeleteService(context.Background(), id)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return c.JSON(http.StatusNotFound, ErrorResponse{
-				Error: "Service not found",
-			})
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(ErrorResponse{Error: "Service not found"})
+			return
 		}
 		h.logger.Error("Failed to delete service", "error", err, "id", id.String())
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Error: "Failed to delete service",
-		})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Failed to delete service"})
+		return
 	}
 
-	return c.NoContent(http.StatusNoContent)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // GetServiceHistory godoc
@@ -320,13 +302,13 @@ func (h *Handler) DeleteService(c echo.Context) error {
 // @Failure 400 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /api/services/{id}/history [get]
-func (h *Handler) GetServiceHistory(c echo.Context) error {
-	idParam := c.Param("id")
-	id, err := uuid.Parse(idParam)
+func (h *Handler) GetServiceHistory(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error: "Invalid service ID",
-		})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Invalid service ID"})
+		return
 	}
 
 	limit := int32(100)
@@ -337,16 +319,18 @@ func (h *Handler) GetServiceHistory(c echo.Context) error {
 	})
 	if err != nil {
 		h.logger.Error("Failed to get service history", "error", err, "id", id.String())
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Error: "Failed to get service history",
-		})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Failed to get service history"})
+		return
 	}
 
 	if history == nil {
 		history = []sqlc.CoregatewayServiceHealthHistory{}
 	}
 
-	return c.JSON(http.StatusOK, history)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(history)
 }
 
 // GetServiceStats godoc
@@ -359,13 +343,13 @@ func (h *Handler) GetServiceHistory(c echo.Context) error {
 // @Failure 400 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /api/services/{id}/stats [get]
-func (h *Handler) GetServiceStats(c echo.Context) error {
-	idParam := c.Param("id")
-	id, err := uuid.Parse(idParam)
+func (h *Handler) GetServiceStats(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error: "Invalid service ID",
-		})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Invalid service ID"})
+		return
 	}
 
 	pgID := pgtype.UUID{Bytes: id, Valid: true}
@@ -373,9 +357,10 @@ func (h *Handler) GetServiceStats(c echo.Context) error {
 	stats24h, err := h.queries.GetServiceStats24h(context.Background(), pgID)
 	if err != nil {
 		h.logger.Error("Failed to get 24h stats", "error", err, "id", id.String())
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Error: "Failed to get service stats",
-		})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Failed to get service stats"})
+		return
 	}
 
 	stats7d, _ := h.queries.GetServiceStats7d(context.Background(), pgID)
@@ -396,7 +381,8 @@ func (h *Handler) GetServiceStats(c echo.Context) error {
 		uptime30d = float64(stats30d.SuccessfulChecks) / float64(stats30d.TotalChecks) * 100
 	}
 
-	return c.JSON(http.StatusOK, map[string]interface{}{
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
 		"service_id":        id.String(),
 		"uptime_24h":        uptime24h,
 		"uptime_7d":         uptime7d,
@@ -415,13 +401,14 @@ func (h *Handler) GetServiceStats(c echo.Context) error {
 // @Success 200 {object} map[string]interface{}
 // @Failure 500 {object} ErrorResponse
 // @Router /api/services/stats/all [get]
-func (h *Handler) GetAllServicesStats(c echo.Context) error {
+func (h *Handler) GetAllServicesStats(w http.ResponseWriter, r *http.Request) {
 	stats, err := h.queries.GetAllServicesStats(context.Background())
 	if err != nil {
 		h.logger.Error("Failed to get all services stats", "error", err)
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Error: "Failed to get services stats",
-		})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Failed to get services stats"})
+		return
 	}
 
 	uptime := 0.0
@@ -429,7 +416,8 @@ func (h *Handler) GetAllServicesStats(c echo.Context) error {
 		uptime = float64(stats.SuccessfulChecks) / float64(stats.TotalChecks) * 100
 	}
 
-	return c.JSON(http.StatusOK, map[string]interface{}{
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
 		"total_services":    stats.TotalServices,
 		"total_checks":      stats.TotalChecks,
 		"successful_checks": stats.SuccessfulChecks,

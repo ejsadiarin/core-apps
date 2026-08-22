@@ -1,6 +1,7 @@
 package user
 
 import (
+	"encoding/json"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -9,27 +10,15 @@ import (
 	"github.com/ejsadiarin/coregateway/internal/domain/auth"
 	sqlc "github.com/ejsadiarin/coregateway/internal/db/sqlc"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/labstack/echo/v4"
 )
 
 // ErrorResponse represents an API error response
 type ErrorResponse struct {
 	Error   string      `json:"error"`
 	Details interface{} `json:"details,omitempty"`
-}
-
-// bindAndValidate binds the request body to a typed struct and validates it
-func bindAndValidate[T any](c echo.Context) (*T, error) {
-	var req T
-	if err := c.Bind(&req); err != nil {
-		return nil, err
-	}
-	if err := c.Validate(&req); err != nil {
-		return nil, err
-	}
-	return &req, nil
 }
 
 type Handler struct {
@@ -53,11 +42,14 @@ func NewHandler(queries *sqlc.Queries, logger *slog.Logger) *Handler {
 // @Failure 401 {object} ErrorResponse
 // @Failure 403 {object} ErrorResponse
 // @Router /api/users [get]
-func (h *Handler) ListUsers(c echo.Context) error {
-	users, err := h.queries.ListUsers(c.Request().Context())
+func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
+	users, err := h.queries.ListUsers(r.Context())
 	if err != nil {
 		h.logger.Error("Failed to list users", "error", err)
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to list users"})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Failed to list users"})
+		return
 	}
 
 	res := make([]UserResponse, len(users))
@@ -70,7 +62,8 @@ func (h *Handler) ListUsers(c echo.Context) error {
 		}
 	}
 
-	return c.JSON(http.StatusOK, res)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(res)
 }
 
 // CreateUser godoc
@@ -86,42 +79,52 @@ func (h *Handler) ListUsers(c echo.Context) error {
 // @Failure 403 {object} ErrorResponse
 // @Failure 409 {object} ErrorResponse
 // @Router /api/users [post]
-func (h *Handler) CreateUser(c echo.Context) error {
-	req, err := bindAndValidate[CreateUserRequest](c)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: err.Error()})
+func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
+	var req CreateUserRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: err.Error()})
+		return
 	}
 
-	// normalize email
 	email := strings.ToLower(strings.TrimSpace(req.Email))
 
-	// check if user already exists
-	_, err = h.queries.GetUserByEmail(c.Request().Context(), email)
+	_, err := h.queries.GetUserByEmail(r.Context(), email)
 	if err == nil {
-		return c.JSON(http.StatusConflict, ErrorResponse{Error: "User with this email already exists"})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusConflict)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "User with this email already exists"})
+		return
 	}
 
-	// hash password
 	hashedPassword, err := auth.HashPassword(req.Password)
 	if err != nil {
 		h.logger.Error("Failed to hash password", "error", err)
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to create user"})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Failed to create user"})
+		return
 	}
 
-	// create user
-	user, err := h.queries.CreateUser(c.Request().Context(), sqlc.CreateUserParams{
+	user, err := h.queries.CreateUser(r.Context(), sqlc.CreateUserParams{
 		Email:        email,
 		PasswordHash: pgtype.Text{String: hashedPassword, Valid: true},
 		Role:         req.Role,
 	})
 	if err != nil {
 		h.logger.Error("Failed to create user", "error", err)
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to create user"})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Failed to create user"})
+		return
 	}
 
 	h.logger.Info("User created by admin", "email", email, "role", req.Role)
 
-	return c.JSON(http.StatusCreated, UserResponse{
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(UserResponse{
 		ID:        user.ID,
 		Email:     user.Email,
 		Role:      user.Role,
@@ -140,28 +143,40 @@ func (h *Handler) CreateUser(c echo.Context) error {
 // @Failure 403 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
 // @Router /api/users/{id} [get]
-func (h *Handler) GetUser(c echo.Context) error {
-	id, err := uuid.Parse(c.Param("id"))
+func (h *Handler) GetUser(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Invalid user ID"})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Invalid user ID"})
+		return
 	}
 
-	// check authorization (admin can view any, users can only view themselves)
-	currentUser := auth.GetUserFromContext(c)
+	currentUser := auth.GetUserFromContext(r)
 	if currentUser == nil {
-		return c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "Authentication required"})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Authentication required"})
+		return
 	}
 
 	if currentUser.Role != auth.RoleAdmin && currentUser.ID != id {
-		return c.JSON(http.StatusForbidden, ErrorResponse{Error: "Access denied"})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusForbidden)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Access denied"})
+		return
 	}
 
-	user, err := h.queries.GetUser(c.Request().Context(), id)
+	user, err := h.queries.GetUser(r.Context(), id)
 	if err != nil {
-		return c.JSON(http.StatusNotFound, ErrorResponse{Error: "User not found"})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "User not found"})
+		return
 	}
 
-	return c.JSON(http.StatusOK, UserResponse{
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(UserResponse{
 		ID:        user.ID,
 		Email:     user.Email,
 		Role:      user.Role,
@@ -183,42 +198,56 @@ func (h *Handler) GetUser(c echo.Context) error {
 // @Failure 403 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
 // @Router /api/users/{id} [put]
-func (h *Handler) UpdateUser(c echo.Context) error {
-	id, err := uuid.Parse(c.Param("id"))
+func (h *Handler) UpdateUser(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Invalid user ID"})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Invalid user ID"})
+		return
 	}
 
-	// check authorization
-	currentUser := auth.GetUserFromContext(c)
+	currentUser := auth.GetUserFromContext(r)
 	if currentUser == nil {
-		return c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "Authentication required"})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Authentication required"})
+		return
 	}
 
 	isAdmin := currentUser.Role == auth.RoleAdmin
 	isSelf := currentUser.ID == id
 
 	if !isAdmin && !isSelf {
-		return c.JSON(http.StatusForbidden, ErrorResponse{Error: "Access denied"})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusForbidden)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Access denied"})
+		return
 	}
 
-	req, err := bindAndValidate[UpdateUserRequest](c)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: err.Error()})
+	var req UpdateUserRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: err.Error()})
+		return
 	}
 
-	// only admin can change roles
 	if req.Role != nil && !isAdmin {
-		return c.JSON(http.StatusForbidden, ErrorResponse{Error: "Only administrators can change user roles"})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusForbidden)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Only administrators can change user roles"})
+		return
 	}
 
-	// check if user exists
-	_, err = h.queries.GetUser(c.Request().Context(), id)
+	_, err = h.queries.GetUser(r.Context(), id)
 	if err != nil {
-		return c.JSON(http.StatusNotFound, ErrorResponse{Error: "User not found"})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "User not found"})
+		return
 	}
 
-	// build update params
 	updateParams := sqlc.UpdateUserParams{ID: id}
 
 	if req.Email != nil {
@@ -230,7 +259,10 @@ func (h *Handler) UpdateUser(c echo.Context) error {
 		hashedPassword, err := auth.HashPassword(*req.Password)
 		if err != nil {
 			h.logger.Error("Failed to hash password", "error", err)
-			return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to update user"})
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(ErrorResponse{Error: "Failed to update user"})
+			return
 		}
 		updateParams.PasswordHash = pgtype.Text{String: hashedPassword, Valid: true}
 	}
@@ -239,15 +271,19 @@ func (h *Handler) UpdateUser(c echo.Context) error {
 		updateParams.Role = pgtype.Text{String: *req.Role, Valid: true}
 	}
 
-	user, err := h.queries.UpdateUser(c.Request().Context(), updateParams)
+	user, err := h.queries.UpdateUser(r.Context(), updateParams)
 	if err != nil {
 		h.logger.Error("Failed to update user", "error", err)
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to update user"})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Failed to update user"})
+		return
 	}
 
 	h.logger.Info("User updated", "user_id", id.String())
 
-	return c.JSON(http.StatusOK, UserResponse{
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(UserResponse{
 		ID:        user.ID,
 		Email:     user.Email,
 		Role:      user.Role,
@@ -266,45 +302,58 @@ func (h *Handler) UpdateUser(c echo.Context) error {
 // @Failure 403 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
 // @Router /api/users/{id} [delete]
-func (h *Handler) DeleteUser(c echo.Context) error {
-	id, err := uuid.Parse(c.Param("id"))
+func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Invalid user ID"})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Invalid user ID"})
+		return
 	}
 
-	currentUser := auth.GetUserFromContext(c)
+	currentUser := auth.GetUserFromContext(r)
 	if currentUser == nil {
-		return c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "Authentication required"})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Authentication required"})
+		return
 	}
 
-	// prevent self-deletion
 	if currentUser.ID == id {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Cannot delete your own account"})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Cannot delete your own account"})
+		return
 	}
 
-	// check if user exists and is not the demo user
-	user, err := h.queries.GetUser(c.Request().Context(), id)
+	user, err := h.queries.GetUser(r.Context(), id)
 	if err != nil {
-		return c.JSON(http.StatusNotFound, ErrorResponse{Error: "User not found"})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "User not found"})
+		return
 	}
 
-	// prevent demo user deletion
 	if user.Email == auth.DemoUserEmail {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Cannot delete demo user"})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Cannot delete demo user"})
+		return
 	}
 
-	// delete all user sessions first
-	if err := h.queries.DeleteUserSessions(c.Request().Context(), id); err != nil {
+	if err := h.queries.DeleteUserSessions(r.Context(), id); err != nil {
 		h.logger.Warn("Failed to delete user sessions", "error", err, "user_id", id.String())
 	}
 
-	// delete user
-	if err := h.queries.DeleteUser(c.Request().Context(), id); err != nil {
+	if err := h.queries.DeleteUser(r.Context(), id); err != nil {
 		h.logger.Error("Failed to delete user", "error", err)
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to delete user"})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Failed to delete user"})
+		return
 	}
 
 	h.logger.Info("User deleted", "user_id", id.String())
 
-	return c.NoContent(http.StatusNoContent)
+	w.WriteHeader(http.StatusNoContent)
 }

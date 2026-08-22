@@ -4,8 +4,6 @@ import (
 	"net/http"
 	"os"
 	"time"
-
-	"github.com/labstack/echo/v4"
 )
 
 const (
@@ -15,7 +13,7 @@ const (
 )
 
 // SetSessionCookie sets the session cookie with proper security attributes
-func SetSessionCookie(c echo.Context, token string, expiry time.Duration) {
+func SetSessionCookie(w http.ResponseWriter, token string, expiry time.Duration) {
 	cookie := &http.Cookie{
 		Name:     SessionCookieName,
 		Value:    token,
@@ -25,12 +23,11 @@ func SetSessionCookie(c echo.Context, token string, expiry time.Duration) {
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   int(expiry.Seconds()),
 	}
-
-	c.SetCookie(cookie)
+	http.SetCookie(w, cookie)
 }
 
 // ClearSessionCookie removes the session cookie
-func ClearSessionCookie(c echo.Context) {
+func ClearSessionCookie(w http.ResponseWriter) {
 	cookie := &http.Cookie{
 		Name:     SessionCookieName,
 		Value:    "",
@@ -38,22 +35,20 @@ func ClearSessionCookie(c echo.Context) {
 		HttpOnly: true,
 		Secure:   isProduction(),
 		SameSite: http.SameSiteLaxMode,
-		MaxAge:   -1, // delete cookie
+		MaxAge:   -1,
 	}
-
-	c.SetCookie(cookie)
+	http.SetCookie(w, cookie)
 }
 
 // GetSessionToken extracts the session token from the request cookie
-func GetSessionToken(c echo.Context) (string, error) {
-	cookie, err := c.Cookie(SessionCookieName)
+func GetSessionToken(r *http.Request) (string, error) {
+	cookie, err := r.Cookie(SessionCookieName)
 	if err != nil {
 		return "", err
 	}
 	return cookie.Value, nil
 }
 
-// isProduction returns true if running in production mode
 func isProduction() bool {
 	return os.Getenv("ENV") == "production"
 }

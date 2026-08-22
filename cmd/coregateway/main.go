@@ -15,7 +15,6 @@ import (
 )
 
 func main() {
-	// load .env file
 	_ = godotenv.Load()
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
@@ -23,12 +22,12 @@ func main() {
 	}))
 
 	cfg := server.Config{
-		Port:               getEnvOrDefaultInt("PORT", 8080),
-		DatabaseURL:        getEnvOrDefault("DATABASE_URL", "postgresql://core:core@localhost:5432/core?sslmode=disable"),
-		FrontendURL:        os.Getenv("FRONTEND_URL"),
+		Port:                getEnvOrDefaultInt("PORT", 8080),
+		DatabaseURL:         getEnvOrDefault("DATABASE_URL", "postgresql://core:core@localhost:5432/core?sslmode=disable"),
+		FrontendURL:         os.Getenv("FRONTEND_URL"),
 		HealthCheckInterval: 60 * time.Second,
-		AdminEmail:         os.Getenv("ADMIN_EMAIL"),
-		AdminPassword:      os.Getenv("ADMIN_PASSWORD"),
+		AdminEmail:          os.Getenv("ADMIN_EMAIL"),
+		AdminPassword:       os.Getenv("ADMIN_PASSWORD"),
 	}
 
 	srv, err := server.New(cfg, logger)
@@ -41,7 +40,7 @@ func main() {
 	go gracefulShutdown(srv, done)
 
 	logger.Info("Starting coregateway...", "port", cfg.Port)
-	if err := srv.Start(fmt.Sprintf("%d", cfg.Port)); err != nil {
+	if err := srv.Start(); err != nil {
 		logger.Error("Server error", "error", err)
 	}
 
@@ -61,7 +60,7 @@ func gracefulShutdown(srv *server.Server, done chan bool) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	if err := srv.Echo.Shutdown(ctx); err != nil {
+	if err := srv.Shutdown(ctx); err != nil {
 		log.Printf("Server forced to shutdown with error: %v", err)
 	}
 
