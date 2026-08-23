@@ -5,8 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	sqlc "github.com/ejsadiarin/coregateway/internal/db/sqlc"
-
+	"github.com/ejsadiarin/coregateway/internal/session"
 	"github.com/google/uuid"
 )
 
@@ -26,31 +25,31 @@ type UserContext struct {
 }
 
 // AuthMiddleware extracts session cookie, validates it, and loads user into context
-func AuthMiddleware(queries *sqlc.Queries) func(http.Handler) http.Handler {
+func AuthMiddleware(svc Service) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			token, err := GetSessionToken(r)
+			token, err := session.GetToken(r)
 			if err != nil {
 				next.ServeHTTP(w, r)
 				return
 			}
 
-			tokenHash := HashSessionToken(token)
-			session, err := queries.GetSessionByTokenHash(r.Context(), tokenHash)
+			user, err := svc.GetSessionUser(r.Context(), token)
 			if err != nil {
-				ClearSessionCookie(w)
+				session.ClearCookie(w)
 				next.ServeHTTP(w, r)
 				return
 			}
 
+			id, _ := uuid.Parse(user.Id)
 			userCtx := &UserContext{
-				ID:    session.UserID,
-				Email: session.Email,
-				Role:  session.Role,
+				ID:    id,
+				Email: user.Email,
+				Role:  user.Role,
 			}
 
 			ctx := context.WithValue(r.Context(), userContextKey, userCtx)
-			ctx = context.WithValue(ctx, userIDContextKey, session.UserID)
+			ctx = context.WithValue(ctx, userIDContextKey, id)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}

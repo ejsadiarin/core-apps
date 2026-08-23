@@ -9,26 +9,25 @@ import (
 // Config holds application configuration
 type Config struct {
 	DatabaseURL         string
-	ServerAddr          string
+	Port                int
 	Env                 string
+	FrontendURL         string
 	HealthCheckInterval time.Duration
-	SessionSecret       string
-	AllowedOrigins      string
 	AdminEmail          string
 	AdminPass           string
+	AllowedOrigins      string
 }
 
 // Load loads configuration from environment variables
 func Load() *Config {
 	return &Config{
-		DatabaseURL:         getEnv("DATABASE_URL", "postgresql://core:core@postgres:5432/core?sslmode=disable"),
-		ServerAddr:          getEnv("SERVER_ADDR", ":6969"),
+		DatabaseURL:         getEnv("DATABASE_URL", "postgresql://core:core@localhost:5432/core?sslmode=disable"),
+		Port:                getEnvInt("PORT", 8080),
 		Env:                 getEnv("ENV", "development"),
 		HealthCheckInterval: 60 * time.Second,
-		SessionSecret:       getEnv("SESSION_SECRET", ""),
-		AllowedOrigins:      getEnv("ALLOWED_ORIGINS", "*"),
 		AdminEmail:          os.Getenv("ADMIN_EMAIL"),
 		AdminPass:           os.Getenv("ADMIN_PASSWORD"),
+		AllowedOrigins:      getEnv("ALLOWED_ORIGINS", "http://localhost:3000"),
 	}
 }
 
@@ -44,10 +43,19 @@ func (c *Config) Validate() error {
 	return nil
 }
 
-// getEnv returns the value of an environment variable or a default value
 func getEnv(key, defaultValue string) string {
 	if v := os.Getenv(key); v != "" {
 		return v
+	}
+	return defaultValue
+}
+
+func getEnvInt(key string, defaultValue int) int {
+	if v := os.Getenv(key); v != "" {
+		var n int
+		if _, err := fmt.Sscanf(v, "%d", &n); err == nil {
+			return n
+		}
 	}
 	return defaultValue
 }

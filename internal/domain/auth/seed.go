@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/ejsadiarin/coregateway/internal/crypto"
 	sqlc "github.com/ejsadiarin/coregateway/internal/db/sqlc"
 
 	"github.com/google/uuid"
@@ -46,7 +47,7 @@ func seedAdminUser(ctx context.Context, queries *sqlc.Queries, logger *slog.Logg
 	}
 
 	// hash the password
-	hashedPassword, err := HashPassword(adminPassword)
+	hashedPassword, err := crypto.HashPassword(adminPassword)
 	if err != nil {
 		return err
 	}
