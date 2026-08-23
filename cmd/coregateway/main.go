@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"log/slog"
 	"os"
@@ -10,31 +9,46 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/ejsadiarin/coregateway/internal/config"
+	dbpkg "github.com/ejsadiarin/coregateway/internal/db"
+	sqlc "github.com/ejsadiarin/coregateway/internal/db/sqlc"
+	"github.com/ejsadiarin/coregateway/internal/domain/auth"
+	monitor "github.com/ejsadiarin/coregateway/internal/domain/monitor"
+	"github.com/ejsadiarin/coregateway/internal/domain/user"
 	"github.com/ejsadiarin/coregateway/internal/server"
+
 	"github.com/joho/godotenv"
 )
 
 func main() {
 	_ = godotenv.Load()
 
+	cfg := config.Load()
+
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelDebug,
 	}))
 
-	cfg := server.Config{
-		Port:                getEnvOrDefaultInt("PORT", 8080),
-		DatabaseURL:         getEnvOrDefault("DATABASE_URL", "postgresql://core:core@localhost:5432/core?sslmode=disable"),
-		FrontendURL:         os.Getenv("FRONTEND_URL"),
-		HealthCheckInterval: 60 * time.Second,
-		AdminEmail:          os.Getenv("ADMIN_EMAIL"),
-		AdminPassword:       os.Getenv("ADMIN_PASSWORD"),
+	pool, err := dbpkg.NewPool(context.Background(), cfg.DatabaseURL)
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
+	defer pool.Close()
+
+	queries := sqlc.New(pool)
+
+	healthChecker := monitor.NewHealthChecker(queries, logger)
+	if cfg.HealthCheckInterval > 0 {
+		healthChecker.StartHealthCheckScheduler(cfg.HealthCheckInterval)
 	}
 
-	srv, err := server.New(cfg, logger)
-	if err != nil {
-		log.Fatalf("Failed to create server: %v", err)
-	}
-	defer srv.Close()
+	authSvc := auth.NewService(queries, logger)
+	userSvc := user.NewService(queries, logger)
+	monitorSvc := monitor.NewService(queries, logger)
+
+	srv := server.New(cfg, logger, authSvc, userSvc, monitorSvc)
+
+	go startSessionCleanup(queries, logger)
 
 	done := make(chan bool, 1)
 	go gracefulShutdown(srv, done)
@@ -68,19 +82,17 @@ func gracefulShutdown(srv *server.Server, done chan bool) {
 	done <- true
 }
 
-func getEnvOrDefault(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return defaultValue
-}
+func startSessionCleanup(queries *sqlc.Queries, logger *slog.Logger) {
+	ticker := time.NewTicker(1 * time.Hour)
+	defer ticker.Stop()
 
-func getEnvOrDefaultInt(key string, defaultValue int) int {
-	if value := os.Getenv(key); value != "" {
-		var n int
-		if _, err := fmt.Sscanf(value, "%d", &n); err == nil {
-			return n
+	logger.Info("Session cleanup scheduler started")
+
+	for range ticker.C {
+		if err := queries.DeleteExpiredSessions(context.Background()); err != nil {
+			logger.Error("Failed to delete expired sessions", "error", err)
+		} else {
+			logger.Debug("Expired sessions cleaned up")
 		}
 	}
-	return defaultValue
 }

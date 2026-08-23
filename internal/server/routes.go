@@ -8,10 +8,10 @@ import (
 
 	"github.com/ejsadiarin/coregateway/internal/domain/auth"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/cors"
 	swagger "github.com/swaggo/http-swagger"
 )
 
-// legacy types for backwards compatibility
 type systemStats struct {
 	CPU         int    `json:"cpu"`
 	Memory      int    `json:"memory"`
@@ -30,67 +30,52 @@ type serviceStatus struct {
 	Type   string `json:"type"`
 }
 
-// RegisterRoutes sets up all API routes
-func (s *Server) RegisterRoutes() {
-	// swagger documentation
-	s.router.Get("/swagger/*", swagger.WrapHandler)
+func (s *Server) RegisterRoutes() http.Handler {
+	r := chi.NewRouter()
 
-	// health endpoint
-	s.router.Get("/health", s.healthCheck)
+	// global middleware
+	r.Use(auth.AuthMiddleware(s.authService))
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"http://localhost:3000", "http://localhost:3001", s.frontendURL},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		AllowCredentials: true,
+	}))
 
-	// legacy endpoints
-	s.router.Get("/api/system/stats", s.getSystemStats)
-	s.router.Get("/api/legacy/services", s.getLegacyServices)
+	// ops
+	r.Get("/swagger/*", swagger.WrapHandler)
+	r.Get("/health", healthCheck)
+	r.Get("/api/system/stats", getSystemStats)
+	r.Get("/api/legacy/services", getLegacyServices)
 
-	// API v1
-	s.router.Route("/api", func(r chi.Router) {
-		// auth routes (public)
-		r.Route("/auth", func(r chi.Router) {
-			r.Post("/register", s.AuthHandler.Register)
-			r.Post("/login", s.AuthHandler.Login)
-			r.Post("/logout", s.AuthHandler.Logout)
-			r.Post("/demo", s.AuthHandler.LoginAsDemo)
-			r.Get("/me", s.AuthHandler.Me)
-		})
+	// auth
+	r.Post("/api/auth/register", s.authHandler.Register)
+	r.Post("/api/auth/login", s.authHandler.Login)
+	r.Post("/api/auth/logout", s.authHandler.Logout)
+	r.Post("/api/auth/demo", s.authHandler.LoginAsDemo)
+	r.Get("/api/auth/me", s.authHandler.Me)
 
-		// user management routes (require auth)
-		r.Group(func(r chi.Router) {
-			r.Use(auth.RequireAuth())
+	// users
+	r.Get("/api/users", s.userHandler.ListUsers)
+	r.Post("/api/users", s.userHandler.CreateUser)
+	r.Get("/api/users/{id}", s.userHandler.GetUser)
+	r.Put("/api/users/{id}", s.userHandler.UpdateUser)
+	r.Delete("/api/users/{id}", s.userHandler.DeleteUser)
 
-			r.Get("/users", s.UserHandler.ListUsers)
-			r.Post("/users", s.UserHandler.CreateUser)
-			r.Get("/users/{id}", s.UserHandler.GetUser)
-			r.Put("/users/{id}", s.UserHandler.UpdateUser)
+	// services
+	r.Post("/api/services", s.serviceHandler.CreateService)
+	r.Get("/api/services/list", s.serviceHandler.ListServices)
+	r.Get("/api/services/stats/all", s.serviceHandler.GetAllServicesStats)
+	r.Get("/api/services/{id}", s.serviceHandler.GetService)
+	r.Put("/api/services/{id}", s.serviceHandler.UpdateService)
+	r.Delete("/api/services/{id}", s.serviceHandler.DeleteService)
+	r.Get("/api/services/{id}/history", s.serviceHandler.GetServiceHistory)
+	r.Get("/api/services/{id}/stats", s.serviceHandler.GetServiceStats)
 
-			// admin-only routes
-			r.Group(func(r chi.Router) {
-				r.Use(auth.RequireRole(auth.RoleAdmin))
-				r.Delete("/users/{id}", s.UserHandler.DeleteUser)
-			})
-		})
-
-		// service monitoring routes
-		r.Route("/services", func(r chi.Router) {
-			r.Post("", s.ServiceHandler.CreateService)
-			r.Get("/list", s.ServiceHandler.ListServices)
-			r.Get("/stats/all", s.ServiceHandler.GetAllServicesStats)
-			r.Get("/{id}", s.ServiceHandler.GetService)
-			r.Put("/{id}", s.ServiceHandler.UpdateService)
-			r.Delete("/{id}", s.ServiceHandler.DeleteService)
-			r.Get("/{id}/history", s.ServiceHandler.GetServiceHistory)
-			r.Get("/{id}/stats", s.ServiceHandler.GetServiceStats)
-		})
-	})
+	return r
 }
 
-// healthCheck godoc
-// @Summary Health check
-// @Description Check if the API is running
-// @Tags health
-// @Produce json
-// @Success 200 {object} map[string]string
-// @Router /health [get]
-func (s *Server) healthCheck(w http.ResponseWriter, r *http.Request) {
+func healthCheck(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
 		"status": "healthy",
@@ -98,14 +83,7 @@ func (s *Server) healthCheck(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// getSystemStats godoc
-// @Summary Get system statistics
-// @Description Get mock system statistics (CPU, memory, etc.)
-// @Tags system
-// @Produce json
-// @Success 200 {object} systemStats
-// @Router /api/system/stats [get]
-func (s *Server) getSystemStats(w http.ResponseWriter, r *http.Request) {
+func getSystemStats(w http.ResponseWriter, r *http.Request) {
 	rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	stats := systemStats{
@@ -127,15 +105,7 @@ func (s *Server) getSystemStats(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(stats)
 }
 
-// getLegacyServices godoc
-// @Summary Get legacy services (deprecated)
-// @Description Get mock service list for backwards compatibility
-// @Tags legacy
-// @Produce json
-// @Success 200 {array} serviceStatus
-// @Deprecated true
-// @Router /api/legacy/services [get]
-func (s *Server) getLegacyServices(w http.ResponseWriter, r *http.Request) {
+func getLegacyServices(w http.ResponseWriter, r *http.Request) {
 	services := []serviceStatus{
 		{Name: "Docker Manager", Type: "Container", Status: "online"},
 		{Name: "PostgreSQL", Type: "Database", Status: "online"},
