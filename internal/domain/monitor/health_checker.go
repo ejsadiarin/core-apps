@@ -14,11 +14,11 @@ import (
 )
 
 type HealthChecker struct {
-	queries *sqlc.Queries
+	queries sqlc.Querier
 	logger  *slog.Logger
 }
 
-func NewHealthChecker(queries *sqlc.Queries, logger *slog.Logger) *HealthChecker {
+func NewHealthChecker(queries sqlc.Querier, logger *slog.Logger) *HealthChecker {
 	return &HealthChecker{
 		queries: queries,
 		logger:  logger,
