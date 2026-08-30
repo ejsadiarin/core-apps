@@ -12,6 +12,8 @@
     - backlog clearing/old reads to revisit
     - "Core reminds me to..." (philosophical, grounded mental)
         - self learn, have strong fundamentals (language-agnostic)
+            - system design, caching patterns, etc.
+            - linux troubleshooting scenarios, kubernetes
         - job hop for growth potential
         - the work you do needs to be broadly communicated for visibility in order to be considered for high ratings and compensation increases.
         - programming is just moving data around and managing state.

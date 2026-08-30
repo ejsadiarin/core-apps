@@ -9,8 +9,8 @@ import (
 
 	"github.com/ejsadiarin/coregateway/internal/crypto"
 	db "github.com/ejsadiarin/coregateway/internal/db/sqlc"
-	"github.com/ejsadiarin/coregateway/internal/session"
 	usertypes "github.com/ejsadiarin/coregateway/internal/domain/user/v1"
+	"github.com/ejsadiarin/coregateway/internal/session"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"

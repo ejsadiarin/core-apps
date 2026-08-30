@@ -3,3 +3,5 @@ go 1.26.5
 use .
 
 use ./services/coreban
+
+use ./services/corefinance
