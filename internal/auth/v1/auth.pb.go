@@ -8,7 +8,7 @@ package authtypes
 
 import (
 	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
-	v1 "github.com/ejsadiarin/coregateway/internal/domain/user/v1"
+	v1 "github.com/ejsadiarin/coregateway/internal/user/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"

@@ -2,9 +2,9 @@ package auth
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
+	"github.com/ejsadiarin/coregateway/internal/helper"
 	"github.com/ejsadiarin/coregateway/internal/session"
 	"github.com/google/uuid"
 )
@@ -25,7 +25,7 @@ type UserContext struct {
 }
 
 // AuthMiddleware extracts session cookie, validates it, and loads user into context
-func AuthMiddleware(svc Service) func(http.Handler) http.Handler {
+func AuthMiddleware(svc *Service) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			token, err := session.GetToken(r)
@@ -61,16 +61,12 @@ func RequireAuth() func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			user := GetUserFromContext(r)
 			if user == nil {
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusUnauthorized)
-				json.NewEncoder(w).Encode(map[string]string{
-					"error": "Authentication required",
-				})
-				return
-			}
-			next.ServeHTTP(w, r)
-		})
-	}
+			helper.RespondErrorJSON(w, http.StatusUnauthorized, "Authentication required")
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
 }
 
 // RequireRole middleware checks if user has one of the allowed roles
@@ -79,11 +75,7 @@ func RequireRole(allowedRoles ...string) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			user := GetUserFromContext(r)
 			if user == nil {
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusUnauthorized)
-				json.NewEncoder(w).Encode(map[string]string{
-					"error": "Authentication required",
-				})
+				helper.RespondErrorJSON(w, http.StatusUnauthorized, "Authentication required")
 				return
 			}
 
@@ -94,11 +86,7 @@ func RequireRole(allowedRoles ...string) func(http.Handler) http.Handler {
 				}
 			}
 
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusForbidden)
-			json.NewEncoder(w).Encode(map[string]string{
-				"error": "Insufficient permissions",
-			})
+			helper.RespondErrorJSON(w, http.StatusForbidden, "Insufficient permissions")
 		})
 	}
 }

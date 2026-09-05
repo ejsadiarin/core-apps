@@ -12,17 +12,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type Service interface {
-	CreateService(ctx context.Context, req CreateServiceRequest) (*sqlc.CoregatewayService, error)
-	ListServices(ctx context.Context) ([]sqlc.ListServicesRow, error)
-	GetService(ctx context.Context, id uuid.UUID) (*sqlc.CoregatewayService, error)
-	UpdateService(ctx context.Context, id uuid.UUID, req UpdateServiceRequest) (*sqlc.CoregatewayService, error)
-	DeleteService(ctx context.Context, id uuid.UUID) error
-	GetServiceHistory(ctx context.Context, serviceID uuid.UUID, limit int32) ([]sqlc.CoregatewayServiceHealthHistory, error)
-	GetServiceStats(ctx context.Context, serviceID uuid.UUID) (ServiceStats, error)
-	GetAllServiceStats(ctx context.Context) (AllServiceStats, error)
-}
-
 type ServiceStats struct {
 	ServiceID        string      `json:"service_id"`
 	Uptime24h        float64     `json:"uptime_24h"`
@@ -41,16 +30,16 @@ type AllServiceStats struct {
 	AvgResponseTime  interface{} `json:"avg_response_time"`
 }
 
-type serviceImpl struct {
+type Service struct {
 	queries sqlc.Querier
-	logger  *slog.Logger
 }
 
-func NewService(queries sqlc.Querier, logger *slog.Logger) Service {
-	return &serviceImpl{queries: queries, logger: logger}
+func NewService(queries sqlc.Querier) *Service {
+	return &Service{queries: queries}
 }
 
-func (s *serviceImpl) CreateService(ctx context.Context, req CreateServiceRequest) (*sqlc.CoregatewayService, error) {
+func (s *Service) CreateService(ctx context.Context, req CreateServiceRequest) (*sqlc.CoregatewayService, error) {
+	slog.Debug("monitor.Service.CreateService", "name", req.Name, "url", req.URL)
 	healthCheckInterval := int32(60)
 	if req.HealthCheckInterval != nil {
 		healthCheckInterval = *req.HealthCheckInterval
@@ -100,7 +89,8 @@ func (s *serviceImpl) CreateService(ctx context.Context, req CreateServiceReques
 	return &service, nil
 }
 
-func (s *serviceImpl) ListServices(ctx context.Context) ([]sqlc.ListServicesRow, error) {
+func (s *Service) ListServices(ctx context.Context) ([]sqlc.ListServicesRow, error) {
+	slog.Debug("monitor.Service.ListServices")
 	services, err := s.queries.ListServices(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list services: %w", err)
@@ -113,7 +103,8 @@ func (s *serviceImpl) ListServices(ctx context.Context) ([]sqlc.ListServicesRow,
 	return services, nil
 }
 
-func (s *serviceImpl) GetService(ctx context.Context, id uuid.UUID) (*sqlc.CoregatewayService, error) {
+func (s *Service) GetService(ctx context.Context, id uuid.UUID) (*sqlc.CoregatewayService, error) {
+	slog.Debug("monitor.Service.GetService", "id", id)
 	service, err := s.queries.GetService(ctx, id)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -125,7 +116,8 @@ func (s *serviceImpl) GetService(ctx context.Context, id uuid.UUID) (*sqlc.Coreg
 	return &service, nil
 }
 
-func (s *serviceImpl) UpdateService(ctx context.Context, id uuid.UUID, req UpdateServiceRequest) (*sqlc.CoregatewayService, error) {
+func (s *Service) UpdateService(ctx context.Context, id uuid.UUID, req UpdateServiceRequest) (*sqlc.CoregatewayService, error) {
+	slog.Debug("monitor.Service.UpdateService", "id", id)
 	params := sqlc.UpdateServiceParams{ID: id}
 
 	if req.Name != nil {
@@ -170,7 +162,8 @@ func (s *serviceImpl) UpdateService(ctx context.Context, id uuid.UUID, req Updat
 	return &service, nil
 }
 
-func (s *serviceImpl) DeleteService(ctx context.Context, id uuid.UUID) error {
+func (s *Service) DeleteService(ctx context.Context, id uuid.UUID) error {
+	slog.Debug("monitor.Service.DeleteService", "id", id)
 	err := s.queries.DeleteService(ctx, id)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -182,7 +175,8 @@ func (s *serviceImpl) DeleteService(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-func (s *serviceImpl) GetServiceHistory(ctx context.Context, serviceID uuid.UUID, limit int32) ([]sqlc.CoregatewayServiceHealthHistory, error) {
+func (s *Service) GetServiceHistory(ctx context.Context, serviceID uuid.UUID, limit int32) ([]sqlc.CoregatewayServiceHealthHistory, error) {
+	slog.Debug("monitor.Service.GetServiceHistory", "service_id", serviceID, "limit", limit)
 	history, err := s.queries.GetServiceHistory(ctx, sqlc.GetServiceHistoryParams{
 		ServiceID: pgtype.UUID{Bytes: serviceID, Valid: true},
 		Limit:     limit,
@@ -198,7 +192,8 @@ func (s *serviceImpl) GetServiceHistory(ctx context.Context, serviceID uuid.UUID
 	return history, nil
 }
 
-func (s *serviceImpl) GetServiceStats(ctx context.Context, serviceID uuid.UUID) (ServiceStats, error) {
+func (s *Service) GetServiceStats(ctx context.Context, serviceID uuid.UUID) (ServiceStats, error) {
+	slog.Debug("monitor.Service.GetServiceStats", "service_id", serviceID)
 	pgID := pgtype.UUID{Bytes: serviceID, Valid: true}
 
 	stats24h, err := s.queries.GetServiceStats24h(ctx, pgID)
@@ -235,7 +230,8 @@ func (s *serviceImpl) GetServiceStats(ctx context.Context, serviceID uuid.UUID) 
 	}, nil
 }
 
-func (s *serviceImpl) GetAllServiceStats(ctx context.Context) (AllServiceStats, error) {
+func (s *Service) GetAllServiceStats(ctx context.Context) (AllServiceStats, error) {
+	slog.Debug("monitor.Service.GetAllServiceStats")
 	stats, err := s.queries.GetAllServicesStats(ctx)
 	if err != nil {
 		return AllServiceStats{}, fmt.Errorf("failed to get all services stats: %w", err)

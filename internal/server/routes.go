@@ -1,13 +1,15 @@
 package server
 
 import (
-	"encoding/json"
-	"math/rand"
 	"net/http"
 	"time"
 
-	"github.com/ejsadiarin/coregateway/internal/domain/auth"
+	"github.com/ejsadiarin/coregateway/internal/auth"
+	"github.com/ejsadiarin/coregateway/internal/config"
+	"github.com/ejsadiarin/coregateway/internal/helper"
+	"github.com/ejsadiarin/coregateway/internal/middleware"
 	"github.com/go-chi/chi/v5"
+	chiMiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	swagger "github.com/swaggo/http-swagger"
 )
@@ -30,15 +32,17 @@ type serviceStatus struct {
 	Type   string `json:"type"`
 }
 
-func (s *Server) RegisterRoutes() http.Handler {
+func (s *Server) RegisterRoutes(cfg *config.Config) http.Handler {
 	r := chi.NewRouter()
 
-	// global middleware
-	r.Use(auth.AuthMiddleware(s.authService))
+	r.Use(chiMiddleware.RequestID)
+	r.Use(middleware.RequestIDResponseHeader)
+	r.Use(middleware.SlogMiddleware)
+	r.Use(auth.AuthMiddleware(s.AuthService))
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:3000", "http://localhost:3001", s.frontendURL},
+		AllowedOrigins:   []string{"http://localhost:3000", "http://localhost:3001", cfg.FrontendURL},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		AllowedHeaders:   []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Request-ID", "X-User-ID"},
 		AllowCredentials: true,
 	}))
 
@@ -49,46 +53,43 @@ func (s *Server) RegisterRoutes() http.Handler {
 	r.Get("/api/legacy/services", getLegacyServices)
 
 	// auth
-	r.Post("/api/auth/register", s.authHandler.Register)
-	r.Post("/api/auth/login", s.authHandler.Login)
-	r.Post("/api/auth/logout", s.authHandler.Logout)
-	r.Post("/api/auth/demo", s.authHandler.LoginAsDemo)
-	r.Get("/api/auth/me", s.authHandler.Me)
+	r.Post("/api/auth/register", s.AuthHandler.Register)
+	r.Post("/api/auth/login", s.AuthHandler.Login)
+	r.Post("/api/auth/logout", s.AuthHandler.Logout)
+	r.Post("/api/auth/demo", s.AuthHandler.LoginAsDemo)
+	r.Get("/api/auth/me", s.AuthHandler.Me)
 
 	// users
-	r.Get("/api/users", s.userHandler.ListUsers)
-	r.Post("/api/users", s.userHandler.CreateUser)
-	r.Get("/api/users/{id}", s.userHandler.GetUser)
-	r.Put("/api/users/{id}", s.userHandler.UpdateUser)
-	r.Delete("/api/users/{id}", s.userHandler.DeleteUser)
+	r.Get("/api/users", s.UserHandler.ListUsers)
+	r.Post("/api/users", s.UserHandler.CreateUser)
+	r.Get("/api/users/{id}", s.UserHandler.GetUser)
+	r.Put("/api/users/{id}", s.UserHandler.UpdateUser)
+	r.Delete("/api/users/{id}", s.UserHandler.DeleteUser)
 
 	// services
-	r.Post("/api/services", s.serviceHandler.CreateService)
-	r.Get("/api/services/list", s.serviceHandler.ListServices)
-	r.Get("/api/services/stats/all", s.serviceHandler.GetAllServicesStats)
-	r.Get("/api/services/{id}", s.serviceHandler.GetService)
-	r.Put("/api/services/{id}", s.serviceHandler.UpdateService)
-	r.Delete("/api/services/{id}", s.serviceHandler.DeleteService)
-	r.Get("/api/services/{id}/history", s.serviceHandler.GetServiceHistory)
-	r.Get("/api/services/{id}/stats", s.serviceHandler.GetServiceStats)
+	r.Post("/api/services", s.ServiceHandler.CreateService)
+	r.Get("/api/services/list", s.ServiceHandler.ListServices)
+	r.Get("/api/services/stats/all", s.ServiceHandler.GetAllServicesStats)
+	r.Get("/api/services/{id}", s.ServiceHandler.GetService)
+	r.Put("/api/services/{id}", s.ServiceHandler.UpdateService)
+	r.Delete("/api/services/{id}", s.ServiceHandler.DeleteService)
+	r.Get("/api/services/{id}/history", s.ServiceHandler.GetServiceHistory)
+	r.Get("/api/services/{id}/stats", s.ServiceHandler.GetServiceStats)
 
 	return r
 }
 
 func healthCheck(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
+	helper.RespondJSON(w, http.StatusOK, map[string]string{
 		"status": "healthy",
 		"time":   time.Now().Format(time.RFC3339),
 	})
 }
 
 func getSystemStats(w http.ResponseWriter, r *http.Request) {
-	rand.New(rand.NewSource(time.Now().UnixNano()))
-
 	stats := systemStats{
-		CPU:         rand.Intn(30) + 10,
-		Memory:      rand.Intn(40) + 20,
+		CPU:         15,
+		Memory:      42,
 		Storage:     68,
 		Temperature: 45,
 		Uptime:      "42d 13h 27m",
@@ -101,8 +102,7 @@ func getSystemStats(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(stats)
+	helper.RespondJSON(w, http.StatusOK, stats)
 }
 
 func getLegacyServices(w http.ResponseWriter, r *http.Request) {
@@ -115,6 +115,5 @@ func getLegacyServices(w http.ResponseWriter, r *http.Request) {
 		{Name: "Mail Server", Type: "Email", Status: "maintenance"},
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(services)
+	helper.RespondJSON(w, http.StatusOK, services)
 }

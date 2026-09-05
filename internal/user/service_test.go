@@ -2,8 +2,6 @@ package user
 
 import (
 	"context"
-	"log/slog"
-	"os"
 	"testing"
 
 	sqlc "github.com/ejsadiarin/coregateway/internal/db/sqlc"
@@ -95,17 +93,13 @@ func (m *mockQuerier) UpdateService(context.Context, sqlc.UpdateServiceParams) (
 	return sqlc.CoregatewayService{}, nil
 }
 
-func testLogger() *slog.Logger {
-	return slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
-}
-
 func TestListUsers_Empty(t *testing.T) {
 	mock := &mockQuerier{
 		listUsersFn: func(_ context.Context) ([]sqlc.CoregatewayUser, error) {
 			return []sqlc.CoregatewayUser{}, nil
 		},
 	}
-	svc := NewService(mock, testLogger())
+	svc := NewService(mock)
 	users, err := svc.ListUsers(context.Background())
 	if err != nil { t.Fatalf("unexpected error: %v", err) }
 	if len(users) != 0 { t.Errorf("expected 0 users, got %d", len(users)) }
@@ -118,7 +112,7 @@ func TestGetUser_Found(t *testing.T) {
 			return sqlc.CoregatewayUser{ID: id, Email: "test@example.com", Role: "user"}, nil
 		},
 	}
-	svc := NewService(mock, testLogger())
+	svc := NewService(mock)
 	user, err := svc.GetUser(context.Background(), userID)
 	if err != nil { t.Fatalf("unexpected error: %v", err) }
 	if user.Email != "test@example.com" { t.Errorf("expected test@example.com, got %s", user.Email) }
@@ -126,7 +120,7 @@ func TestGetUser_Found(t *testing.T) {
 
 func TestGetUser_NotFound(t *testing.T) {
 	mock := &mockQuerier{}
-	svc := NewService(mock, testLogger())
+	svc := NewService(mock)
 	_, err := svc.GetUser(context.Background(), uuid.New())
 	if err == nil { t.Fatal("expected error for not found") }
 	if err.Error() != "user not found" { t.Errorf("expected 'user not found', got: %v", err) }
@@ -138,14 +132,14 @@ func TestCreateUser_DuplicateEmail(t *testing.T) {
 			return sqlc.CoregatewayUser{Email: email}, nil
 		},
 	}
-	svc := NewService(mock, testLogger())
+	svc := NewService(mock)
 	_, err := svc.CreateUser(context.Background(), "dup@example.com", "pass", "user")
 	if err == nil { t.Fatal("expected duplicate email error") }
 }
 
 func TestDeleteUser_CannotDeleteSelf(t *testing.T) {
 	mock := &mockQuerier{}
-	svc := NewService(mock, testLogger())
+	svc := NewService(mock)
 	callerID := uuid.New()
 	err := svc.DeleteUser(context.Background(), callerID, callerID, "admin")
 	if err == nil { t.Fatal("expected self-delete error") }
@@ -161,7 +155,7 @@ func TestDeleteUser_CannotDeleteDemo(t *testing.T) {
 			return sqlc.CoregatewayUser{ID: id, Email: "demo@example.com"}, nil
 		},
 	}
-	svc := NewService(mock, testLogger())
+	svc := NewService(mock)
 	callerID := uuid.New()
 	err := svc.DeleteUser(context.Background(), demoID, callerID, "admin")
 	if err == nil { t.Fatal("expected demo-delete error") }

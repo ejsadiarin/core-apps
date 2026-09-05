@@ -2,8 +2,6 @@ package auth
 
 import (
 	"context"
-	"log/slog"
-	"os"
 	"testing"
 
 	sqlc "github.com/ejsadiarin/coregateway/internal/db/sqlc"
@@ -88,10 +86,6 @@ func (m *mockQuerier) UpdateUser(context.Context, sqlc.UpdateUserParams) (sqlc.C
 	return sqlc.CoregatewayUser{}, nil
 }
 
-func testLogger() *slog.Logger {
-	return slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
-}
-
 func TestRegister_Success(t *testing.T) {
 	userID := uuid.New()
 	mock := &mockQuerier{
@@ -102,7 +96,7 @@ func TestRegister_Success(t *testing.T) {
 			return sqlc.CoregatewayUser{ID: userID, Email: arg.Email, Role: arg.Role}, nil
 		},
 	}
-	svc := NewService(mock, testLogger())
+	svc := NewService(mock)
 	user, err := svc.Register(context.Background(), "test@example.com", "password123")
 	if err != nil { t.Fatalf("unexpected error: %v", err) }
 	if user.Email != "test@example.com" { t.Errorf("expected test@example.com, got %s", user.Email) }
@@ -114,14 +108,14 @@ func TestRegister_DuplicateEmail(t *testing.T) {
 			return sqlc.CoregatewayUser{Email: email}, nil
 		},
 	}
-	svc := NewService(mock, testLogger())
+	svc := NewService(mock)
 	_, err := svc.Register(context.Background(), "existing@example.com", "password123")
 	if err == nil { t.Fatal("expected error for duplicate email") }
 }
 
 func TestLogin_InvalidCredentials(t *testing.T) {
 	mock := &mockQuerier{}
-	svc := NewService(mock, testLogger())
+	svc := NewService(mock)
 	_, err := svc.Login(context.Background(), "nobody@example.com", "password")
 	if err == nil { t.Fatal("expected error for invalid credentials") }
 }
@@ -133,7 +127,7 @@ func TestGetUser_Found(t *testing.T) {
 			return sqlc.CoregatewayUser{ID: id, Email: "found@example.com", Role: "user"}, nil
 		},
 	}
-	svc := NewService(mock, testLogger())
+	svc := NewService(mock)
 	user, err := svc.GetUser(context.Background(), userID)
 	if err != nil { t.Fatalf("unexpected error: %v", err) }
 	if user.Email != "found@example.com" { t.Errorf("expected found@example.com, got %s", user.Email) }
@@ -143,7 +137,7 @@ func TestLogout_Success(t *testing.T) {
 	mock := &mockQuerier{
 		deleteSessionByHashFn: func(_ context.Context, _ string) error { return nil },
 	}
-	svc := NewService(mock, testLogger())
+	svc := NewService(mock)
 	err := svc.Logout(context.Background(), "some-token")
 	if err != nil { t.Fatalf("unexpected error: %v", err) }
 }

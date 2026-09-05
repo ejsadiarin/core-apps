@@ -8,21 +8,12 @@ import (
 
 	"github.com/ejsadiarin/coregateway/internal/crypto"
 	sqlc "github.com/ejsadiarin/coregateway/internal/db/sqlc"
-	"github.com/ejsadiarin/coregateway/internal/domain/auth"
-	usertypes "github.com/ejsadiarin/coregateway/internal/domain/user/v1"
+	"github.com/ejsadiarin/coregateway/internal/auth"
+	usertypes "github.com/ejsadiarin/coregateway/internal/user/v1"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
-
-// Service defines the interface for user operations.
-type Service interface {
-	ListUsers(ctx context.Context) ([]*usertypes.User, error)
-	CreateUser(ctx context.Context, email, password, role string) (*usertypes.User, error)
-	GetUser(ctx context.Context, id uuid.UUID) (*usertypes.User, error)
-	UpdateUser(ctx context.Context, id uuid.UUID, params UpdateParams, callerIsAdmin bool) (*usertypes.User, error)
-	DeleteUser(ctx context.Context, id, callerID uuid.UUID, callerRole string) error
-}
 
 type UpdateParams struct {
 	Email    *string
@@ -30,17 +21,16 @@ type UpdateParams struct {
 	Role     *string
 }
 
-// userService implements Service.
-type userService struct {
-	db     sqlc.Querier
-	logger *slog.Logger
+type Service struct {
+	db sqlc.Querier
 }
 
-func NewService(db sqlc.Querier, logger *slog.Logger) Service {
-	return &userService{db: db, logger: logger}
+func NewService(db sqlc.Querier) *Service {
+	return &Service{db: db}
 }
 
-func (s *userService) ListUsers(ctx context.Context) ([]*usertypes.User, error) {
+func (s *Service) ListUsers(ctx context.Context) ([]*usertypes.User, error) {
+	slog.Debug("user.Service.ListUsers")
 	users, err := s.db.ListUsers(ctx)
 	if err != nil {
 		return nil, err
@@ -59,7 +49,8 @@ func (s *userService) ListUsers(ctx context.Context) ([]*usertypes.User, error) 
 	return res, nil
 }
 
-func (s *userService) CreateUser(ctx context.Context, email, password, role string) (*usertypes.User, error) {
+func (s *Service) CreateUser(ctx context.Context, email, password, role string) (*usertypes.User, error) {
+	slog.Debug("user.Service.CreateUser", "email", email, "role", role)
 	email = strings.ToLower(strings.TrimSpace(email))
 
 	_, err := s.db.GetUserByEmail(ctx, email)
@@ -81,7 +72,7 @@ func (s *userService) CreateUser(ctx context.Context, email, password, role stri
 		return nil, err
 	}
 
-	s.logger.Info("User created", "email", email, "role", role)
+	slog.Info("user.Service.CreateUser: user created", "email", email, "role", role)
 	return &usertypes.User{
 		Id:        user.ID.String(),
 		Email:     user.Email,
@@ -91,7 +82,8 @@ func (s *userService) CreateUser(ctx context.Context, email, password, role stri
 	}, nil
 }
 
-func (s *userService) GetUser(ctx context.Context, id uuid.UUID) (*usertypes.User, error) {
+func (s *Service) GetUser(ctx context.Context, id uuid.UUID) (*usertypes.User, error) {
+	slog.Debug("user.Service.GetUser", "id", id)
 	user, err := s.db.GetUser(ctx, id)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -108,7 +100,8 @@ func (s *userService) GetUser(ctx context.Context, id uuid.UUID) (*usertypes.Use
 	}, nil
 }
 
-func (s *userService) UpdateUser(ctx context.Context, id uuid.UUID, params UpdateParams, callerIsAdmin bool) (*usertypes.User, error) {
+func (s *Service) UpdateUser(ctx context.Context, id uuid.UUID, params UpdateParams, callerIsAdmin bool) (*usertypes.User, error) {
+	slog.Debug("user.Service.UpdateUser", "id", id)
 	if params.Role != nil && !callerIsAdmin {
 		return nil, errors.New("only administrators can change user roles")
 	}
@@ -144,7 +137,7 @@ func (s *userService) UpdateUser(ctx context.Context, id uuid.UUID, params Updat
 		return nil, err
 	}
 
-	s.logger.Info("User updated", "user_id", id.String())
+	slog.Info("user.Service.UpdateUser: user updated", "id", id)
 	return &usertypes.User{
 		Id:        user.ID.String(),
 		Email:     user.Email,
@@ -154,7 +147,8 @@ func (s *userService) UpdateUser(ctx context.Context, id uuid.UUID, params Updat
 	}, nil
 }
 
-func (s *userService) DeleteUser(ctx context.Context, id, callerID uuid.UUID, callerRole string) error {
+func (s *Service) DeleteUser(ctx context.Context, id, callerID uuid.UUID, callerRole string) error {
+	slog.Debug("user.Service.DeleteUser", "id", id)
 	if callerID == id {
 		return errors.New("cannot delete your own account")
 	}
@@ -172,13 +166,13 @@ func (s *userService) DeleteUser(ctx context.Context, id, callerID uuid.UUID, ca
 	}
 
 	if err := s.db.DeleteUserSessions(ctx, id); err != nil {
-		s.logger.Warn("Failed to delete user sessions", "error", err, "user_id", id.String())
+		slog.Warn("user.Service.DeleteUser: failed to delete user sessions", "error", err, "id", id)
 	}
 
 	if err := s.db.DeleteUser(ctx, id); err != nil {
 		return err
 	}
 
-	s.logger.Info("User deleted", "user_id", id.String())
+	slog.Info("user.Service.DeleteUser: user deleted", "id", id)
 	return nil
 }

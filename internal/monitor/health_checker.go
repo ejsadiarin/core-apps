@@ -15,13 +15,11 @@ import (
 
 type HealthChecker struct {
 	queries sqlc.Querier
-	logger  *slog.Logger
 }
 
-func NewHealthChecker(queries sqlc.Querier, logger *slog.Logger) *HealthChecker {
+func NewHealthChecker(queries sqlc.Querier) *HealthChecker {
 	return &HealthChecker{
 		queries: queries,
-		logger:  logger,
 	}
 }
 
@@ -102,11 +100,11 @@ func (ch *HealthChecker) saveHealthCheck(serviceID uuid.UUID, status string, res
 
 	_, err := ch.queries.CreateHealthHistory(context.Background(), params)
 	if err != nil {
-		ch.logger.Error("Failed to save health check", "error", err)
+		slog.Error("Failed to save health check", "error", err)
 		return
 	}
 
-	ch.logger.Info("Health check completed",
+	slog.Info("Health check completed",
 		"service_id", serviceID.String(),
 		"status", status,
 		"response_time", responseTime,
@@ -117,11 +115,11 @@ func (ch *HealthChecker) saveHealthCheck(serviceID uuid.UUID, status string, res
 func (ch *HealthChecker) CheckAllServices() {
 	services, err := ch.queries.ListActiveServicesForHealthCheck(context.Background())
 	if err != nil {
-		ch.logger.Error("Failed to fetch services for health check", "error", err)
+		slog.Error("Failed to fetch services for health check", "error", err)
 		return
 	}
 
-	ch.logger.Info("Starting health checks", "count", len(services))
+	slog.Info("Starting health checks", "count", len(services))
 
 	// perform health checks concurrently
 	for _, service := range services {
@@ -142,5 +140,5 @@ func (ch *HealthChecker) StartHealthCheckScheduler(interval time.Duration) {
 		}
 	}()
 
-	ch.logger.Info("Health check scheduler started", "interval", interval)
+	slog.Info("Health check scheduler started", "interval", interval)
 }

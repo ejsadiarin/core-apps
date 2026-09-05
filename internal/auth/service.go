@@ -9,40 +9,23 @@ import (
 
 	"github.com/ejsadiarin/coregateway/internal/crypto"
 	db "github.com/ejsadiarin/coregateway/internal/db/sqlc"
-	usertypes "github.com/ejsadiarin/coregateway/internal/domain/user/v1"
+	usertypes "github.com/ejsadiarin/coregateway/internal/user/v1"
 	"github.com/ejsadiarin/coregateway/internal/session"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-// Service defines the interface for auth operations.
-type Service interface {
-	Register(ctx context.Context, email, password string) (*usertypes.User, error)
-	Login(ctx context.Context, email, password string) (*usertypes.User, error)
-	CreateSession(ctx context.Context, userID uuid.UUID, rememberMe bool) (string, error)
-	Logout(ctx context.Context, token string) error
-	GetSessionUser(ctx context.Context, token string) (*usertypes.User, error)
-	GetUser(ctx context.Context, id uuid.UUID) (*usertypes.User, error)
-	LoginAsDemo(ctx context.Context) (*usertypes.User, string, error)
-}
-
-// authService implements Service.
-type authService struct {
+type Service struct {
 	queries db.Querier
-	logger  *slog.Logger
 }
 
-// NewService creates a new auth service.
-func NewService(queries db.Querier, logger *slog.Logger) Service {
-	return &authService{
-		queries: queries,
-		logger:  logger,
-	}
+func NewService(queries db.Querier) *Service {
+	return &Service{queries: queries}
 }
 
-// Register creates a new user account.
-func (s *authService) Register(ctx context.Context, email, password string) (*usertypes.User, error) {
+func (s *Service) Register(ctx context.Context, email, password string) (*usertypes.User, error) {
+	slog.Debug("auth.Service.Register", "email", email)
 	_, err := s.queries.GetUserByEmail(ctx, email)
 	if err == nil {
 		return nil, fmt.Errorf("user with email %s already exists", email)
@@ -50,7 +33,7 @@ func (s *authService) Register(ctx context.Context, email, password string) (*us
 
 	hashedPassword, err := crypto.HashPassword(password)
 	if err != nil {
-		s.logger.Error("Failed to hash password", "error", err)
+		slog.Error("auth.Service.Register: failed to hash password", "error", err)
 		return nil, fmt.Errorf("failed to hash password: %w", err)
 	}
 
@@ -60,11 +43,11 @@ func (s *authService) Register(ctx context.Context, email, password string) (*us
 		Role:         RoleUser,
 	})
 	if err != nil {
-		s.logger.Error("Failed to create user", "error", err)
+		slog.Error("auth.Service.Register: failed to create user", "error", err)
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
 
-	s.logger.Info("User registered", "email", email)
+	slog.Info("auth.Service.Register: user registered", "email", email)
 
 	return &usertypes.User{
 		Id:        user.ID.String(),
@@ -74,8 +57,8 @@ func (s *authService) Register(ctx context.Context, email, password string) (*us
 	}, nil
 }
 
-// Login authenticates a user.
-func (s *authService) Login(ctx context.Context, email, password string) (*usertypes.User, error) {
+func (s *Service) Login(ctx context.Context, email, password string) (*usertypes.User, error) {
+	slog.Debug("auth.Service.Login", "email", email)
 	user, err := s.queries.GetUserByEmail(ctx, email)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -93,7 +76,7 @@ func (s *authService) Login(ctx context.Context, email, password string) (*usert
 		return nil, fmt.Errorf("invalid email or password")
 	}
 
-	s.logger.Info("User authenticated", "email", email)
+	slog.Info("auth.Service.Login: user authenticated", "email", email)
 
 	return &usertypes.User{
 		Id:        user.ID.String(),
@@ -103,8 +86,8 @@ func (s *authService) Login(ctx context.Context, email, password string) (*usert
 	}, nil
 }
 
-// CreateSession creates a new session for a user and returns the raw token.
-func (s *authService) CreateSession(ctx context.Context, userID uuid.UUID, rememberMe bool) (string, error) {
+func (s *Service) CreateSession(ctx context.Context, userID uuid.UUID, rememberMe bool) (string, error) {
+	slog.Debug("auth.Service.CreateSession", "user_id", userID)
 	token, tokenHash, err := crypto.GenerateSessionToken()
 	if err != nil {
 		return "", fmt.Errorf("failed to generate session token: %w", err)
@@ -128,14 +111,14 @@ func (s *authService) CreateSession(ctx context.Context, userID uuid.UUID, remem
 	return token, nil
 }
 
-// Logout deletes the session identified by the given token.
-func (s *authService) Logout(ctx context.Context, token string) error {
+func (s *Service) Logout(ctx context.Context, token string) error {
+	slog.Debug("auth.Service.Logout")
 	tokenHash := crypto.HashSessionToken(token)
 	return s.queries.DeleteSessionByTokenHash(ctx, tokenHash)
 }
 
-// GetSessionUser looks up a session by token hash and returns the associated user.
-func (s *authService) GetSessionUser(ctx context.Context, token string) (*usertypes.User, error) {
+func (s *Service) GetSessionUser(ctx context.Context, token string) (*usertypes.User, error) {
+	slog.Debug("auth.Service.GetSessionUser")
 	tokenHash := crypto.HashSessionToken(token)
 	session, err := s.queries.GetSessionByTokenHash(ctx, tokenHash)
 	if err != nil {
@@ -155,8 +138,8 @@ func (s *authService) GetSessionUser(ctx context.Context, token string) (*userty
 	}, nil
 }
 
-// GetUser retrieves a user by ID.
-func (s *authService) GetUser(ctx context.Context, id uuid.UUID) (*usertypes.User, error) {
+func (s *Service) GetUser(ctx context.Context, id uuid.UUID) (*usertypes.User, error) {
+	slog.Debug("auth.Service.GetUser", "id", id)
 	user, err := s.queries.GetUser(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user: %w", err)
@@ -170,8 +153,8 @@ func (s *authService) GetUser(ctx context.Context, id uuid.UUID) (*usertypes.Use
 	}, nil
 }
 
-// LoginAsDemo creates a session for the demo user.
-func (s *authService) LoginAsDemo(ctx context.Context) (*usertypes.User, string, error) {
+func (s *Service) LoginAsDemo(ctx context.Context) (*usertypes.User, string, error) {
+	slog.Debug("auth.Service.LoginAsDemo")
 	user, err := s.queries.GetUserByEmail(ctx, DemoUserEmail)
 	if err != nil {
 		return nil, "", fmt.Errorf("demo user not available: %w", err)
@@ -182,7 +165,7 @@ func (s *authService) LoginAsDemo(ctx context.Context) (*usertypes.User, string,
 		return nil, "", err
 	}
 
-	s.logger.Info("Demo user logged in")
+	slog.Info("auth.Service.LoginAsDemo: demo user logged in")
 
 	return &usertypes.User{
 		Id:        user.ID.String(),

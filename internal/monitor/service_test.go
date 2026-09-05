@@ -3,8 +3,6 @@ package service
 import (
 	"context"
 	"database/sql"
-	"log/slog"
-	"os"
 	"testing"
 
 	sqlc "github.com/ejsadiarin/coregateway/internal/db/sqlc"
@@ -87,17 +85,13 @@ func (m *mockQuerier) UpdateUser(context.Context, sqlc.UpdateUserParams) (sqlc.C
 	return sqlc.CoregatewayUser{}, nil
 }
 
-func testLogger() *slog.Logger {
-	return slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
-}
-
 func TestCreateService_Success(t *testing.T) {
 	mock := &mockQuerier{
 		createServiceFn: func(_ context.Context, arg sqlc.CreateServiceParams) (sqlc.CoregatewayService, error) {
 			return sqlc.CoregatewayService{ID: uuid.New(), Name: arg.Name, Url: arg.Url}, nil
 		},
 	}
-	svc := NewService(mock, testLogger())
+	svc := NewService(mock)
 	result, err := svc.CreateService(context.Background(), CreateServiceRequest{Name: "My Service", URL: "https://example.com"})
 	if err != nil { t.Fatalf("unexpected error: %v", err) }
 	if result.Name != "My Service" { t.Errorf("expected My Service, got %s", result.Name) }
@@ -105,7 +99,7 @@ func TestCreateService_Success(t *testing.T) {
 
 func TestGetService_NotFound(t *testing.T) {
 	mock := &mockQuerier{}
-	svc := NewService(mock, testLogger())
+	svc := NewService(mock)
 	_, err := svc.GetService(context.Background(), uuid.New())
 	if err == nil { t.Fatal("expected error for service not found") }
 	if err.Error() != "service not found" { t.Errorf("expected 'service not found', got: %v", err) }
@@ -113,7 +107,7 @@ func TestGetService_NotFound(t *testing.T) {
 
 func TestDeleteService_NotFound(t *testing.T) {
 	mock := &mockQuerier{}
-	svc := NewService(mock, testLogger())
+	svc := NewService(mock)
 	err := svc.DeleteService(context.Background(), uuid.New())
 	if err == nil { t.Fatal("expected error for service not found") }
 	if err.Error() != "service not found" { t.Errorf("expected 'service not found', got: %v", err) }
@@ -125,7 +119,7 @@ func TestListServices_Empty(t *testing.T) {
 			return []sqlc.ListServicesRow{}, nil
 		},
 	}
-	svc := NewService(mock, testLogger())
+	svc := NewService(mock)
 	services, err := svc.ListServices(context.Background())
 	if err != nil { t.Fatalf("unexpected error: %v", err) }
 	if len(services) != 0 { t.Errorf("expected 0 services, got %d", len(services)) }
