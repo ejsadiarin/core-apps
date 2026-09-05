@@ -1,21 +1,19 @@
 @host=localhost:8080
-@sessionToken=your-session-token-here
-
 
 ### Health Check
 
 GET {{host}}/health
 
-
 ### System Stats
 
 GET {{host}}/api/system/stats
-
 
 ### Legacy Services
 
 GET {{host}}/api/legacy/services
 
+
+# ─── Auth ────────────────────────────────────────────────────────────────────
 
 ### Register
 
@@ -27,7 +25,6 @@ Content-Type: application/json
   "password": "password123"
 }
 
-
 ### Login
 
 POST {{host}}/api/auth/login
@@ -38,40 +35,28 @@ Content-Type: application/json
   "password": "password123"
 }
 
-
 ### Login as Demo
 
 POST {{host}}/api/auth/demo
-Content-Type: application/json
-
-{
-  "email": "demo@coregateway.local",
-  "password": "demo12345"
-}
-
 
 ### Logout
 
 POST {{host}}/api/auth/logout
-Cookie: session_token={{sessionToken}}
-
 
 ### Get Current User
 
 GET {{host}}/api/auth/me
-Cookie: session_token={{sessionToken}}
 
+
+# ─── Users ───────────────────────────────────────────────────────────────────
 
 ### List Users
 
 GET {{host}}/api/users
-Cookie: session_token={{sessionToken}}
-
 
 ### Create User
 
 POST {{host}}/api/users
-Cookie: session_token={{sessionToken}}
 Content-Type: application/json
 
 {
@@ -80,34 +65,29 @@ Content-Type: application/json
   "role": "user"
 }
 
-
 ### Get User
 
 GET {{host}}/api/users/{user_id}
-Cookie: session_token={{sessionToken}}
-
 
 ### Update User
 
 PUT {{host}}/api/users/{user_id}
-Cookie: session_token={{sessionToken}}
 Content-Type: application/json
 
 {
   "email": "updated@example.com"
 }
 
-
 ### Delete User
 
 DELETE {{host}}/api/users/{user_id}
-Cookie: session_token={{sessionToken}}
 
+
+# ─── Services ────────────────────────────────────────────────────────────────
 
 ### Create Service
 
 POST {{host}}/api/services
-Cookie: session_token={{sessionToken}}
 Content-Type: application/json
 
 {
@@ -121,29 +101,21 @@ Content-Type: application/json
   "timeout": 5000
 }
 
-
 ### List Services
 
 GET {{host}}/api/services/list
-Cookie: session_token={{sessionToken}}
-
 
 ### Get All Services Stats
 
 GET {{host}}/api/services/stats/all
-Cookie: session_token={{sessionToken}}
-
 
 ### Get Service
 
 GET {{host}}/api/services/{service_id}
-Cookie: session_token={{sessionToken}}
-
 
 ### Update Service
 
 PUT {{host}}/api/services/{service_id}
-Cookie: session_token={{sessionToken}}
 Content-Type: application/json
 
 {
@@ -151,27 +123,14 @@ Content-Type: application/json
   "is_active": false
 }
 
-
 ### Delete Service
 
 DELETE {{host}}/api/services/{service_id}
-Cookie: session_token={{sessionToken}}
-
 
 ### Get Service History
 
 GET {{host}}/api/services/{service_id}/history
-Cookie: session_token={{sessionToken}}
-
 
 ### Get Service Stats
 
 GET {{host}}/api/services/{service_id}/stats
-Cookie: session_token={{sessionToken}}
-
-
-# How to use this file:
-# 1. Login using the Login request to get a session_token cookie
-# 2. Copy the session_token value from the response cookies
-# 3. Update @sessionToken at the top of this file
-# 4. For user/service endpoints, replace {user_id} and {service_id} with actual UUIDs
