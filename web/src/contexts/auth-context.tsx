@@ -1,4 +1,3 @@
-"use client";
 
 import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from "react";
 import type { User, UserRole, LoginRequest, RegisterRequest } from "@/types/api";

@@ -1,5 +1,3 @@
-"use client";
-
 import { motion } from "motion/react";
 import { useState, type ChangeEvent } from "react";
 import {
@@ -21,7 +19,7 @@ import { Label } from "@/components/ui/label";
 import { Plus, Trash2, Edit2, Save, X, ArrowLeft, Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { Category, Tag, BudgetExportPayload, BudgetImportResult } from "@/types/api";
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import { useToast } from "@/components/ui/toast";
 import { GuestBlockedError } from "@/hooks/use-budget";
 
@@ -245,7 +243,7 @@ export default function SettingsPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <Link href="/dashboard/budget">
+        <Link to="/dashboard/budget">
           <Button variant="ghost" size="sm" className="mb-4">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Budget

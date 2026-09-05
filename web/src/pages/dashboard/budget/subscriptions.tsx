@@ -1,5 +1,3 @@
-'use client';
-
 import { motion } from 'motion/react';
 import {
   RecurringSummaryCard,
@@ -10,7 +8,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 
 export default function SubscriptionsPage() {
   return (
@@ -23,7 +21,7 @@ export default function SubscriptionsPage() {
       >
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <Link href="/dashboard/budget">
+            <Link to="/dashboard/budget">
               <Button variant="ghost" size="sm">
                 <ArrowLeft className="h-4 w-4" />
               </Button>

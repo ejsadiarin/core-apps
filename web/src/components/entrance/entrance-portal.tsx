@@ -1,14 +1,10 @@
-"use client";
-
 import { motion } from "motion/react";
 import { Server, Zap, Shield, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 export function EntrancePortal() {
-  const router = useRouter();
-  const [ yes, setYes ] = useState(null)
+  const navigate = useNavigate();
 
   return (
     <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
@@ -212,7 +208,7 @@ export function EntrancePortal() {
             <Button
               size="lg"
               className="bg-primary text-primary-foreground hover:bg-primary/90 glow-box"
-              onClick={() => router.push("/login")}
+              onClick={() => navigate("/login")}
             >
               <LogIn className="w-5 h-5 mr-2" />
               Access System

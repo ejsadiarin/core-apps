@@ -1,8 +1,5 @@
-"use client";
-
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { useNavigate, Link } from "react-router-dom";
 import { motion } from "motion/react";
 import { Terminal, Lock, Mail, AlertCircle, Eye, EyeOff, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,7 +16,7 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { register } = useAuth();
-  const router = useRouter();
+  const navigate = useNavigate();
 
   const validateForm = (): string | null => {
     if (!email || !password || !confirmPassword) {
@@ -48,9 +45,8 @@ export default function RegisterPage() {
 
     try {
       await register(email, password);
-      router.push("/dashboard");
+      navigate("/dashboard");
     } catch (err) {
-        // TODO: detect duplicate email error and send "Email already exists"
       setError(err instanceof Error ? err.message : "Registration failed. Please try again.");
     } finally {
       setIsLoading(false);
@@ -217,7 +213,7 @@ export default function RegisterPage() {
             <p className="text-sm text-muted-foreground">
               Already have an account?{" "}
               <Link
-                href="/login"
+                to="/login"
                 className="text-primary hover:underline inline-flex items-center gap-1"
               >
                 <LogIn className="w-3 h-3" />

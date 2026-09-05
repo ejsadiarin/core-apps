@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useMemo } from "react";
 import { motion } from "motion/react";
 import {
@@ -16,7 +14,7 @@ import {
   AlertTriangle,
   ArrowLeft,
 } from "lucide-react";
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -91,7 +89,6 @@ export default function ServicesPage() {
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
-  // get unique service types for filter
   const serviceTypes = useMemo(() => {
     if (!services) return [];
     const types = new Set<string>();
@@ -101,11 +98,9 @@ export default function ServicesPage() {
     return Array.from(types).sort();
   }, [services]);
 
-  // filtered services
   const filteredServices = useMemo(() => {
     if (!services) return [];
     return services.filter((service) => {
-      // search filter
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         const matchesSearch =
@@ -114,17 +109,12 @@ export default function ServicesPage() {
           service.description?.toLowerCase().includes(query);
         if (!matchesSearch) return false;
       }
-
-      // status filter
       if (statusFilter !== "all") {
         if (service.current_status !== statusFilter) return false;
       }
-
-      // type filter
       if (typeFilter !== "all") {
         if (service.service_type !== typeFilter) return false;
       }
-
       return true;
     });
   }, [services, searchQuery, statusFilter, typeFilter]);
@@ -144,7 +134,6 @@ export default function ServicesPage() {
     setTimeout(() => setSelectedService(null), 200);
   };
 
-  // stats
   const stats = useMemo(() => {
     if (!services) return { total: 0, online: 0, offline: 0, degraded: 0 };
     return {
@@ -165,7 +154,7 @@ export default function ServicesPage() {
         transition={{ duration: 0.3 }}
       >
         <div className="flex items-center gap-4 mb-4">
-          <Link href="/dashboard">
+          <Link to="/dashboard">
             <Button variant="ghost" size="sm" className="gap-2">
               <ArrowLeft className="w-4 h-4" />
               Dashboard

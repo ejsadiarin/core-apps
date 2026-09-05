@@ -1,8 +1,5 @@
-"use client";
-
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { useNavigate, Link } from "react-router-dom";
 import { motion } from "motion/react";
 import { Terminal, Lock, Mail, AlertCircle, Eye, EyeOff, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,7 +16,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { login, demoLogin } = useAuth();
-  const router = useRouter();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,7 +25,7 @@ export default function LoginPage() {
 
     try {
       await login(email, password, rememberMe);
-      router.push("/dashboard");
+      navigate("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Invalid credentials. Please try again.");
     } finally {
@@ -42,7 +39,7 @@ export default function LoginPage() {
 
     try {
       await demoLogin();
-      router.push("/dashboard");
+      navigate("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Demo login failed. Please try again.");
     } finally {
@@ -225,7 +222,7 @@ export default function LoginPage() {
             <p className="text-sm text-muted-foreground">
               Don't have an account?{" "}
               <Link
-                href="/register"
+                to="/register"
                 className="text-primary hover:underline inline-flex items-center gap-1"
               >
                 <UserPlus className="w-3 h-3" />

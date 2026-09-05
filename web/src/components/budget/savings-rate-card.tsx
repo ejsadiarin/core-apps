@@ -1,4 +1,3 @@
-'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useSavingsRate } from '@/hooks/use-budget';

@@ -1,7 +1,5 @@
-"use client";
-
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import { format } from "date-fns";
 import {
@@ -47,7 +45,7 @@ import { useUsers, useCreateUser, useUpdateUser, useDeleteUser } from "@/hooks/u
 import type { User as UserType, UserRole, CreateUserRequest, UpdateUserRequest } from "@/types/api";
 
 export default function UsersPage() {
-    const router = useRouter();
+    const navigate = useNavigate();
     const { user: currentUser, isAdmin, isLoading: authLoading } = useAuth();
     const { data: users, isLoading, error } = useUsers();
     const createUser = useCreateUser();
@@ -68,7 +66,7 @@ export default function UsersPage() {
 
     // redirect non-admins
     if (!authLoading && !isAdmin) {
-        router.replace("/dashboard");
+        navigate("/dashboard", { replace: true });
         return null;
     }
 

@@ -1,4 +1,3 @@
-"use client";
 
 import { motion } from "motion/react";
 import { Terminal, ChevronsLeft, ChevronsRight } from "lucide-react";

@@ -1,8 +1,6 @@
-"use client";
-
 import { motion } from "motion/react";
 import { useState, useEffect, useMemo } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { ExpenseStats } from "@/components/budget/expense-stats";
 import { IncomeForm } from "@/components/budget/income-form";
 import { ExpenseFormDialog } from "@/components/budget/expense-form-dialog";
@@ -37,7 +35,7 @@ import { Plus, ArrowRight } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/components/ui/toast";
@@ -45,8 +43,8 @@ import { ExpenseDetailDialog } from "@/components/budget/expense-detail-dialog";
 import type { Expense, Income, CreateIncomeRequest, UpdateIncomeRequest, CreateExpenseRequest, UpdateExpenseRequest } from "@/types/api";
 
 export default function BudgetDashboard() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [period] = useState<string>("month");
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   
@@ -91,9 +89,9 @@ export default function BudgetDashboard() {
     if (openExpense === "true") {
       setShowExpenseDialog(true);
       // remove query param from URL
-      router.replace("/dashboard/budget", { scroll: false });
+      navigate("/dashboard/budget", { replace: true });
     }
-  }, [searchParams, router]);
+  }, [searchParams, navigate]);
 
   const updateExpense = useUpdateExpense();
   const deleteExpense = useDeleteExpense();
@@ -332,7 +330,7 @@ export default function BudgetDashboard() {
                 <CardTitle>Recent Incomes</CardTitle>
                 <CardDescription>Last 7 days (including recurring)</CardDescription>
               </div>
-              <Link href="/dashboard/budget/incomes">
+              <Link to="/dashboard/budget/incomes">
                 <Button variant="ghost" size="sm">
                   View All
                   <ArrowRight className="ml-2 h-4 w-4" />
@@ -428,7 +426,7 @@ export default function BudgetDashboard() {
                 <CardTitle>Recent Expenses</CardTitle>
                 <CardDescription>Your latest transactions</CardDescription>
               </div>
-              <Link href="/dashboard/budget/expenses">
+              <Link to="/dashboard/budget/expenses">
                 <Button variant="ghost" size="sm">
                   View All
                   <ArrowRight className="ml-2 h-4 w-4" />

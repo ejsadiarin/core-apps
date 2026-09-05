@@ -1,4 +1,3 @@
-"use client";
 
 import { createContext, useContext, useState, useCallback, ReactNode } from "react";
 import { motion, AnimatePresence } from "motion/react";

@@ -1,6 +1,4 @@
-"use client";
-
-import { usePathname } from "next/navigation";
+import { useLocation } from "react-router-dom";
 import { motion } from "motion/react";
 import { SidebarProvider } from "./sidebar-context";
 import { Sidebar } from "./sidebar";
@@ -8,7 +6,7 @@ import { MobileBottomNav } from "./mobile-bottom-nav";
 import { ContentHeader } from "./content-header";
 
 function ShellInner({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
+  const { pathname } = useLocation();
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">

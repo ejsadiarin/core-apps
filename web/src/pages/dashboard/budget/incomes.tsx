@@ -1,5 +1,3 @@
-"use client";
-
 import { motion } from "motion/react";
 import { useState } from "react";
 import { useIncomes, useIncomeOccurrences, useDeleteIncome, useUpdateIncome, useCreateIncome, GuestBlockedError } from "@/hooks/use-budget";
@@ -18,7 +16,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/components/ui/toast";
 import { Card, CardContent } from "@/components/ui/card";
 import { format } from "date-fns";
-import Link from "next/link";
+import { Link } from "react-router-dom";
 
 function OccurrenceCard({ occurrence }: { occurrence: IncomeOccurrence }) {
   return (
@@ -177,7 +175,7 @@ export default function IncomesPage() {
         transition={{ duration: 0.5 }}
       >
         <div>
-          <Link href="/dashboard/budget">
+          <Link to="/dashboard/budget">
             <Button variant="ghost" size="sm" className="mb-2 pl-0">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Budget

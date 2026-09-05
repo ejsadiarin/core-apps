@@ -1,6 +1,4 @@
-"use client";
-
-import { usePathname, useRouter } from "next/navigation";
+import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import {
   Bell,
@@ -26,7 +24,7 @@ import { navItems } from "./sidebar-nav-items";
 
 // derive breadcrumbs from pathname
 function useBreadcrumbs() {
-  const pathname = usePathname();
+  const { pathname } = useLocation();
   const segments = pathname.split("/").filter(Boolean);
 
   const crumbs: { label: string; path: string }[] = [];
@@ -61,7 +59,7 @@ function getRoleBadgeClasses(role?: string) {
 }
 
 export function ContentHeader() {
-  const router = useRouter();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user, logout, isGuest, isAdmin } = useAuth();
   const breadcrumbs = useBreadcrumbs();
@@ -69,7 +67,7 @@ export function ContentHeader() {
   const handleLogout = async () => {
     await logout();
     queryClient.clear();
-    router.push("/login");
+    navigate("/login");
   };
 
   return (
@@ -93,7 +91,7 @@ export function ContentHeader() {
                 </span>
               ) : (
                 <button
-                  onClick={() => router.push(crumb.path)}
+                  onClick={() => navigate(crumb.path)}
                   className="truncate hover:text-primary transition-colors"
                 >
                   {crumb.label}
@@ -150,7 +148,7 @@ export function ContentHeader() {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             {isAdmin && (
-              <DropdownMenuItem onClick={() => router.push("/dashboard/admin/users")}>
+              <DropdownMenuItem onClick={() => navigate("/dashboard/admin/users")}>
                 <Shield className="mr-2 h-3.5 w-3.5" />
                 User Management
               </DropdownMenuItem>

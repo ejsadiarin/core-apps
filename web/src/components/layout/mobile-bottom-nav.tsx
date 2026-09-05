@@ -1,7 +1,5 @@
-"use client";
-
 import { useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import {
 LayoutDashboard,
@@ -200,8 +198,8 @@ function OverflowMenu({
 }
 
 export function MobileBottomNav() {
-  const pathname = usePathname();
-  const router = useRouter();
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { isAdmin, logout } = useAuth();
   const [isOverflowOpen, setOverflowOpen] = useState(false);
@@ -211,14 +209,14 @@ export function MobileBottomNav() {
   );
 
   const handleNavigate = (path: string) => {
-    router.push(path);
+    navigate(path);
     setOverflowOpen(false);
   };
 
   const handleLogout = async () => {
     await logout();
     queryClient.clear();
-    router.push("/login");
+    navigate("/login");
   };
 
   // check if any overflow item is active (to highlight the "More" button)

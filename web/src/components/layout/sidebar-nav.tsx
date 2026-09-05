@@ -1,6 +1,4 @@
-"use client";
-
-import { usePathname, useRouter } from "next/navigation";
+import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "./sidebar-context";
@@ -83,8 +81,8 @@ function NavItemButton({
 }
 
 export function SidebarNav() {
-  const pathname = usePathname();
-  const router = useRouter();
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
   const { isCollapsed } = useSidebar();
   const { isAdmin } = useAuth();
 
@@ -105,7 +103,7 @@ export function SidebarNav() {
   }
 
   const handleNavigate = (path: string) => {
-    router.push(path);
+    navigate(path);
   };
 
   return (

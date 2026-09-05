@@ -1,7 +1,5 @@
-'use client';
-
-import { Suspense, useState, useEffect, useCallback } from 'react';
-import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { useState, useEffect, useCallback } from 'react';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { motion } from 'motion/react';
 import {
 HealthScoreCard,
@@ -14,12 +12,12 @@ SpendingVelocityCard
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 
-function HealthDashboardContent() {
-    const router = useRouter();
-    const pathname = usePathname();
-    const searchParams = useSearchParams();
+export default function HealthDashboardContent() {
+    const navigate = useNavigate();
+    const { pathname } = useLocation();
+    const [searchParams] = useSearchParams();
 
     const queryStartDate = searchParams.get('start_date');
     const queryEndDate = searchParams.get('end_date');
@@ -44,11 +42,11 @@ function HealthDashboardContent() {
         if (end) params.set('end_date', end);
 
         if (params.toString()) {
-            router.push(`${pathname}?${params.toString()}`);
+            navigate(`${pathname}?${params.toString()}`);
         } else {
-            router.push(pathname);
+            navigate(pathname);
         }
-    }, [pathname, router]);
+    }, [pathname, navigate]);
 
     const handleStartDateChange = (value: string) => {
         setDateRangeStart(value);
@@ -63,7 +61,7 @@ function HealthDashboardContent() {
     const handleClearFilter = () => {
         setDateRangeStart('');
         setDateRangeEnd('');
-        router.push(pathname);
+        navigate(pathname);
     };
 
     const currentStartDate = queryStartDate || undefined;
@@ -79,7 +77,7 @@ function HealthDashboardContent() {
         >
             <div>
             <div className="flex items-center gap-3 mb-2">
-                <Link href="/dashboard/budget">
+                <Link to="/dashboard/budget">
                 <Button variant="ghost" size="sm">
                     <ArrowLeft className="h-4 w-4" />
                 </Button>
@@ -159,16 +157,4 @@ function HealthDashboardContent() {
         </motion.div>
         </div>
     );
-}
-
-export default function HealthDashboardPage() {
-  return (
-    <Suspense fallback={
-      <div className="flex h-[50vh] items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    }>
-      <HealthDashboardContent />
-    </Suspense>
-  );
 }

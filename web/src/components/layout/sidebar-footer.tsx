@@ -1,8 +1,6 @@
-"use client";
-
 import { motion, AnimatePresence } from "motion/react";
 import { LogOut, User, ChevronUp } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth-context";
@@ -38,13 +36,13 @@ function getRoleBadgeClasses(role?: string) {
 export function SidebarFooter() {
   const { user, logout, isGuest } = useAuth();
   const { isCollapsed } = useSidebar();
-  const router = useRouter();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const handleLogout = async () => {
     await logout();
     queryClient.clear();
-    router.push("/login");
+    navigate("/login");
   };
 
   // collapsed: show icon with dropdown

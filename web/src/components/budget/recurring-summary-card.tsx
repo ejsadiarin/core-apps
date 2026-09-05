@@ -1,4 +1,3 @@
-'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useRecurringIncomes, useSubscriptions } from '@/hooks/use-budget';

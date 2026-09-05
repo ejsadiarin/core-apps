@@ -3,8 +3,8 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --font-sans: var(--font-geist-sans);
-  --font-mono: 'JetBrains Mono', monospace;
+  --font-sans: 'JetBrains Mono', ui-monospace, monospace;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
   --background: #0a0e1a;
   --foreground: #e0f2f1;

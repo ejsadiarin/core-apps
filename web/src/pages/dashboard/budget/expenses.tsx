@@ -1,5 +1,3 @@
-"use client";
-
 import { motion } from "motion/react";
 import { useState, useEffect, useMemo } from "react";
 import { useExpenses, useSearchExpenses, useCategories, useDeleteExpense, useUpdateExpense, useCreateExpense, GuestBlockedError } from "@/hooks/use-budget";
@@ -16,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import type { ExpenseFilters, Expense, UpdateExpenseRequest, CreateExpenseRequest } from "@/types/api";
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/components/ui/toast";
-import Link from "next/link";
+import { Link } from "react-router-dom";
 
 // debounce hook for search input
 function useDebounce<T>(value: T, delay: number): T {
@@ -150,7 +148,7 @@ export default function ExpensesPage() {
         transition={{ duration: 0.5 }}
       >
         <div>
-          <Link href="/dashboard/budget">
+          <Link to="/dashboard/budget">
             <Button variant="ghost" size="sm" className="mb-2 pl-0">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Budget
@@ -326,7 +324,7 @@ export default function ExpensesPage() {
               {isGuest ? (
                 <p className="text-xs">Sign in or create an account to manage your own expenses.</p>
               ) : (
-                <Link href="/dashboard/budget/expenses/new">
+                <Link to="/dashboard/budget/expenses/new">
                   <Button variant="outline" size="sm" className="mt-2">
                     <Plus className="mr-2 h-4 w-4" />
                     Add your first expense
