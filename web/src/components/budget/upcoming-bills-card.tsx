@@ -12,7 +12,7 @@ interface UpcomingBillsCardProps {
 }
 
 export function UpcomingBillsCard({ days = 30, className }: UpcomingBillsCardProps) {
-  const { data, isLoading, error } = useUpcomingBills(days);
+  const { data, isLoading, error } = useUpcomingBills();
 
   if (isLoading) {
     return (

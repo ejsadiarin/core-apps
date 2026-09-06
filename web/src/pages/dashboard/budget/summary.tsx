@@ -295,20 +295,9 @@ export default function BudgetSummaryPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <p className="text-sm font-medium truncate">{expense.description}</p>
-                            {expense.category && (
-                              <span
-                                className="text-xs px-1.5 py-0.5 rounded-full truncate max-w-[80px]"
-                                style={{
-                                  backgroundColor: expense.category.color
-                                    ? `${expense.category.color}20`
-                                    : undefined,
-                                  color: expense.category.color || 'inherit'
-                                }}
-                                title={expense.category.name}
-                              >
-                                {expense.category.name}
-                              </span>
-                            )}
+                            <span className="text-xs px-1.5 py-0.5 rounded-full capitalize">
+                              {expense.priority}
+                            </span>
                           </div>
                           <p className="text-xs text-muted-foreground">
                             {expense.expense_date}

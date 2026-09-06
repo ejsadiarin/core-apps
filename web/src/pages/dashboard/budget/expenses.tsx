@@ -264,7 +264,7 @@ export default function ExpensesPage() {
         {pagination && pagination.totalPages > 1 && (
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-b py-4">
             <p className="text-sm text-muted-foreground order-2 sm:order-1">
-              Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} expenses
+              Showing {((pagination.page - 1) * pagination.page_size) + 1} to {Math.min(pagination.page * pagination.page_size, pagination.total)} of {pagination.total} expenses
             </p>
             <div className="order-1 sm:order-2">
               <Pagination

@@ -11,7 +11,7 @@ interface WeekdaySpendingChartProps {
 }
 
 export function WeekdaySpendingChart({ startDate, endDate, className }: WeekdaySpendingChartProps) {
-  const { data, isLoading, error } = useTrends('day', startDate, endDate);
+  const { data, isLoading, error } = useTrends(startDate, endDate);
 
   if (isLoading) {
     return (

@@ -42,7 +42,7 @@ export function SkipOccurrenceDialog({ income, open, onOpenChange }: SkipOccurre
     const checkForExistingSkip = async () => {
       setIsChecking(true);
       try {
-        const isSkipped = await checkSkippedIncome(skipDate, income.id);
+        const isSkipped = await checkSkippedIncome(skipDate, skipDate);
         if (!isCancelled && requestId === checkRequestIdRef.current) {
           setAlreadySkipped(isSkipped);
         }
@@ -80,8 +80,7 @@ export function SkipOccurrenceDialog({ income, open, onOpenChange }: SkipOccurre
 
     try {
       await skipIncome.mutateAsync({
-        source_rule_id: income.id,
-        date: skipDate,
+        id: income.id,
       });
       showToast(`Skipped ${income.currency} ${income.amount.toFixed(2)} for ${format(parseISO(skipDate), 'MMM d, yyyy')}`, 'success');
       handleOpen(false);

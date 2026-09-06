@@ -42,7 +42,7 @@ export function SkipExpenseDialog({ expense, open, onOpenChange }: SkipExpenseDi
     const checkForExistingSkip = async () => {
       setIsChecking(true);
       try {
-        const isSkipped = await checkSkippedExpense(skipDate, expense.id);
+        const isSkipped = await checkSkippedExpense(skipDate, skipDate);
         if (!isCancelled && requestId === checkRequestIdRef.current) {
           setAlreadySkipped(isSkipped);
         }
@@ -80,8 +80,7 @@ export function SkipExpenseDialog({ expense, open, onOpenChange }: SkipExpenseDi
 
     try {
       await skipExpense.mutateAsync({
-        source_rule_id: expense.id,
-        expense_date: skipDate,
+        id: expense.id,
       });
       showToast(
         `Skipped ${expense.currency} ${expense.amount.toFixed(2)} for ${format(parseISO(skipDate), 'MMM d, yyyy')}`,

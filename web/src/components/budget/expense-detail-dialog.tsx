@@ -13,7 +13,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Edit, Trash2, Calendar, Tag as TagIcon, ChevronDown, ChevronUp, Repeat } from "lucide-react";
+import { Edit, Trash2, Calendar, Repeat } from "lucide-react";
 import type { Expense } from "@/types/api";
 import { format } from "date-fns";
 import { EditExpenseDialog } from "./expense-edit-dialog";
@@ -38,7 +38,6 @@ export function ExpenseDetailDialog({
   isGuest = false,
 }: ExpenseDetailDialogProps) {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [tagsExpanded, setTagsExpanded] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   if (!expense) return null;
@@ -94,29 +93,11 @@ export function ExpenseDetailDialog({
           </DialogHeader>
 
           <div className="space-y-5 mt-2">
-            {/* Category, Priority Group & Recurring */}
+            {/* Priority & Recurring */}
             <div className="flex flex-wrap gap-2">
-              {expense.category && (
-                <Badge
-                  variant="outline"
-                  className="text-sm"
-                  style={{
-                    backgroundColor: expense.category.color
-                      ? `${expense.category.color}20`
-                      : undefined,
-                    borderColor: expense.category.color || undefined,
-                    color: expense.category.color || "inherit",
-                  }}
-                >
-                  {expense.category.icon && <span className="mr-1">{expense.category.icon}</span>}
-                  {expense.category.name}
-                </Badge>
-              )}
-              {expense.priority_group && (
-                <Badge variant="outline" className="text-sm">
-                  {expense.priority_group.name}
-                </Badge>
-              )}
+              <Badge variant="outline" className="text-sm capitalize">
+                {expense.priority}
+              </Badge>
               <Badge
                 variant={isRecurring ? "default" : "outline"}
                 className="text-sm"
@@ -148,46 +129,6 @@ export function ExpenseDetailDialog({
                 >
                   {expense.notes}
                 </p>
-              </div>
-            )}
-
-            {/* Tags */}
-            {expense.tags && expense.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {(tagsExpanded ? expense.tags : expense.tags.slice(0, 5)).map((tag) => (
-                  <Badge
-                    key={tag.id}
-                    variant="secondary"
-                    className="text-xs"
-                    style={{
-                      backgroundColor: tag.color ? `${tag.color}15` : undefined,
-                      color: tag.color || "inherit",
-                    }}
-                  >
-                    <TagIcon className="mr-1 h-3 w-3" />
-                    {tag.name}
-                  </Badge>
-                ))}
-                {expense.tags.length > 5 && !tagsExpanded && (
-                  <Badge
-                    variant="outline"
-                    className="text-xs cursor-pointer hover:bg-accent transition-colors"
-                    onClick={() => setTagsExpanded(true)}
-                  >
-                    +{expense.tags.length - 5} more
-                    <ChevronDown className="ml-1 h-3 w-3" />
-                  </Badge>
-                )}
-                {tagsExpanded && expense.tags.length > 5 && (
-                  <Badge
-                    variant="outline"
-                    className="text-xs cursor-pointer hover:bg-accent transition-colors"
-                    onClick={() => setTagsExpanded(false)}
-                  >
-                    Show less
-                    <ChevronUp className="ml-1 h-3 w-3" />
-                  </Badge>
-                )}
               </div>
             )}
 

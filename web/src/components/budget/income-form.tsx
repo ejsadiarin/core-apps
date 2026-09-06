@@ -20,7 +20,7 @@ export function IncomeForm({ initialData, onSubmit, onCancel, isLoading }: Incom
     currency: initialData?.currency || "PHP",
     date: initialData?.date || new Date().toISOString().split('T')[0],
     description: initialData?.description || "",
-    recurring_type: initialData?.recurring_type || null,
+    recurring_type: initialData?.recurring_type || "one-time",
     start_date: initialData?.start_date || undefined,
     end_date: initialData?.end_date || undefined,
   });
@@ -32,7 +32,7 @@ export function IncomeForm({ initialData, onSubmit, onCancel, isLoading }: Incom
     await onSubmit(formData);
   };
 
-  const isRecurring = formData.recurring_type !== null;
+  const isRecurring = formData.recurring_type !== "one-time";
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -81,7 +81,7 @@ export function IncomeForm({ initialData, onSubmit, onCancel, isLoading }: Incom
           onValueChange={(value) =>
             setFormData({
               ...formData,
-              recurring_type: value === "one-time" ? null : (value as "daily" | "weekly" | "monthly"),
+              recurring_type: value as "one-time" | "daily" | "weekly" | "monthly" | "yearly",
               start_date: value !== "one-time" ? formData.date : undefined,
               end_date: value !== "one-time" ? formData.end_date : undefined,
             })

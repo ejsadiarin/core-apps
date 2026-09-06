@@ -84,28 +84,15 @@ export function ExpenseCard({ expense, onView, onEdit, onDelete, disabled, showT
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2 flex-wrap">
                 <h3 className="font-semibold">{expense.description}</h3>
-                {expense.category && (
-                  <Badge
-                    variant="outline"
-                    className="text-xs"
-                    style={{
-                      backgroundColor: expense.category.color
-                        ? `${expense.category.color}20`
-                        : undefined,
-                      borderColor: expense.category.color || undefined,
-                      color: expense.category.color || "inherit",
-                    }}
-                  >
-                    {expense.category.icon && <span className="mr-1">{expense.category.icon}</span>}
-                    {expense.category.name}
-                  </Badge>
-                )}
                 <Badge
                   variant={isRecurring ? "default" : "outline"}
                   className="text-xs"
                 >
                   {isRecurring && <Repeat className="h-3 w-3 mr-1" />}
                   {getRecurringLabel(expense.recurring_type)}
+                </Badge>
+                <Badge variant="outline" className="text-xs capitalize">
+                  {expense.priority}
                 </Badge>
               </div>
 
@@ -126,31 +113,6 @@ export function ExpenseCard({ expense, onView, onEdit, onDelete, disabled, showT
               {expense.notes && (
                 <p className="text-sm text-muted-foreground mb-2 line-clamp-2">{expense.notes}</p>
               )}
-
-              <div className="flex items-center gap-2 flex-wrap">
-                {expense.tags && expense.tags.length > 0 && (
-                  <div className="flex gap-1 flex-wrap">
-                    {expense.tags.slice(0, 3).map((tag) => (
-                      <Badge
-                        key={tag.id}
-                        variant="secondary"
-                        className="text-xs"
-                        style={{
-                          backgroundColor: tag.color ? `${tag.color}15` : undefined,
-                          color: tag.color || "inherit",
-                        }}
-                      >
-                        {tag.name}
-                      </Badge>
-                    ))}
-                    {expense.tags.length > 3 && (
-                      <Badge variant="outline" className="text-xs">
-                        +{expense.tags.length - 3}
-                      </Badge>
-                    )}
-                  </div>
-                )}
-              </div>
 
               <p className="text-xs text-muted-foreground mt-2">
                 {format(new Date(expense.expense_date), "MMM dd, yyyy")}

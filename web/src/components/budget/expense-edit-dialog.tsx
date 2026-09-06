@@ -23,12 +23,13 @@ export function EditExpenseDialog({ expense, open, onOpenChange, onSubmit }: Edi
     description: expense.description,
     amount: expense.amount,
     currency: expense.currency,
-    category_id: expense.category?.id,
-    priority_group_id: expense.priority_group?.id,
+    category_id: expense.category_id,
     expense_date: expense.expense_date,
     notes: expense.notes,
-    tag_ids: expense.tags?.map((t) => t.id) || [],
     recurring_type: expense.recurring_type,
+    priority: expense.priority,
+    status: expense.status,
+    is_debt: expense.is_debt,
     start_date: expense.start_date,
     end_date: expense.end_date,
   };
@@ -38,15 +39,9 @@ export function EditExpenseDialog({ expense, open, onOpenChange, onSubmit }: Edi
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Edit Expense</DialogTitle>
-          <DialogDescription>
-            Update the expense details below.
-          </DialogDescription>
+          <DialogDescription>Update the details of this expense.</DialogDescription>
         </DialogHeader>
-        <ExpenseForm
-          initialData={initialData}
-          onSubmit={handleSubmit}
-          onCancel={() => onOpenChange(false)}
-        />
+        <ExpenseForm initialData={initialData} onSubmit={handleSubmit} />
       </DialogContent>
     </Dialog>
   );

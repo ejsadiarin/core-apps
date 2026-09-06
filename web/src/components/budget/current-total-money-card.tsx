@@ -52,7 +52,7 @@ export function CurrentTotalMoneyCard({ startDate, endDate, className }: Current
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">Total Money</CardTitle>
         <CardDescription className="text-xs">
-          Since {new Date(data.date_range?.start || data.tracking_start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+          Since {new Date(data.tracking_start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
         </CardDescription>
       </CardHeader>
       <CardContent>

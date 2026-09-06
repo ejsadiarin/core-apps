@@ -57,7 +57,7 @@ export default function BudgetDashboard() {
   
   const { data: summaryStats, isLoading: statsLoading } = useSummaryStats(period);
   const { data: expensesData, isLoading: expensesLoading } = useExpenses(undefined, 1, 5);
-  const { data: budgetRemainingData } = useBudgetRemaining(selectedDate);
+  const { data: budgetRemainingData } = useBudgetRemaining();
 
   // fetch recent income occurrences (last 7 days) including virtual recurring entries
   const recentOccurrenceDates = useMemo(() => {
@@ -249,13 +249,13 @@ export default function BudgetDashboard() {
           </div>
           {budgetRemainingData && (
             <div className={`text-sm font-semibold ${
-              budgetRemainingData.budget_remaining_status === 'red' ? 'text-red-500' :
-              budgetRemainingData.budget_remaining_status === 'green' ? 'text-green-600' :
+              budgetRemainingData.remaining < 0 ? 'text-red-500' :
+              budgetRemainingData.remaining > 0 ? 'text-green-600' :
               'text-gray-600'
             }`}>
-              Budget Remaining: ₱{budgetRemainingData.budget_remaining.toFixed(2)}
-              {budgetRemainingData.budget_remaining_status === 'red' && ' ⚠️ Over Budget'}
-              {budgetRemainingData.budget_remaining_status === 'green' && ' ✓ On Track'}
+              Budget Remaining: ₱{budgetRemainingData.remaining.toFixed(2)}
+              {budgetRemainingData.remaining < 0 && ' ⚠️ Over Budget'}
+              {budgetRemainingData.remaining > 0 && ' ✓ On Track'}
             </div>
           )}
         </div>
@@ -380,7 +380,9 @@ export default function BudgetDashboard() {
                           currency: occ.currency,
                           date: occ.date,
                           description: occ.description,
-                          recurring_type: occ.recurring_type,
+                          recurring_type: (occ.recurring_type as "one-time" | "daily" | "weekly" | "monthly" | "yearly") || "one-time",
+                          priority: "need",
+                          status: "posted",
                           created_at: '',
                           updated_at: ''
                         };
@@ -481,42 +483,9 @@ export default function BudgetDashboard() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-medium truncate">{expense.description}</p>
-                        {expense.category && (
-                          <span
-                            className="text-xs px-2 py-0.5 rounded-full truncate max-w-[100px]"
-                            style={{
-                              backgroundColor: expense.category.color
-                                ? `${expense.category.color}20`
-                                : undefined,
-                              color: expense.category.color || "inherit",
-                            }}
-                            title={expense.category.name}
-                          >
-                            {expense.category.name}
-                          </span>
-                        )}
-                        {expense.tags && expense.tags.length > 0 && (
-                          <div className="flex gap-1">
-                            {expense.tags.slice(0, 2).map((tag) => (
-                              <Badge
-                                key={tag.id}
-                                variant="secondary"
-                                className="text-xs py-0 h-5"
-                                style={{
-                                  backgroundColor: tag.color ? `${tag.color}15` : undefined,
-                                  color: tag.color || "inherit",
-                                }}
-                              >
-                                {tag.name}
-                              </Badge>
-                            ))}
-                            {expense.tags.length > 2 && (
-                              <Badge variant="outline" className="text-xs py-0 h-5">
-                                +{expense.tags.length - 2}
-                              </Badge>
-                            )}
-                          </div>
-                        )}
+                        <span className="text-xs px-2 py-0.5 rounded-full capitalize">
+                          {expense.priority}
+                        </span>
                       </div>
                       <p className="text-xs text-muted-foreground">
                         {formatDistanceToNow(new Date(expense.expense_date), { addSuffix: true })}

@@ -32,8 +32,8 @@ export function ExpenseStats({ stats, isLoading }: ExpenseStatsProps) {
     return null;
   }
 
-  const budgetRemaining = stats.budget_remaining ?? 0;
-  const budgetStatus = stats.budget_remaining_status ?? "neutral";
+  const budgetRemaining = stats.remaining ?? 0;
+  const budgetStatus = stats.remaining > 0 ? "green" : stats.remaining < 0 ? "red" : "neutral";
   const statusColors = {
     green: "text-green-600",
     red: "text-red-500",
@@ -48,7 +48,7 @@ export function ExpenseStats({ stats, isLoading }: ExpenseStatsProps) {
   const statCards = [
     {
       title: "Total Spent",
-      value: `₱${stats.total_spent.toFixed(2)}`,
+      value: `₱${stats.total_expense.toFixed(2)}`,
       description: stats.period,
       icon: DollarSign,
       iconColor: "text-green-500",
@@ -63,7 +63,7 @@ export function ExpenseStats({ stats, isLoading }: ExpenseStatsProps) {
     {
       title: "Avg per Transaction",
       value: stats.transaction_count > 0
-        ? `₱${(stats.total_spent / stats.transaction_count).toFixed(2)}`
+        ? `₱${(stats.total_expense / stats.transaction_count).toFixed(2)}`
         : "₱0.00",
       description: "average amount",
       icon: TrendingUp,
