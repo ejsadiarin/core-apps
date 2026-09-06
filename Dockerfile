@@ -1,11 +1,11 @@
-FROM golang:1.24-alpine AS builder
+FROM golang:1.27-alpine AS builder
 WORKDIR /app
 RUN apk add --no-cache git
 # to use docker cache
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -o /server ./cmd/server
+RUN CGO_ENABLED=0 GOOS=linux go build -o /server ./cmd/coregateway
 
 FROM alpine:latest AS runner
 WORKDIR /app
