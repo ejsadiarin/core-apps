@@ -90,8 +90,7 @@ export interface UpdateServiceRequest {
 export interface PriorityGroup {
     id: string;
     name: string;
-    slug: string;
-    display_order: number;
+    description: string;
 }
 
 export interface Category {
@@ -99,6 +98,7 @@ export interface Category {
     name: string;
     color?: string;
     icon?: string;
+    is_active: boolean;
 }
 
 export interface Tag {
@@ -112,14 +112,16 @@ export interface Expense {
     description: string;
     amount: number;
     currency: string;
-    category?: Category;
-    priority_group?: PriorityGroup;
+    category_id?: string;
     expense_date: string;
     notes?: string;
-    tags?: Tag[];
-    recurring_type?: "daily" | "weekly" | "monthly" | "yearly" | null;
+    recurring_type: "one-time" | "daily" | "weekly" | "monthly" | "yearly";
+    priority: "need" | "want" | "savings";
+    status: "pending" | "posted" | "skipped";
+    is_debt: boolean;
     start_date?: string;
     end_date?: string;
+    source_rule_id?: string;
     created_at: string;
     updated_at: string;
 }
@@ -131,7 +133,7 @@ export interface CreateCategoryRequest {
 }
 
 export interface UpdateCategoryRequest {
-    name?: string;
+    name: string;
     color?: string;
     icon?: string;
 }
@@ -142,22 +144,24 @@ export interface CreateTagRequest {
 }
 
 export interface UpdateTagRequest {
-    name?: string;
+    name: string;
     color?: string;
 }
 
 export interface CreateExpenseRequest {
     description: string;
     amount: number;
-    currency?: string;
+    currency: string;
     category_id?: string;
-    priority_group_id?: string;
     expense_date: string;
     notes?: string;
-    tag_ids?: string[];
-    recurring_type?: "daily" | "weekly" | "monthly" | "yearly" | null;
+    recurring_type: "one-time" | "daily" | "weekly" | "monthly" | "yearly";
+    priority: "need" | "want" | "savings";
+    status: "pending" | "posted" | "skipped";
+    is_debt: boolean;
     start_date?: string;
     end_date?: string;
+    source_rule_id?: string;
 }
 
 export interface UpdateExpenseRequest {
@@ -165,13 +169,15 @@ export interface UpdateExpenseRequest {
     amount?: number;
     currency?: string;
     category_id?: string;
-    priority_group_id?: string;
     expense_date?: string;
     notes?: string;
-    tag_ids?: string[];
-    recurring_type?: "daily" | "weekly" | "monthly" | "yearly" | null;
+    recurring_type?: "one-time" | "daily" | "weekly" | "monthly" | "yearly";
+    priority?: "need" | "want" | "savings";
+    status?: "pending" | "posted" | "skipped";
+    is_debt?: boolean;
     start_date?: string;
     end_date?: string;
+    source_rule_id?: string;
 }
 
 export interface ExpenseFilters {
@@ -186,7 +192,7 @@ export interface ExpenseFilters {
 export interface OffsetPagination {
     total: number;
     page: number;
-    limit: number;
+    page_size: number;
     totalPages: number;
     hasMore: boolean;
 }
@@ -198,7 +204,7 @@ export interface PaginatedResponse<T> {
 
 export interface PaginationParams {
     page?: number;
-    limit?: number;
+    page_size?: number;
 }
 
 export interface Income {
@@ -207,12 +213,14 @@ export interface Income {
     currency: string;
     date: string;
     description?: string;
-    recurring_type?: "daily" | "weekly" | "monthly" | null;
+    category_id?: string;
+    notes?: string;
+    recurring_type: "one-time" | "daily" | "weekly" | "monthly" | "yearly";
+    priority: "need" | "want" | "savings";
+    status: "pending" | "posted" | "skipped";
     start_date?: string;
     end_date?: string;
-    status?: string;
     source_rule_id?: string;
-    exclude_from_calculations?: boolean;
     created_at: string;
     updated_at: string;
 }
@@ -240,13 +248,16 @@ export interface RecurringSummary {
 
 export interface CreateIncomeRequest {
     amount: number;
-    currency?: string;
+    currency: string;
     date: string;
     description?: string;
     notes?: string;
-    recurring_type?: "daily" | "weekly" | "monthly" | null;
+    recurring_type: "one-time" | "daily" | "weekly" | "monthly" | "yearly";
+    priority?: "need" | "want" | "savings";
+    status?: "pending" | "posted" | "skipped";
     start_date?: string;
     end_date?: string;
+    source_rule_id?: string;
 }
 
 export interface UpdateIncomeRequest {
@@ -254,22 +265,29 @@ export interface UpdateIncomeRequest {
     currency?: string;
     date?: string;
     description?: string;
-    recurring_type?: "daily" | "weekly" | "monthly" | null;
+    notes?: string;
+    recurring_type?: "one-time" | "daily" | "weekly" | "monthly" | "yearly";
+    priority?: "need" | "want" | "savings";
+    status?: "pending" | "posted" | "skipped";
     start_date?: string;
     end_date?: string;
+    source_rule_id?: string;
 }
 
 export interface BudgetRemainingResponse {
-    budget_remaining: number;
-    budget_remaining_status: "green" | "red" | "neutral";
+    period_start: string;
+    period_end: string;
+    total_income: number;
+    total_expense: number;
+    remaining: number;
 }
 
 export interface SummaryStats {
-    total_spent: number;
+    total_income: number;
+    total_expense: number;
+    remaining: number;
     transaction_count: number;
     period: string;
-    budget_remaining?: number;
-    budget_remaining_status?: "green" | "red" | "neutral";
 }
 
 export interface CategoryBreakdown {
@@ -278,7 +296,6 @@ export interface CategoryBreakdown {
     color?: string;
     total_amount: number;
     count: number;
-    percentage: number;
 }
 
 export interface TrendItem {
@@ -330,8 +347,6 @@ export interface SavingsRateResponse {
     savings_rate: number;
     status: "excellent" | "good" | "fair" | "poor" | "negative";
     period: string;
-    tracking_period_start?: string;
-    date_range?: DateRangeMetadata;
 }
 
 export interface SpendingVelocityResponse {
@@ -341,7 +356,6 @@ export interface SpendingVelocityResponse {
     projected_spend: number;
     total_budget: number;
     status: "on_track" | "warning" | "at_risk" | "over_pace" | "unknown";
-    date_range?: DateRangeMetadata;
 }
 
 export interface UpcomingBill {
@@ -360,15 +374,69 @@ export interface UpcomingBillsResponse {
     period: number;
 }
 
-// Category Budget Types
+// Financial Health Types
+
+export interface FiftyThirtyTwentyItem {
+    category: string;
+    amount: number;
+    target_percentage: number;
+    actual_percentage: number;
+    status: string;
+}
+
+export interface FiftyThirtyTwentyResponse {
+    needs: FiftyThirtyTwentyItem;
+    wants: FiftyThirtyTwentyItem;
+    investments: FiftyThirtyTwentyItem;
+    total_income: number;
+    unclassified_count: number;
+    unclassified_amount: number;
+}
+
+export interface MonthOverMonthItem {
+    month: string;
+    income: number;
+    expenses: number;
+    savings: number;
+    savings_rate: number;
+    expense_change_percent: number;
+}
+
+export interface MonthOverMonthResponse {
+    trends: MonthOverMonthItem[];
+    average_savings_rate: number;
+}
+
+export interface CurrentTotalMoneyResponse {
+    current_total: number;
+    money_baseline: number;
+    income_since_start: number;
+    expenses_since_start: number;
+    net_change: number;
+    tracking_start_date: string;
+}
+
+export interface IncomeOccurrence {
+    id: string;
+    source_income_id: string;
+    source_rule_id?: string;
+    amount: number;
+    currency: string;
+    date: string;
+    description?: string;
+    recurring_type?: 'daily' | 'weekly' | 'monthly' | null;
+    status: string;
+    is_virtual: boolean;
+    is_skipped: boolean;
+}
+
+// Category Budget Types (not yet implemented in corefinance)
 
 export interface CategoryBudget {
     id: string;
     category_id: string;
     month: string;
     budget_amount: number;
-    created_at: string;
-    updated_at: string;
 }
 
 export interface CategoryBudgetWithVariance {
@@ -392,87 +460,7 @@ export interface UpdateCategoryBudgetRequest {
     budget_amount?: number;
 }
 
-// Financial Health Types
-
-// Financial Health Response Types
-
-export interface FactorScoreBreakdown {
-    savings_rate: number;
-    debt_to_income: number;
-    emergency_fund: number;
-}
-
-export interface HealthScoreResponse {
-    score: number;
-    status: string;
-    savings_rate: number;
-    debt_to_income: number;
-    emergency_fund_months: number;
-    recommendations: string[];
-    factor_scores?: FactorScoreBreakdown;
-}
-
-export interface FiftyThirtyTwentyItem {
-    category: string;
-    amount: number;
-    target_percentage: number;
-    actual_percentage: number;
-    status: string;
-}
-
-export interface FiftyThirtyTwentyResponse {
-    needs: FiftyThirtyTwentyItem;
-    wants: FiftyThirtyTwentyItem;
-    investments: FiftyThirtyTwentyItem;
-    total_income: number;
-    unclassified_count: number;
-    unclassified_amount: number;
-    tracking_period_start?: string;
-}
-
-export interface WeekdaySpendingItem {
-    day: string;
-    total_amount: number;
-    count: number;
-    average_amount: number;
-}
-
-export interface WeekdayPatternResponse {
-    weekdays: WeekdaySpendingItem[];
-    highest_spending_day: string;
-    lowest_spending_day: string;
-    date_range?: DateRangeMetadata;
-}
-
-export interface MonthOverMonthItem {
-    month: string;
-    income: number;
-    expenses: number;
-    savings: number;
-    savings_rate: number;
-    expense_change_percent: number;
-}
-
-export interface MonthOverMonthResponse {
-    trends: MonthOverMonthItem[];
-    average_savings_rate: number;
-}
-
-export interface MerchantItem {
-    name: string;
-    total_spent: number;
-    count: number;
-    average_amount: number;
-    percentage: number;
-    category_name?: string;
-}
-
-export interface MerchantAnalysisResponse {
-    merchants: MerchantItem[];
-    total_spent: number;
-    unique_merchant_count: number;
-}
-
+// Subscription type (used by skip dialog, backed by recurring expenses)
 export interface SubscriptionItem {
     id: string;
     description: string;
@@ -485,38 +473,42 @@ export interface SubscriptionItem {
 
 export interface SubscriptionsResponse {
     subscriptions: SubscriptionItem[];
-    total_monthly: number;
     count: number;
+    total_monthly: number;
 }
 
-export interface DateRangeMetadata {
-    start: string;
-    end: string;
-    source: string;
+export interface MerchantAnalysisItem {
+    name: string;
+    total_spent: number;
+    count: number;
+    average_amount: number;
+    percentage: number;
 }
 
-export interface CurrentTotalMoneyResponse {
-    current_total: number;
-    money_baseline: number;
-    income_since_start: number;
-    expenses_since_start: number;
-    net_change: number;
-    tracking_start_date: string;
-    date_range?: DateRangeMetadata;
+export interface MerchantAnalysisResponse {
+    merchants: MerchantAnalysisItem[];
+    unique_merchant_count: number;
+    total_spent: number;
 }
 
-export interface IncomeOccurrence {
-    id: string;
-    source_income_id: string;
-    source_rule_id?: string;
-    amount: number;
-    currency: string;
-    date: string;
-    description?: string;
-    recurring_type?: 'daily' | 'weekly' | 'monthly' | null;
-    status: string;
-    is_virtual: boolean;
-    is_skipped: boolean;
+export interface HealthScoreResponse {
+    score: number;
+    status: "excellent" | "good" | "fair" | "poor";
+    savings_rate: number;
+    debt_to_income: number;
+    emergency_fund_months: number;
+    factor_scores: {
+        savings_rate: number;
+        debt_to_income: number;
+        emergency_fund: number;
+    };
+    recommendations: string[];
+}
+
+export interface WeekdayPatternResponse {
+    day: string;
+    total_amount: number;
+    count: number;
 }
 
 // Budget Import / Export Types
@@ -549,7 +541,7 @@ export interface ImportExpenseRecord {
     recurring_type?: "daily" | "weekly" | "monthly" | "yearly" | null;
     start_date?: string;
     end_date?: string;
-    priority_group_id?: string;
+    priority?: string;
     is_debt: boolean;
 }
 
@@ -613,11 +605,9 @@ export interface BudgetImportResult {
 }
 
 export interface SkipIncomeRequest {
-    date: string;
-    source_rule_id: string;
+    id: string;
 }
 
 export interface SkipExpenseRequest {
-    expense_date: string;
-    source_rule_id: string;
+    id: string;
 }

@@ -27,23 +27,14 @@ import type {
   CreateIncomeRequest,
   UpdateIncomeRequest,
   RecurringIncomeWithNextDate,
-  RecurringSummary,
   BudgetRemainingResponse,
   PaginatedResponse,
   PaginationParams,
   SavingsRateResponse,
   SpendingVelocityResponse,
   UpcomingBillsResponse,
-  CategoryBudget,
-  CategoryBudgetWithVariance,
-  CreateCategoryBudgetRequest,
-  UpdateCategoryBudgetRequest,
-  HealthScoreResponse,
   FiftyThirtyTwentyResponse,
-  WeekdayPatternResponse,
   MonthOverMonthResponse,
-  MerchantAnalysisResponse,
-  SubscriptionsResponse,
   CurrentTotalMoneyResponse,
   IncomeOccurrence,
   BudgetExportPayload,
@@ -52,7 +43,22 @@ import type {
   SkipExpenseRequest
 } from '@/types/api';
 
-const url = 'http://localhost:8080';
+const url = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+
+function wrapPaginated<T>(data: T[], page: number = 1, pageSize: number = 50): PaginatedResponse<T> {
+  const total = data.length;
+  const totalPages = Math.ceil(total / pageSize);
+  return {
+    data,
+    pagination: {
+      total,
+      page,
+      page_size: pageSize,
+      totalPages,
+      hasMore: page < totalPages
+    }
+  };
+}
 
 // Auth API Functions
 
@@ -82,7 +88,6 @@ export async function register(data: RegisterRequest): Promise<User> {
     body: JSON.stringify(data)
   });
   if (!res.ok) {
-    // TODO: detect duplicate email error and send "Email already exists"
     const error = await res.json().catch(() => ({ message: 'Registration failed' }));
     throw new Error(error.message || 'Registration failed');
   }
@@ -195,30 +200,20 @@ export async function fetchSystemStatus() {
 
 // Budget API Functions
 
-// Categories
+// Expense Categories
 
-export async function fetchCategories(): Promise<Category[]> {
-  const res = await fetch(url + '/api/budget/categories', {
+export async function fetchExpenseCategories(): Promise<Category[]> {
+  const res = await fetch(url + '/api/budget/expense-categories', {
     credentials: 'include'
   });
   if (!res.ok) {
-    throw new Error(`Error fetching categories: ${res.status}`);
+    throw new Error(`Error fetching expense categories: ${res.status}`);
   }
   return res.json();
 }
 
-export async function fetchCategory(id: string): Promise<Category> {
-  const res = await fetch(url + `/api/budget/categories/${id}`, {
-    credentials: 'include'
-  });
-  if (!res.ok) {
-    throw new Error(`Error fetching category: ${res.status}`);
-  }
-  return res.json();
-}
-
-export async function createCategory(data: CreateCategoryRequest): Promise<Category> {
-  const res = await fetch(url + '/api/budget/categories', {
+export async function createExpenseCategory(data: CreateCategoryRequest): Promise<Category> {
+  const res = await fetch(url + '/api/budget/expense-categories', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -227,13 +222,13 @@ export async function createCategory(data: CreateCategoryRequest): Promise<Categ
     body: JSON.stringify(data)
   });
   if (!res.ok) {
-    throw new Error(`Error creating category: ${res.status}`);
+    throw new Error(`Error creating expense category: ${res.status}`);
   }
   return res.json();
 }
 
-export async function updateCategory(id: string, data: UpdateCategoryRequest): Promise<Category> {
-  const res = await fetch(url + `/api/budget/categories/${id}`, {
+export async function updateExpenseCategory(id: string, data: UpdateCategoryRequest): Promise<Category> {
+  const res = await fetch(url + `/api/budget/expense-categories/${id}`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json'
@@ -242,19 +237,101 @@ export async function updateCategory(id: string, data: UpdateCategoryRequest): P
     body: JSON.stringify(data)
   });
   if (!res.ok) {
-    throw new Error(`Error updating category: ${res.status}`);
+    throw new Error(`Error updating expense category: ${res.status}`);
   }
   return res.json();
 }
 
-export async function deleteCategory(id: string): Promise<void> {
-  const res = await fetch(url + `/api/budget/categories/${id}`, {
+export async function deleteExpenseCategory(id: string): Promise<void> {
+  const res = await fetch(url + `/api/budget/expense-categories/${id}`, {
     method: 'DELETE',
     credentials: 'include'
   });
   if (!res.ok) {
-    throw new Error(`Error deleting category: ${res.status}`);
+    throw new Error(`Error deleting expense category: ${res.status}`);
   }
+}
+
+// Income Categories
+
+export async function fetchIncomeCategories(): Promise<Category[]> {
+  const res = await fetch(url + '/api/budget/income-categories', {
+    credentials: 'include'
+  });
+  if (!res.ok) {
+    throw new Error(`Error fetching income categories: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function createIncomeCategory(data: CreateCategoryRequest): Promise<Category> {
+  const res = await fetch(url + '/api/budget/income-categories', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    credentials: 'include',
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    throw new Error(`Error creating income category: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function updateIncomeCategory(id: string, data: UpdateCategoryRequest): Promise<Category> {
+  const res = await fetch(url + `/api/budget/income-categories/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    credentials: 'include',
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    throw new Error(`Error updating income category: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function deleteIncomeCategory(id: string): Promise<void> {
+  const res = await fetch(url + `/api/budget/income-categories/${id}`, {
+    method: 'DELETE',
+    credentials: 'include'
+  });
+  if (!res.ok) {
+    throw new Error(`Error deleting income category: ${res.status}`);
+  }
+}
+
+// Unified category helpers (for backward compat in hooks)
+// These combine both expense and income categories
+export async function fetchCategories(): Promise<Category[]> {
+  const [expense, income] = await Promise.all([
+    fetchExpenseCategories(),
+    fetchIncomeCategories()
+  ]);
+  const seen = new Set<string>();
+  const all: Category[] = [];
+  for (const cat of [...expense, ...income]) {
+    if (!seen.has(cat.id)) {
+      seen.add(cat.id);
+      all.push(cat);
+    }
+  }
+  return all;
+}
+
+export async function createCategory(data: CreateCategoryRequest): Promise<Category> {
+  return createExpenseCategory(data);
+}
+
+export async function updateCategory(id: string, data: UpdateCategoryRequest): Promise<Category> {
+  return updateExpenseCategory(id, data);
+}
+
+export async function deleteCategory(id: string): Promise<void> {
+  return deleteExpenseCategory(id);
 }
 
 // Priority Groups
@@ -301,9 +378,6 @@ export async function createTag(data: CreateTagRequest): Promise<Tag> {
     body: JSON.stringify(data)
   });
   if (!res.ok) {
-    if (res.status === 403) {
-      throw new Error(`Error creating tag: ${res.status}`);
-    }
     throw new Error(`Error creating tag: ${res.status}`);
   }
   return res.json();
@@ -341,7 +415,7 @@ export async function fetchExpenses(
 ): Promise<PaginatedResponse<Expense>> {
   const searchParams = new URLSearchParams();
   if (params.page) searchParams.append('page', params.page.toString());
-  if (params.limit) searchParams.append('limit', params.limit.toString());
+  if (params.page_size) searchParams.append('page_size', params.page_size.toString());
   if (params.start_date) searchParams.append('start_date', params.start_date);
   if (params.end_date) searchParams.append('end_date', params.end_date);
   if (params.category_id) searchParams.append('category_id', params.category_id);
@@ -353,7 +427,8 @@ export async function fetchExpenses(
   if (!res.ok) {
     throw new Error(`Error fetching expenses: ${res.status}`);
   }
-  return res.json();
+  const data: Expense[] = await res.json();
+  return wrapPaginated(data, params.page, params.page_size);
 }
 
 export async function fetchExpense(id: string): Promise<Expense> {
@@ -409,7 +484,7 @@ export async function deleteExpense(id: string): Promise<void> {
 export interface ExpenseSearchParams {
   q: string;
   page?: number;
-  limit?: number;
+  page_size?: number;
   category_id?: string;
   start_date?: string;
   end_date?: string;
@@ -421,7 +496,7 @@ export async function searchExpenses(
   const searchParams = new URLSearchParams();
   searchParams.append('q', params.q);
   if (params.page) searchParams.append('page', params.page.toString());
-  if (params.limit) searchParams.append('limit', params.limit.toString());
+  if (params.page_size) searchParams.append('page_size', params.page_size.toString());
   if (params.start_date) searchParams.append('start_date', params.start_date);
   if (params.end_date) searchParams.append('end_date', params.end_date);
   if (params.category_id) searchParams.append('category_id', params.category_id);
@@ -432,14 +507,19 @@ export async function searchExpenses(
   if (!res.ok) {
     throw new Error(`Error searching expenses: ${res.status}`);
   }
-  return res.json();
+  const data: Expense[] = await res.json();
+  return wrapPaginated(data, params.page, params.page_size);
 }
 
 // Statistics
 
-export async function fetchSummaryStats(period?: string): Promise<SummaryStats> {
-  const params = period ? `?period=${period}` : '';
-  const res = await fetch(url + `/api/budget/stats/summary${params}`, {
+export async function fetchSummaryStats(startDate?: string, endDate?: string): Promise<SummaryStats> {
+  const params = new URLSearchParams();
+  if (startDate) params.append('start_date', startDate);
+  if (endDate) params.append('end_date', endDate);
+  const qs = params.toString();
+  const endpoint = qs ? `/api/budget/stats/summary?${qs}` : '/api/budget/stats/summary';
+  const res = await fetch(url + endpoint, {
     credentials: 'include'
   });
   if (!res.ok) {
@@ -468,12 +548,10 @@ export async function fetchCategoryBreakdown(startDate?: string, endDate?: strin
 }
 
 export async function fetchTrends(
-  granularity: 'day' | 'month' = 'month',
   startDate?: string,
   endDate?: string
 ): Promise<TrendItem[]> {
   const params = new URLSearchParams();
-  params.append('granularity', granularity);
   if (startDate) params.append('start_date', startDate);
   if (endDate) params.append('end_date', endDate);
 
@@ -541,15 +619,6 @@ export async function deleteService(id: string): Promise<void> {
   }
 }
 
-export async function triggerHealthCheck(id: string): Promise<void> {
-  const res = await fetch(url + `/api/services/${id}/check`, {
-    method: 'POST'
-  });
-  if (!res.ok) {
-    throw new Error(`Error triggering health check: ${res.status}`);
-  }
-}
-
 export async function fetchServiceHistory(id: string): Promise<ServiceHealthHistory[]> {
   const res = await fetch(url + `/api/services/${id}/history`);
   if (!res.ok) {
@@ -583,15 +652,15 @@ export async function fetchAllServicesStats(): Promise<{
 // Incomes
 
 export async function fetchIncomes(
-  params: PaginationParams & { 
-    start_date?: string; 
-    end_date?: string; 
+  params: PaginationParams & {
+    start_date?: string;
+    end_date?: string;
     recurring_type?: string;
   }
 ): Promise<PaginatedResponse<Income>> {
   const searchParams = new URLSearchParams();
   if (params.page) searchParams.append('page', params.page.toString());
-  if (params.limit) searchParams.append('limit', params.limit.toString());
+  if (params.page_size) searchParams.append('page_size', params.page_size.toString());
   if (params.start_date) searchParams.append('start_date', params.start_date);
   if (params.end_date) searchParams.append('end_date', params.end_date);
   if (params.recurring_type) searchParams.append('recurring_type', params.recurring_type);
@@ -602,7 +671,8 @@ export async function fetchIncomes(
   if (!res.ok) {
     throw new Error(`Error fetching incomes: ${res.status}`);
   }
-  return res.json();
+  const data: Income[] = await res.json();
+  return wrapPaginated(data, params.page, params.page_size);
 }
 
 export async function fetchIncome(id: string): Promise<Income> {
@@ -662,7 +732,7 @@ export async function fetchIncomeOccurrences(
   searchParams.append('start_date', params.start_date);
   searchParams.append('end_date', params.end_date);
   if (params.page) searchParams.append('page', params.page.toString());
-  if (params.limit) searchParams.append('limit', params.limit.toString());
+  if (params.page_size) searchParams.append('page_size', params.page_size.toString());
 
   const res = await fetch(url + `/api/budget/incomes/occurrences?${searchParams.toString()}`, {
     credentials: 'include'
@@ -670,7 +740,8 @@ export async function fetchIncomeOccurrences(
   if (!res.ok) {
     throw new Error(`Error fetching income occurrences: ${res.status}`);
   }
-  return res.json();
+  const data: IncomeOccurrence[] = await res.json();
+  return wrapPaginated(data, params.page, params.page_size);
 }
 
 export async function fetchRecurringIncomes(): Promise<RecurringIncomeWithNextDate[]> {
@@ -683,34 +754,28 @@ export async function fetchRecurringIncomes(): Promise<RecurringIncomeWithNextDa
   return res.json();
 }
 
-export async function checkSkippedIncome(date: string, sourceRuleId?: string): Promise<boolean> {
-  const params = new URLSearchParams({ date });
-  if (sourceRuleId) {
-    params.set('source_rule_id', sourceRuleId);
-  }
-
+export async function checkSkippedIncome(startDate: string, endDate: string): Promise<boolean> {
+  const params = new URLSearchParams({ start_date: startDate, end_date: endDate });
   const res = await fetch(url + `/api/budget/incomes/check-skipped?${params.toString()}`, {
     credentials: 'include'
   });
   if (!res.ok) {
     throw new Error(`Error checking skipped income: ${res.status}`);
   }
-  return res.json();
+  const data = await res.json();
+  return data.is_skipped;
 }
 
-export async function checkSkippedExpense(date: string, sourceRuleId?: string): Promise<boolean> {
-  const params = new URLSearchParams({ date });
-  if (sourceRuleId) {
-    params.set('source_rule_id', sourceRuleId);
-  }
-
+export async function checkSkippedExpense(startDate: string, endDate: string): Promise<boolean> {
+  const params = new URLSearchParams({ start_date: startDate, end_date: endDate });
   const res = await fetch(url + `/api/budget/expenses/check-skipped?${params.toString()}`, {
     credentials: 'include'
   });
   if (!res.ok) {
     throw new Error(`Error checking skipped expense: ${res.status}`);
   }
-  return res.json();
+  const data = await res.json();
+  return data.is_skipped;
 }
 
 export async function exportBudgetJSON(): Promise<BudgetExportPayload> {
@@ -739,7 +804,7 @@ export async function importBudgetJSON(payload: BudgetExportPayload): Promise<Bu
   return res.json();
 }
 
-export async function skipIncome(data: SkipIncomeRequest): Promise<Income> {
+export async function skipIncome(data: SkipIncomeRequest): Promise<{ status: string }> {
   const res = await fetch(url + '/api/budget/incomes/skip', {
     method: 'POST',
     headers: {
@@ -755,7 +820,7 @@ export async function skipIncome(data: SkipIncomeRequest): Promise<Income> {
   return res.json();
 }
 
-export async function skipExpense(data: SkipExpenseRequest): Promise<Expense> {
+export async function skipExpense(data: SkipExpenseRequest): Promise<{ status: string }> {
   const res = await fetch(url + '/api/budget/expenses/skip', {
     method: 'POST',
     headers: {
@@ -781,9 +846,8 @@ export async function cancelRecurringIncome(id: string): Promise<Income> {
   return updateIncome(id, { end_date: today });
 }
 
-export async function fetchBudgetRemaining(date?: string): Promise<BudgetRemainingResponse> {
-  const params = date ? `?date=${date}` : '';
-  const res = await fetch(url + `/api/budget/remaining${params}`, {
+export async function fetchBudgetRemaining(): Promise<BudgetRemainingResponse> {
+  const res = await fetch(url + '/api/budget/remaining', {
     credentials: 'include'
   });
   if (!res.ok) {
@@ -813,17 +877,12 @@ export async function fetchSavingsRate(startDate?: string, endDate?: string): Pr
   return res.json();
 }
 
-export async function fetchSpendingVelocity(startDate?: string, endDate?: string): Promise<SpendingVelocityResponse> {
+export async function fetchSpendingVelocity(startDate: string, endDate: string): Promise<SpendingVelocityResponse> {
   const params = new URLSearchParams();
-  if (startDate) params.append('start_date', startDate);
-  if (endDate) params.append('end_date', endDate);
+  params.append('start_date', startDate);
+  params.append('end_date', endDate);
 
-  const queryString = params.toString();
-  const endpoint = queryString
-    ? `/api/budget/velocity?${queryString}`
-    : '/api/budget/velocity';
-
-  const res = await fetch(url + endpoint, {
+  const res = await fetch(url + `/api/budget/velocity?${params.toString()}`, {
     credentials: 'include'
   });
   if (!res.ok) {
@@ -832,77 +891,12 @@ export async function fetchSpendingVelocity(startDate?: string, endDate?: string
   return res.json();
 }
 
-export async function fetchUpcomingBills(days: 7 | 30 = 30): Promise<UpcomingBillsResponse> {
-  const res = await fetch(url + `/api/budget/forecast/upcoming?days=${days}`, {
+export async function fetchUpcomingBills(): Promise<UpcomingBillsResponse> {
+  const res = await fetch(url + '/api/budget/forecast/upcoming', {
     credentials: 'include'
   });
   if (!res.ok) {
     throw new Error(`Error fetching upcoming bills: ${res.status}`);
-  }
-  return res.json();
-}
-
-// Category Budget API
-
-export async function createCategoryBudget(data: CreateCategoryBudgetRequest): Promise<CategoryBudget> {
-  const res = await fetch(url + '/api/budget/category-budgets', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    credentials: 'include',
-    body: JSON.stringify(data)
-  });
-  if (!res.ok) {
-    throw new Error(`Error creating category budget: ${res.status}`);
-  }
-  return res.json();
-}
-
-export async function fetchCategoryBudgets(month?: string): Promise<CategoryBudgetWithVariance[]> {
-  const params = month ? `?month=${month}` : '';
-  const res = await fetch(url + `/api/budget/category-budgets${params}`, {
-    credentials: 'include'
-  });
-  if (!res.ok) {
-    throw new Error(`Error fetching category budgets: ${res.status}`);
-  }
-  return res.json();
-}
-
-export async function updateCategoryBudget(id: string, data: UpdateCategoryBudgetRequest): Promise<CategoryBudget> {
-  const res = await fetch(url + `/api/budget/category-budgets/${id}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    credentials: 'include',
-    body: JSON.stringify(data)
-  });
-  if (!res.ok) {
-    throw new Error(`Error updating category budget: ${res.status}`);
-  }
-  return res.json();
-}
-
-export async function deleteCategoryBudget(id: string): Promise<void> {
-  const res = await fetch(url + `/api/budget/category-budgets/${id}`, {
-    method: 'DELETE',
-    credentials: 'include'
-  });
-  if (!res.ok) {
-    throw new Error(`Error deleting category budget: ${res.status}`);
-  }
-}
-
-// Financial Health API
-
-export async function fetchHealthScore(): Promise<HealthScoreResponse> {
-  const res = await fetch(url + '/api/budget/stats/health-score', {
-    credentials: 'include'
-  });
-  if (!res.ok) {
-    throw new Error(`Error fetching health score: ${res.status}`);
   }
   return res.json();
 }
@@ -915,7 +909,7 @@ export async function fetchFiftyThirtyTwenty(startDate?: string, endDate?: strin
   const queryString = params.toString();
   const endpoint = queryString
     ? `/api/budget/analysis/503020?${queryString}`
-    : '/api/budget/analysis/503020';
+    : `/api/budget/analysis/503020`;
 
   const res = await fetch(url + endpoint, {
     credentials: 'include'
@@ -926,56 +920,17 @@ export async function fetchFiftyThirtyTwenty(startDate?: string, endDate?: strin
   return res.json();
 }
 
-export async function fetchWeekdayPattern(startDate?: string, endDate?: string): Promise<WeekdayPatternResponse> {
+export async function fetchMonthOverMonth(startDate?: string, endDate?: string): Promise<MonthOverMonthResponse> {
   const params = new URLSearchParams();
   if (startDate) params.append('start_date', startDate);
   if (endDate) params.append('end_date', endDate);
-
-  const queryString = params.toString();
-  const endpoint = queryString
-    ? `/api/budget/analysis/weekday-pattern?${queryString}`
-    : '/api/budget/analysis/weekday-pattern';
-
+  const qs = params.toString();
+  const endpoint = qs ? `/api/budget/trends/month-over-month?${qs}` : '/api/budget/trends/month-over-month';
   const res = await fetch(url + endpoint, {
     credentials: 'include'
   });
   if (!res.ok) {
-    throw new Error(`Error fetching weekday pattern: ${res.status}`);
-  }
-  return res.json();
-}
-
-export async function fetchMonthOverMonth(): Promise<MonthOverMonthResponse> {
-  const res = await fetch(url + '/api/budget/trends/month-over-month', {
-    credentials: 'include'
-  });
-  if (!res.ok) {
     throw new Error(`Error fetching month-over-month trends: ${res.status}`);
-  }
-  return res.json();
-}
-
-export async function fetchMerchantAnalysis(limit: number = 10, startDate?: string, endDate?: string): Promise<MerchantAnalysisResponse> {
-  const params = new URLSearchParams();
-  params.append('limit', limit.toString());
-  if (startDate) params.append('start_date', startDate);
-  if (endDate) params.append('end_date', endDate);
-
-  const res = await fetch(url + `/api/budget/analysis/merchants?${params.toString()}`, {
-    credentials: 'include'
-  });
-  if (!res.ok) {
-    throw new Error(`Error fetching merchant analysis: ${res.status}`);
-  }
-  return res.json();
-}
-
-export async function fetchSubscriptions(): Promise<SubscriptionsResponse> {
-  const res = await fetch(url + '/api/budget/subscriptions', {
-    credentials: 'include'
-  });
-  if (!res.ok) {
-    throw new Error(`Error fetching subscriptions: ${res.status}`);
   }
   return res.json();
 }
