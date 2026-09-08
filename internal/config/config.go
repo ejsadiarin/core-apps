@@ -16,6 +16,7 @@ type Config struct {
 	AdminEmail          string
 	AdminPass           string
 	AllowedOrigins      string
+	CorefinanceURL      string
 }
 
 // Load loads configuration from environment variables
@@ -28,6 +29,7 @@ func Load() *Config {
 		AdminEmail:          os.Getenv("ADMIN_EMAIL"),
 		AdminPass:           os.Getenv("ADMIN_PASSWORD"),
 		AllowedOrigins:      getEnv("ALLOWED_ORIGINS", "http://localhost:3000"),
+		CorefinanceURL:      getEnv("COREFINANCE_URL", "http://localhost:6969"),
 	}
 }
 

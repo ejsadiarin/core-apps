@@ -76,6 +76,12 @@ func (s *Server) RegisterRoutes(cfg *config.Config) http.Handler {
 	r.Get("/api/services/{id}/history", s.ServiceHandler.GetServiceHistory)
 	r.Get("/api/services/{id}/stats", s.ServiceHandler.GetServiceStats)
 
+	// budget — streamed to corefinance-api
+	r.Route("/api/budget", func(r chi.Router) {
+		r.Use(middleware.ForwardHeaders)
+		r.Handle("/*", s.CorefinanceClient.Proxy())
+	})
+
 	return r
 }
 
