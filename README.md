@@ -62,8 +62,9 @@ coregateway/
 │   ├── auth/                 # Authentication (register, login, sessions)
 │   ├── user/                 # User management (CRUD)
 │   ├── monitor/              # Service monitoring (CRUD, health checks, stats)
+│   ├── corefinance/          # Corefinance-api HTTP client and streaming proxy
 │   ├── server/               # HTTP server, routes, middleware wiring
-│   ├── middleware/            # Request ID, slog logging, outbound propagation
+│   ├── middleware/            # Request ID, slog logging, outbound propagation, forward headers
 │   ├── helper/               # JSON responses, UUID parsing, query helpers
 │   ├── logger/               # ENV-based slog setup
 │   ├── config/               # Environment variable loading
@@ -73,7 +74,10 @@ coregateway/
 │       ├── migrations/       # Goose SQL migrations
 │       ├── queries/          # sqlc SQL query files
 │       └── sqlc/             # sqlc-generated Go code (DO NOT EDIT)
+├── services/
+│   └── corefinance/          # Corefinance microservice (separate repo/deployment)
 ├── proto/                    # Protobuf definitions (buf-managed)
+├── compose.yml               # Docker Compose for local development
 ├── routes-api.http           # HTTP client file (VS Code REST Client)
 └── go.mod
 ```
@@ -132,6 +136,10 @@ Request → chi router
   → AuthMiddleware (extracts session, loads user into context)
   → CORS
   → Handler → Service → sqlc → PostgreSQL
+
+Budget API flow:
+  → ForwardHeaders (sets X-User-ID, X-Request-ID on request)
+  → httputil.ReverseProxy (streams body to corefinance-api, no buffering)
 ```
 
 ### Key patterns
@@ -140,6 +148,7 @@ Request → chi router
 - **Structured logging**: `slog.Debug/Info/Error` with contextual fields, ENV-based format (text in dev, JSON in prod)
 - **Request IDs**: Generated per request via chi, returned in `X-Request-ID` response header, propagated on outbound calls
 - **Outbound propagation**: `middleware.PropagateHeaders(req)` sets `X-Request-ID` and `X-User-ID` on downstream HTTP calls
+- **Streaming proxy**: `httputil.ReverseProxy` streams request/response bodies via `io.Copy` — no memory buffering for large payloads
 
 ## Environment Variables
 
@@ -150,6 +159,7 @@ Request → chi router
 | `ENV` | `development` | `development` (text+debug) or `production` (JSON+info) |
 | `FRONTEND_URL` | - | Frontend URL for CORS |
 | `ALLOWED_ORIGINS` | `http://localhost:3000` | Comma-separated allowed origins |
+| `COREFINANCE_URL` | `http://localhost:6969` | Corefinance-api base URL (internal service) |
 | `ADMIN_EMAIL` | - | Admin user email (for seeding) |
 | `ADMIN_PASSWORD` | - | Admin user password (for seeding) |
 
@@ -174,10 +184,126 @@ Request → chi router
 go test ./...
 ```
 
-## Downstream services
+## Downstream Microservices
 
-Coregateway acts as a gateway to downstream services:
-- **corefinance** — budget/finance tracking
-- **coreban** — banking
+Coregateway acts as a **Backend-for-Frontend (BFF)** gateway. All traffic flows through it — the edge proxy (nginx/Traefik) only knows about coregateway, never the internal microservices.
 
-Outbound calls propagate `X-Request-ID` and `X-User-ID` headers via `middleware.PropagateHeaders()`.
+```
+Browser → Edge Proxy (nginx:3000) → coregateway-api:8080
+  ├── /api/auth/*    → coregateway handlers (auth, users, services)
+  ├── /api/services/* → coregateway handlers (monitoring)
+  └── /api/budget/*  → ForwardHeaders → httputil.ReverseProxy → corefinance-api:6969
+```
+
+### Current services
+
+| Service | URL | Routes | Description |
+|---------|-----|--------|-------------|
+| corefinance-api | `http://corefinance-api:6969` | `/api/budget/*` | Budget/finance tracking |
+
+### Adding a new microservice (Runbook)
+
+To integrate a new downstream service (e.g. `coreinventory-api`):
+
+**1. Create the client package**
+
+```bash
+mkdir -p internal/coreinventory
+```
+
+Create `internal/coreinventory/client.go`:
+```go
+package coreinventory
+
+import (
+	"log/slog"
+	"net/http"
+	"net/http/httputil"
+	"net/url"
+	"time"
+)
+
+type Client struct {
+	target     *url.URL
+	httpClient *http.Client
+}
+
+func New(baseURL string) *Client {
+	target, err := url.Parse(baseURL)
+	if err != nil {
+		slog.Error("coreinventory: invalid base URL", "url", baseURL, "error", err)
+		panic("coreinventory: invalid COREINVENTORY_URL")
+	}
+	return &Client{
+		target:     target,
+		httpClient: &http.Client{Timeout: 30 * time.Second},
+	}
+}
+
+func (c *Client) Proxy() http.Handler {
+	proxy := httputil.NewSingleHostReverseProxy(c.target)
+	originalDirector := proxy.Director
+	proxy.Director = func(req *http.Request) {
+		originalDirector(req)
+		req.Host = c.target.Host
+	}
+	proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
+		slog.Error("coreinventory: proxy error", "method", r.Method, "path", r.URL.Path, "error", err)
+		http.Error(w, "downstream service unavailable", http.StatusBadGateway)
+	}
+	return proxy
+}
+```
+
+**2. Add config field**
+
+In `internal/config/config.go`, add `CoreinventoryURL string` to `Config` struct and read from `COREINVENTORY_URL` env var.
+
+**3. Wire into server**
+
+In `internal/server/server.go`, add `CoreinventoryClient *coreinventory.Client` to `Server` struct and initialize in `New()`.
+
+**4. Mount the route**
+
+In `internal/server/routes.go`:
+```go
+// inventory — streamed to coreinventory-api
+r.Route("/api/inventory", func(r chi.Router) {
+    r.Use(middleware.ForwardHeaders)
+    r.Handle("/*", s.CoreinventoryClient.Proxy())
+})
+```
+
+**5. Add to compose.yml**
+
+```yaml
+coreinventory-api:
+  build:
+    context: ./services/coreinventory
+    dockerfile: Dockerfile
+  ports:
+    - "7070:7070"
+  environment:
+    - PORT=7070
+    - ENV=development
+    - DATABASE_URL=...
+```
+
+Add `COREINVENTORY_URL=http://coreinventory-api:7070` to coregateway-api environment.
+Add `coreinventory-api` to web service's `depends_on`.
+
+**6. Update README.md**
+
+Add the service to the "Current services" table.
+
+### Adding aggregation endpoints
+
+For endpoints that combine data from multiple microservices, create typed HTTP clients instead of using the streaming proxy:
+
+1. Add response types to `internal/{service}/types.go`
+2. Add client methods that call multiple endpoints and aggregate
+3. Register specific routes in `routes.go` that call these methods instead of the proxy
+
+### Security: Network isolation
+
+In production, internal microservices should only be reachable from coregateway-api. Configure your infrastructure (Docker network policies, Cilium NetworkPolicy, security groups) to block direct access to microservices from outside the gateway.

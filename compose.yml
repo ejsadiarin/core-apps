@@ -8,6 +8,9 @@ services:
       - "3000:80"
     depends_on:
       - coregateway-api
+      - corefinance-api
+    environment:
+      - VITE_API_URL=http://localhost:8080
 
   coregateway-api:
     build:
@@ -20,6 +23,7 @@ services:
       - PORT=8080
       - ENV=development
       - ALLOWED_ORIGINS=http://localhost:3000
+      - COREFINANCE_URL=http://corefinance-api:6969
       - ADMIN_EMAIL=${ADMIN_EMAIL:-}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
 
