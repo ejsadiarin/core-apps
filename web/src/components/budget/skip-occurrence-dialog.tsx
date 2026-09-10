@@ -67,7 +67,7 @@ export function SkipOccurrenceDialog({ income, open, onOpenChange }: SkipOccurre
 
   const handleOpen = (isOpen: boolean) => {
     if (isOpen && income) {
-      setSkipDate(income.next_occurrence);
+      setSkipDate(income.start_date || '');
       setReason('');
       setAlreadySkipped(false);
     }

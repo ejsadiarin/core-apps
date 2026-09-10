@@ -92,16 +92,13 @@ export function RecurringIncomeList({ className }: RecurringIncomeListProps) {
                   </div>
                   <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
                     <Clock className="h-3 w-3" />
-                    <span>Next: {safeFormat(income.next_occurrence, (d) => format(d, 'MMM d, yyyy'))}</span>
+                    <span>Starts: {safeFormat(income.start_date, (d) => format(d, 'MMM d, yyyy'))}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="text-right">
                     <p className="font-semibold text-green-600">
                       +{income.currency} {safeFixed(income.amount)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      ₱{safeFixed(income.monthly_equivalent, 0)}/mo
                     </p>
                   </div>
                   <Button

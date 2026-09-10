@@ -1,9 +1,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useFiftyThirtyTwenty } from '@/hooks/use-budget';
-import { Info } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { safeFixed, cn } from '@/lib/utils';
 
 interface FiftyThirtyTwentyChartProps {
   startDate?: string;
@@ -42,118 +40,59 @@ export function FiftyThirtyTwentyChart({ startDate, endDate, className }: FiftyT
     );
   }
 
-  const categories = [
-    {
-      key: 'needs',
-      label: 'Needs',
-      data: data.needs,
-      color: 'bg-blue-500',
-      textColor: 'text-blue-500',
-      target: 50
-    },
-    {
-      key: 'wants',
-      label: 'Wants',
-      data: data.wants,
-      color: 'bg-purple-500',
-      textColor: 'text-purple-500',
-      target: 30
-    },
-    {
-      key: 'investments',
-      label: (
-        <span className="flex items-center gap-1">
-          Investments
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Info className="h-3 w-3 text-muted-foreground/50 cursor-help" />
-            </TooltipTrigger>
-            <TooltipContent side="top" className="max-w-[220px]">
-              <p>Investments include retirement accounts, stocks, and savings. This differs from your savings rate which measures income minus expenses.</p>
-            </TooltipContent>
-          </Tooltip>
-        </span>
-      ),
-      data: data.investments,
-      color: 'bg-green-500',
-      textColor: 'text-green-500',
-      target: 20
-    }
-  ];
+  const totalIncome = Number(data.total_incomes) || 0;
+  const needs = Number(data.needs) || 0;
+  const wants = Number(data.wants) || 0;
+  const savings = Number(data.savings) || 0;
+  const needsPct = Number(data.needs_pct) || 0;
+  const wantsPct = Number(data.wants_pct) || 0;
+  const savingsPct = Number(data.savings_pct) || 0;
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'on_target': return 'text-green-500';
-      case 'over': return 'text-red-500';
-      case 'under': return 'text-yellow-500';
-      default: return 'text-muted-foreground';
-    }
-  };
+  const categories = [
+    { label: 'Needs', amount: needs, pct: needsPct, target: 50, color: 'bg-blue-500', textColor: 'text-blue-500' },
+    { label: 'Wants', amount: wants, pct: wantsPct, target: 30, color: 'bg-purple-500', textColor: 'text-purple-500' },
+    { label: 'Savings', amount: savings, pct: savingsPct, target: 20, color: 'bg-green-500', textColor: 'text-green-500' },
+  ];
 
   return (
     <Card className={className}>
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">50/30/20 Budget</CardTitle>
         <CardDescription className="text-xs">
-          Income: ₱{data.total_income.toLocaleString()}
+          Income: ₱{totalIncome.toLocaleString()}
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {/* stacked bar visualization */}
         <div className="mb-4">
           <div className="flex rounded-full overflow-hidden h-4">
             {categories.map((c) => (
               <div
-                key={c.key}
+                key={c.label}
                 className={cn(c.color, 'transition-all')}
-                style={{ width: `${c.data.actual_percentage || 0}%` }}
-                title={`${typeof c.label === 'string' ? c.label : 'Investments'}: ${c.data.actual_percentage.toFixed(1)}%`}
+                style={{ width: `${c.pct}%` }}
+                title={`${c.label}: ${safeFixed(c.pct, 1)}%`}
               />
             ))}
-          </div>
-          {/* target markers */}
-          <div className="relative h-2 mt-1">
-            <div className="absolute left-[50%] w-px h-2 bg-muted-foreground/50" title="50% target" />
-            <div className="absolute left-[80%] w-px h-2 bg-muted-foreground/50" title="80% target" />
           </div>
         </div>
 
         <div className="space-y-3">
           {categories.map((c) => (
-            <div key={c.key} className="space-y-1">
+            <div key={c.label} className="space-y-1">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className={cn('w-3 h-3 rounded-full', c.color)} />
                   <span className="text-sm font-medium">{c.label}</span>
                 </div>
-                <span className={cn('text-xs font-medium', getStatusColor(c.data.status))}>
-                  {c.data.actual_percentage.toFixed(1)}% / {c.data.target_percentage}%
+                <span className="text-xs font-medium">
+                  {safeFixed(c.pct, 1)}% / {c.target}%
                 </span>
               </div>
               <div className="flex justify-between text-xs text-muted-foreground">
-                <span>₱{c.data.amount.toLocaleString()}</span>
-                <span className="capitalize">{c.data.status.replace('_', ' ')}</span>
+                <span>₱{c.amount.toLocaleString()}</span>
               </div>
             </div>
           ))}
-
-          {data.unclassified_count > 0 && (
-            <div className="space-y-1 pt-2 border-t">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-muted-foreground/30" />
-                  <span className="text-sm font-medium text-muted-foreground">Unclassified</span>
-                </div>
-                <span className="text-xs font-medium text-muted-foreground">
-                  {data.unclassified_count} expense{data.unclassified_count !== 1 ? 's' : ''}
-                </span>
-              </div>
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>₱{data.unclassified_amount.toLocaleString()}</span>
-                <span>Not assigned to a priority group</span>
-              </div>
-            </div>
-          )}
         </div>
       </CardContent>
     </Card>

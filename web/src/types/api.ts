@@ -229,13 +229,12 @@ export interface RecurringIncomeWithNextDate {
     id: string;
     amount: number;
     currency: string;
-    date: string;
-    description?: string;
-    recurring_type?: "daily" | "weekly" | "monthly" | null;
-    start_date?: string;
+    description: string;
+    recurring_type: string;
+    start_date: string;
     end_date?: string;
-    next_occurrence: string;
-    monthly_equivalent: number;
+    created_at: string;
+    updated_at: string;
 }
 
 export interface RecurringSummary {
@@ -283,25 +282,24 @@ export interface BudgetRemainingResponse {
 }
 
 export interface SummaryStats {
-    total_income: number;
-    total_expense: number;
-    remaining: number;
-    transaction_count: number;
-    period: string;
+    total_incomes: number;
+    total_expenses: number;
+    expense_count: number;
+    income_count: number;
 }
 
 export interface CategoryBreakdown {
     category_id: string;
     category_name: string;
-    color?: string;
+    category_color?: string;
+    expense_count: number;
     total_amount: number;
-    count: number;
 }
 
 export interface TrendItem {
-    date: string;
-    total_amount: number;
-    count: number;
+    month: string;
+    total_expenses: number;
+    total_incomes: number;
 }
 
 // Auth Types
@@ -341,21 +339,14 @@ export interface UpdateUserRequest {
 // Budget Analytics Types
 
 export interface SavingsRateResponse {
-    income: number;
-    expenses: number;
-    savings: number;
+    total_incomes: number;
+    total_expenses: number;
     savings_rate: number;
-    status: "excellent" | "good" | "fair" | "poor" | "negative";
-    period: string;
 }
 
 export interface SpendingVelocityResponse {
-    amount_spent: number;
-    days_elapsed: number;
-    days_in_month: number;
-    projected_spend: number;
-    total_budget: number;
-    status: "on_track" | "warning" | "at_risk" | "over_pace" | "unknown";
+    avg_monthly_spending: number;
+    months_with_data: number;
 }
 
 export interface UpcomingBill {
@@ -364,48 +355,39 @@ export interface UpcomingBill {
     amount: number;
     currency: string;
     recurring_type: string;
-    due_date: string;
-    category_id?: string;
+    start_date: string;
+    end_date: string;
+    category_id: string;
+    notes: string;
+    priority: string;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+    category_name: string;
+    category_color: string;
 }
 
-export interface UpcomingBillsResponse {
-    bills: UpcomingBill[];
-    total_amount: number;
-    period: number;
-}
+export type UpcomingBillsResponse = UpcomingBill[];
 
 // Financial Health Types
 
-export interface FiftyThirtyTwentyItem {
-    category: string;
-    amount: number;
-    target_percentage: number;
-    actual_percentage: number;
-    status: string;
-}
-
 export interface FiftyThirtyTwentyResponse {
-    needs: FiftyThirtyTwentyItem;
-    wants: FiftyThirtyTwentyItem;
-    investments: FiftyThirtyTwentyItem;
-    total_income: number;
-    unclassified_count: number;
-    unclassified_amount: number;
+    total_incomes: number;
+    total_expenses: number;
+    needs: number;
+    wants: number;
+    savings: number;
+    needs_pct: number;
+    wants_pct: number;
+    savings_pct: number;
 }
 
 export interface MonthOverMonthItem {
     month: string;
-    income: number;
-    expenses: number;
-    savings: number;
-    savings_rate: number;
-    expense_change_percent: number;
+    total_amount: number;
 }
 
-export interface MonthOverMonthResponse {
-    trends: MonthOverMonthItem[];
-    average_savings_rate: number;
-}
+export type MonthOverMonthResponse = MonthOverMonthItem[];
 
 export interface CurrentTotalMoneyResponse {
     total_money: number;

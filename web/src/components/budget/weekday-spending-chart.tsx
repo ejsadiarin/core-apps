@@ -41,17 +41,24 @@ export function WeekdaySpendingChart({ startDate, endDate, className }: WeekdayS
     );
   }
 
-  const maxAmount = Math.max(...data.map((d) => d.total_amount), 1);
-  const minAmountItem = data.reduce((min, item) => item.total_amount < min.total_amount ? item : min, data[0]);
-  const maxAmountItem = data.reduce((max, item) => item.total_amount > max.total_amount ? item : max, data[0]);
+  const items = Array.isArray(data) ? data : [];
+  const maxAmount = Math.max(...items.map((d) => Number(d.total_expenses) || 0), 1);
+  const minAmountItem = items.reduce((min, item) => {
+    const val = Number(item.total_expenses) || 0;
+    const minVal = Number(min.total_expenses) || 0;
+    return val < minVal ? item : min;
+  }, items[0]);
+  const maxAmountItem = items.reduce((max, item) => {
+    const val = Number(item.total_expenses) || 0;
+    const maxVal = Number(max.total_expenses) || 0;
+    return val > maxVal ? item : max;
+  }, items[0]);
 
-  // Helper to format date for display
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
-  // Helper to abbreviate amounts for compact display
   const formatAmount = (amount: number) => {
     if (amount >= 10000) {
       return `₱${(amount / 1000).toFixed(1)}k`;
@@ -69,19 +76,20 @@ export function WeekdaySpendingChart({ startDate, endDate, className }: WeekdayS
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto overflow-y-hidden">
-          <div className="flex items-end gap-1 h-32 min-w-0" style={{ minWidth: `${Math.max(data.length * 36, 100)}px` }}>
-            {data.map((day) => {
-              const heightPct = (day.total_amount / maxAmount) * 100;
-              const isHighest = day.date === maxAmountItem?.date;
-              const isLowest = day.date === minAmountItem?.date;
+          <div className="flex items-end gap-1 h-32 min-w-0" style={{ minWidth: `${Math.max(items.length * 36, 100)}px` }}>
+            {items.map((day) => {
+              const amount = Number(day.total_expenses) || 0;
+              const heightPct = (amount / maxAmount) * 100;
+              const isHighest = day.month === maxAmountItem?.month;
+              const isLowest = day.month === minAmountItem?.month;
 
               return (
                 <TooltipProvider>
-                <Tooltip key={day.date}>
+                <Tooltip key={day.month}>
                   <TooltipTrigger asChild>
                     <div className="flex flex-col items-center gap-1 min-w-[32px] flex-shrink-0">
                       <div className="text-[10px] text-muted-foreground font-medium overflow-hidden text-ellipsis whitespace-nowrap max-w-[40px]">
-                        {formatAmount(day.total_amount)}
+                        {formatAmount(amount)}
                       </div>
                       <div className="w-full relative" style={{ height: '80px' }}>
                         <div
@@ -92,11 +100,11 @@ export function WeekdaySpendingChart({ startDate, endDate, className }: WeekdayS
                           style={{ height: `${Math.max(heightPct, 4)}%` }}
                         />
                       </div>
-                      <div className="text-[10px] text-muted-foreground">{new Date(day.date).getDate()}</div>
+                      <div className="text-[10px] text-muted-foreground">{day.month.slice(5, 7)}/{day.month.slice(2, 4)}</div>
                     </div>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>{formatDate(day.date)}: ₱{day.total_amount.toLocaleString()}</p>
+                    <p>{formatDate(day.month)}: ₱{amount.toLocaleString()}</p>
                   </TooltipContent>
                 </Tooltip>
                 </TooltipProvider>
@@ -108,12 +116,12 @@ export function WeekdaySpendingChart({ startDate, endDate, className }: WeekdayS
         <div className="mt-4 pt-3 border-t border-border grid grid-cols-2 gap-2">
           <div className="text-xs text-muted-foreground">
             Highest: <span className="font-medium text-foreground">
-              ₱{maxAmountItem?.total_amount.toLocaleString()}
+              ₱{Number(maxAmountItem?.total_expenses || 0).toLocaleString()}
             </span>
           </div>
           <div className="text-xs text-muted-foreground">
             Lowest: <span className="font-medium text-foreground">
-              ₱{minAmountItem?.total_amount.toLocaleString()}
+              ₱{Number(minAmountItem?.total_expenses || 0).toLocaleString()}
             </span>
           </div>
         </div>

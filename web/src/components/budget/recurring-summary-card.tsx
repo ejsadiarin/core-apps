@@ -30,7 +30,7 @@ export function RecurringSummaryCard({ className }: RecurringSummaryCardProps) {
   }
 
   const totalRecurringIncome = recurringIncomes?.reduce(
-    (sum, inc) => sum + inc.monthly_equivalent,
+    (sum, inc) => sum + Number(inc.amount),
     0
   ) || 0;
 

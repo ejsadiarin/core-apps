@@ -48,24 +48,22 @@ export default function BudgetSummaryPage() {
     200
   );
 
-  const totalIncome = savingsData?.income ?? 0;
-  const totalExpenses = savingsData?.expenses ?? 0;
-  const netSavings = savingsData?.savings ?? 0;
+  const totalIncome = savingsData?.total_incomes ?? 0;
+  const totalExpenses = savingsData?.total_expenses ?? 0;
   const savingsRate = savingsData?.savings_rate ?? 0;
+  const netSavings = Number(totalIncome) - Number(totalExpenses);
 
   const incomeEntries = occurrencesData?.data ?? [];
   const expenseEntries = expensesData?.data ?? [];
 
   const savingsStatusColor = useMemo(() => {
     if (!savingsData) return 'text-muted-foreground';
-    switch (savingsData.status) {
-      case 'excellent': return 'text-green-600';
-      case 'good': return 'text-green-500';
-      case 'fair': return 'text-yellow-500';
-      case 'poor': return 'text-orange-500';
-      case 'negative': return 'text-red-500';
-      default: return 'text-muted-foreground';
-    }
+    const rate = Number(savingsData.savings_rate) || 0;
+    if (rate >= 20) return 'text-green-600';
+    if (rate >= 15) return 'text-green-500';
+    if (rate >= 10) return 'text-yellow-500';
+    if (rate >= 0) return 'text-orange-500';
+    return 'text-red-500';
   }, [savingsData]);
 
   return (
@@ -120,7 +118,7 @@ export default function BudgetSummaryPage() {
                   <div className="h-8 w-32 bg-muted rounded animate-pulse" />
                 ) : (
                   <div className="text-2xl font-bold text-green-600">
-                    +PHP {totalIncome.toFixed(2)}
+                    +PHP {Number(totalIncome).toFixed(2)}
                   </div>
                 )}
               </CardContent>
@@ -136,7 +134,7 @@ export default function BudgetSummaryPage() {
                   <div className="h-8 w-32 bg-muted rounded animate-pulse" />
                 ) : (
                   <div className="text-2xl font-bold text-red-600">
-                    -PHP {totalExpenses.toFixed(2)}
+                    -PHP {Number(totalExpenses).toFixed(2)}
                   </div>
                 )}
               </CardContent>
@@ -152,7 +150,7 @@ export default function BudgetSummaryPage() {
                   <div className="h-8 w-32 bg-muted rounded animate-pulse" />
                 ) : (
                   <div className={`text-2xl font-bold ${netSavings >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {netSavings >= 0 ? '+' : ''}PHP {netSavings.toFixed(2)}
+                    {netSavings >= 0 ? '+' : ''}PHP {Number(netSavings).toFixed(2)}
                   </div>
                 )}
               </CardContent>
@@ -171,12 +169,12 @@ export default function BudgetSummaryPage() {
                     <span className={`text-2xl font-bold ${savingsStatusColor}`}>
                       {savingsRate.toFixed(1)}%
                     </span>
-                    {savingsData?.status && (
+                    {savingsData && (
                       <Badge
                         variant="secondary"
                         className="text-xs capitalize"
                       >
-                        {savingsData.status}
+                        {Number(savingsData.savings_rate) >= 15 ? 'on track' : Number(savingsData.savings_rate) >= 0 ? 'needs work' : 'negative'}
                       </Badge>
                     )}
                   </div>
@@ -248,7 +246,7 @@ export default function BudgetSummaryPage() {
                         </div>
                         <div className="text-right ml-3">
                           <p className={`text-sm font-semibold ${occ.is_skipped ? 'text-red-600' : 'text-green-600'}`}>
-                            {occ.is_skipped ? '' : '+'}PHP {Math.abs(occ.amount).toFixed(2)}
+                            {occ.is_skipped ? '' : '+'}PHP {Number(Math.abs(occ.amount)).toFixed(2)}
                           </p>
                         </div>
                       </div>
@@ -305,7 +303,7 @@ export default function BudgetSummaryPage() {
                         </div>
                         <div className="text-right ml-3">
                           <p className="text-sm font-semibold text-red-600">
-                            -{expense.currency} {expense.amount.toFixed(2)}
+                            -{expense.currency} {Number(expense.amount).toFixed(2)}
                           </p>
                         </div>
                       </div>
