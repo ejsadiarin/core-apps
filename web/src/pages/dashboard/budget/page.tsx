@@ -37,6 +37,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Link } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
+import { safeFormat, safeFixed } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/components/ui/toast";
 import { ExpenseDetailDialog } from "@/components/budget/expense-detail-dialog";
@@ -45,7 +46,6 @@ import type { Expense, Income, CreateIncomeRequest, UpdateIncomeRequest, CreateE
 export default function BudgetDashboard() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [period] = useState<string>("month");
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   
   // Date range for analytics cards
@@ -55,7 +55,15 @@ export default function BudgetDashboard() {
     preset: null
   });
   
-  const { data: summaryStats, isLoading: statsLoading } = useSummaryStats(period);
+  // Compute summary stats date range from selected date (current month)
+  const summaryDateRange = useMemo(() => {
+    const d = new Date(selectedDate);
+    const start = new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0];
+    const end = new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().split('T')[0];
+    return { startDate: start, endDate: end };
+  }, [selectedDate]);
+
+  const { data: summaryStats, isLoading: statsLoading } = useSummaryStats(summaryDateRange.startDate, summaryDateRange.endDate);
   const { data: expensesData, isLoading: expensesLoading } = useExpenses(undefined, 1, 5);
   const { data: budgetRemainingData } = useBudgetRemaining();
 
@@ -253,7 +261,7 @@ export default function BudgetDashboard() {
               budgetRemainingData.remaining > 0 ? 'text-green-600' :
               'text-gray-600'
             }`}>
-              Budget Remaining: ₱{budgetRemainingData.remaining.toFixed(2)}
+              Budget Remaining: ₱{safeFixed(budgetRemainingData.remaining)}
               {budgetRemainingData.remaining < 0 && ' ⚠️ Over Budget'}
               {budgetRemainingData.remaining > 0 && ' ✓ On Track'}
             </div>
@@ -405,12 +413,12 @@ export default function BudgetDashboard() {
                         )}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {formatDistanceToNow(new Date(occ.date), { addSuffix: true })}
+                        {safeFormat(occ.date, (d) => formatDistanceToNow(d, { addSuffix: true }))}
                       </p>
                     </div>
                     <div className="text-right ml-4">
                       <p className={`font-semibold shrink-0 ${occ.is_skipped ? 'text-red-600' : 'text-green-600'}`}>
-                        {occ.is_skipped ? '' : '+'}{occ.currency} {Math.abs(occ.amount).toFixed(2)}
+                        {occ.is_skipped ? '' : '+'}{occ.currency} {safeFixed(Math.abs(Number(occ.amount)))}
                       </p>
                     </div>
                   </div>
@@ -488,12 +496,12 @@ export default function BudgetDashboard() {
                         </span>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        {formatDistanceToNow(new Date(expense.expense_date), { addSuffix: true })}
+                        {safeFormat(expense.expense_date, (d) => formatDistanceToNow(d, { addSuffix: true }))}
                       </p>
                     </div>
                     <div className="text-right ml-4">
                       <p className="font-semibold shrink-0 text-red-600">
-                        -{expense.currency} {expense.amount.toFixed(2)}
+                        -{expense.currency} {safeFixed(expense.amount)}
                       </p>
                     </div>
                   </div>
