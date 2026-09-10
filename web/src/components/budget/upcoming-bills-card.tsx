@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { useUpcomingBills } from '@/hooks/use-budget';
 import { Calendar, Clock, DollarSign } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, safeFormat } from '@/lib/utils';
 import { format, parseISO, isWithinInterval, addDays } from 'date-fns';
 
 interface UpcomingBillsCardProps {
@@ -93,7 +93,7 @@ export function UpcomingBillsCard({ days = 30, className }: UpcomingBillsCardPro
                       <div className="text-sm font-medium">{bill.description}</div>
                       <div className="text-xs text-muted-foreground flex items-center gap-1">
                         <Clock className="h-3 w-3" />
-                        Due {format(parseISO(bill.due_date), 'MMM d')}
+                        Due {safeFormat(bill.due_date, (d) => format(d, 'MMM d'))}
                       </div>
                     </div>
                   </div>

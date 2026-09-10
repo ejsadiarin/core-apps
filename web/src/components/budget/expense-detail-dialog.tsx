@@ -16,6 +16,7 @@ import {
 import { Edit, Trash2, Calendar, Repeat } from "lucide-react";
 import type { Expense } from "@/types/api";
 import { format } from "date-fns";
+import { safeFormat, safeFixed } from "@/lib/utils";
 import { EditExpenseDialog } from "./expense-edit-dialog";
 
 interface ExpenseDetailDialogProps {
@@ -116,7 +117,7 @@ export function ExpenseDetailDialog({
                 {expense.description}
               </h3>
               <p className="text-2xl font-bold text-primary shrink-0">
-                {expense.currency} {expense.amount.toFixed(2)}
+                {expense.currency} {safeFixed(expense.amount)}
               </p>
             </div>
 
@@ -138,15 +139,15 @@ export function ExpenseDetailDialog({
               <span>
                 {isRecurring ? (
                   <>
-                    {expense.start_date && format(new Date(expense.start_date), "MMMM dd, yyyy")}
+                    {safeFormat(expense.start_date, (d) => format(d, "MMMM dd, yyyy"))}
                     {expense.end_date ? (
-                      <> - {format(new Date(expense.end_date), "MMMM dd, yyyy")}</>
+                      <> - {safeFormat(expense.end_date, (d) => format(d, "MMMM dd, yyyy"))}</>
                     ) : (
                       <> - Ongoing</>
                     )}
                   </>
                 ) : (
-                  format(new Date(expense.expense_date), "MMMM dd, yyyy")
+                  safeFormat(expense.expense_date, (d) => format(d, "MMMM dd, yyyy"))
                 )}
               </span>
             </div>

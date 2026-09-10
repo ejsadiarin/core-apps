@@ -5,7 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useRecurringIncomes, useCreateIncome } from '@/hooks/use-budget';
 import { SkipForward, Calendar, Clock } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
+import { safeFormat, safeFixed } from "@/lib/utils";
 import { SkipOccurrenceDialog } from './skip-occurrence-dialog';
 import type { RecurringIncomeWithNextDate } from '@/types/api';
 
@@ -91,16 +92,16 @@ export function RecurringIncomeList({ className }: RecurringIncomeListProps) {
                   </div>
                   <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
                     <Clock className="h-3 w-3" />
-                    <span>Next: {format(parseISO(income.next_occurrence), 'MMM d, yyyy')}</span>
+                    <span>Next: {safeFormat(income.next_occurrence, (d) => format(d, 'MMM d, yyyy'))}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="text-right">
                     <p className="font-semibold text-green-600">
-                      +{income.currency} {income.amount.toFixed(2)}
+                      +{income.currency} {safeFixed(income.amount)}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      ₱{income.monthly_equivalent.toFixed(0)}/mo
+                      ₱{safeFixed(income.monthly_equivalent, 0)}/mo
                     </p>
                   </div>
                   <Button

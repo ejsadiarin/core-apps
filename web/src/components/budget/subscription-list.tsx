@@ -5,6 +5,7 @@ import { useSubscriptions } from '@/hooks/use-budget';
 import { RefreshCw, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
+import { safeFormat } from '@/lib/utils';
 
 interface SubscriptionListProps {
   className?: string;
@@ -87,7 +88,7 @@ export function SubscriptionList({ className }: SubscriptionListProps) {
                       <div className="text-sm font-medium">{sub.description}</div>
                       <div className="text-xs text-muted-foreground flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
-                        Next: {format(parseISO(sub.next_due_date), 'MMM d, yyyy')}
+                        Next: {safeFormat(sub.next_due_date, (d) => format(d, 'MMM d, yyyy'))}
                       </div>
                     </div>
                   </div>

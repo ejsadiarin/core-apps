@@ -16,6 +16,7 @@ import {
 import { Trash2, Edit, Repeat, Calendar } from "lucide-react";
 import type { Income } from "@/types/api";
 import { format } from "date-fns";
+import { safeFormat, safeFixed } from "@/lib/utils";
 
 interface IncomeCardProps {
   income: Income;
@@ -98,9 +99,9 @@ export function IncomeCard({ income, onView, onEdit, onDelete, disabled, showToa
                 <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
                   <Calendar className="h-3 w-3" />
                   <span>
-                    {income.start_date && format(new Date(income.start_date), "MMM dd, yyyy")}
+                    {safeFormat(income.start_date, (d) => format(d, "MMM dd, yyyy"))}
                     {income.end_date ? (
-                      <> - {format(new Date(income.end_date), "MMM dd, yyyy")}</>
+                      <> - {safeFormat(income.end_date, (d) => format(d, "MMM dd, yyyy"))}</>
                     ) : (
                       <> - Ongoing</>
                     )}
@@ -109,13 +110,13 @@ export function IncomeCard({ income, onView, onEdit, onDelete, disabled, showToa
               )}
 
               <p className="text-xs text-muted-foreground mt-2">
-                {format(new Date(income.date), "MMM dd, yyyy")}
+                {safeFormat(income.date, (d) => format(d, "MMM dd, yyyy"))}
               </p>
             </div>
 
             <div className="flex flex-col items-end gap-2">
               <div className="text-xl font-bold text-green-600">
-                +{income.currency} {income.amount.toFixed(2)}
+                +{income.currency} {safeFixed(income.amount)}
               </div>
               <div className="flex gap-1">
                 <Button

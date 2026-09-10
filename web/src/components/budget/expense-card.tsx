@@ -16,6 +16,7 @@ import {
 import { Trash2, Edit, Repeat, Calendar } from "lucide-react";
 import type { Expense } from "@/types/api";
 import { format } from "date-fns";
+import { safeFormat, safeFixed } from "@/lib/utils";
 
 interface ExpenseCardProps {
   expense: Expense;
@@ -100,9 +101,9 @@ export function ExpenseCard({ expense, onView, onEdit, onDelete, disabled, showT
                 <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
                   <Calendar className="h-3 w-3" />
                   <span>
-                    {expense.start_date && format(new Date(expense.start_date), "MMM dd, yyyy")}
+                    {expense.start_date && safeFormat(expense.start_date, (d) => format(d, "MMM dd, yyyy"))}
                     {expense.end_date ? (
-                      <> - {format(new Date(expense.end_date), "MMM dd, yyyy")}</>
+                      <> - {safeFormat(expense.end_date, (d) => format(d, "MMM dd, yyyy"))}</>
                     ) : (
                       <> - Ongoing</>
                     )}
@@ -115,13 +116,13 @@ export function ExpenseCard({ expense, onView, onEdit, onDelete, disabled, showT
               )}
 
               <p className="text-xs text-muted-foreground mt-2">
-                {format(new Date(expense.expense_date), "MMM dd, yyyy")}
+                {safeFormat(expense.expense_date, (d) => format(d, "MMM dd, yyyy"))}
               </p>
             </div>
 
             <div className="flex flex-col items-end gap-2">
               <div className="text-xl font-bold text-red-500">
-                -{expense.currency} {expense.amount.toFixed(2)}
+                -{expense.currency} {safeFixed(expense.amount)}
               </div>
               <div className="flex gap-1">
                 <Button

@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useSubscriptions, useExpense, useUpdateExpense, GuestBlockedError } from '@/hooks/use-budget';
 import { RefreshCw, Calendar, MoreVertical, Pencil, SkipForward, XCircle } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, safeFormat } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
 import { useToast } from '@/components/ui/toast';
 import { EditExpenseDialog } from './expense-edit-dialog';
@@ -137,7 +137,7 @@ export function RecurringExpensesList({ className }: RecurringExpensesListProps)
                         <div className="text-sm font-medium">{sub.description}</div>
                         <div className="text-xs text-muted-foreground flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
-                          Next: {format(parseISO(sub.next_due_date), 'MMM d, yyyy')}
+                          Next: {safeFormat(sub.next_due_date, (d) => format(d, 'MMM d, yyyy'))}
                         </div>
                       </div>
                     </div>

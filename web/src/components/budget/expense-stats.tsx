@@ -1,6 +1,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, TrendingUp, Receipt, Wallet } from "lucide-react";
+import { safeFixed } from "@/lib/utils";
 import type { SummaryStats } from "@/types/api";
 
 interface ExpenseStatsProps {
@@ -33,6 +34,7 @@ export function ExpenseStats({ stats, isLoading }: ExpenseStatsProps) {
   }
 
   const budgetRemaining = stats.remaining ?? 0;
+  const transactionCount = stats.transaction_count ?? 0;
   const budgetStatus = stats.remaining > 0 ? "green" : stats.remaining < 0 ? "red" : "neutral";
   const statusColors = {
     green: "text-green-600",
@@ -48,22 +50,22 @@ export function ExpenseStats({ stats, isLoading }: ExpenseStatsProps) {
   const statCards = [
     {
       title: "Total Spent",
-      value: `₱${stats.total_expense.toFixed(2)}`,
+      value: `₱${safeFixed(stats.total_expense)}`,
       description: stats.period,
       icon: DollarSign,
       iconColor: "text-green-500",
     },
     {
       title: "Transactions",
-      value: stats.transaction_count.toString(),
+      value: String(transactionCount),
       description: `${stats.period} period`,
       icon: Receipt,
       iconColor: "text-blue-500",
     },
     {
       title: "Avg per Transaction",
-      value: stats.transaction_count > 0
-        ? `₱${(stats.total_expense / stats.transaction_count).toFixed(2)}`
+      value: transactionCount > 0
+        ? `₱${safeFixed(stats.total_expense / transactionCount)}`
         : "₱0.00",
       description: "average amount",
       icon: TrendingUp,
@@ -71,7 +73,7 @@ export function ExpenseStats({ stats, isLoading }: ExpenseStatsProps) {
     },
     {
       title: "Budget Remaining",
-      value: `₱${budgetRemaining.toFixed(2)}`,
+      value: `₱${safeFixed(budgetRemaining)}`,
       description: budgetStatus === "green" ? "on track" : budgetStatus === "red" ? "over budget" : "break even",
       icon: Wallet,
       iconColor: statusColors[budgetStatus as keyof typeof statusColors],

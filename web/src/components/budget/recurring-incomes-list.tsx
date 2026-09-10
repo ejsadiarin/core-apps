@@ -12,6 +12,7 @@ import {
 import { useRecurringIncomes, useIncome, useUpdateIncome, GuestBlockedError } from '@/hooks/use-budget';
 import { Calendar, Clock, MoreVertical, Pencil, SkipForward, XCircle } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
+import { safeFormat, safeFixed } from '@/lib/utils';
 import { useToast } from '@/components/ui/toast';
 import { EditIncomeDialog } from './income-edit-dialog';
 import { SkipOccurrenceDialog } from './skip-occurrence-dialog';
@@ -119,15 +120,15 @@ export function RecurringIncomesList({ className }: RecurringIncomesListProps) {
                   </div>
                   <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
                     <Clock className="h-3 w-3" />
-                    <span>Next: {format(parseISO(income.next_occurrence), 'MMM d, yyyy')}</span>
+                    <span>Next: {safeFormat(income.next_occurrence, (d) => format(d, 'MMM d, yyyy'))}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="text-right">
                     <p className="font-semibold text-green-600">
-                      +{income.currency} {income.amount.toFixed(2)}
+                      +{income.currency} {safeFixed(income.amount)}
                     </p>
-                    <p className="text-xs text-muted-foreground">₱{income.monthly_equivalent.toFixed(0)}/mo</p>
+                    <p className="text-xs text-muted-foreground">₱{safeFixed(income.monthly_equivalent, 0)}/mo</p>
                   </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
