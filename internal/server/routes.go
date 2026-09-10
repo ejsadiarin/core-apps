@@ -40,7 +40,7 @@ func (s *Server) RegisterRoutes(cfg *config.Config) http.Handler {
 	r.Use(middleware.SlogMiddleware)
 	r.Use(auth.AuthMiddleware(s.AuthService))
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:3000", "http://localhost:3001", cfg.FrontendURL},
+		AllowedOrigins:   []string{"http://localhost:3000", "http://localhost:3001"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Request-ID", "X-User-ID"},
 		AllowCredentials: true,

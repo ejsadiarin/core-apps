@@ -7,8 +7,8 @@ import (
 
 	"github.com/ejsadiarin/coregateway/internal/auth"
 	"github.com/ejsadiarin/coregateway/internal/config"
-	"github.com/ejsadiarin/coregateway/internal/corefinance"
 	monitor "github.com/ejsadiarin/coregateway/internal/monitor"
+	"github.com/ejsadiarin/coregateway/internal/services/corefinance"
 	"github.com/ejsadiarin/coregateway/internal/user"
 	"github.com/jackc/pgx/v5/pgxpool"
 

@@ -61,12 +61,12 @@ func RequireAuth() func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			user := GetUserFromContext(r)
 			if user == nil {
-			helper.RespondErrorJSON(w, http.StatusUnauthorized, "Authentication required")
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
-}
+				helper.RespondErrorJSON(w, http.StatusUnauthorized, "Authentication required")
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
 }
 
 // RequireRole middleware checks if user has one of the allowed roles
@@ -85,6 +85,10 @@ func RequireRole(allowedRoles ...string) func(http.Handler) http.Handler {
 					return
 				}
 			}
+			// if slices.Contains(allowedRoles, user.Role) {
+			// 	next.ServeHTTP(w, r)
+			// 	return
+			// }
 
 			helper.RespondErrorJSON(w, http.StatusForbidden, "Insufficient permissions")
 		})
