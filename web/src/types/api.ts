@@ -408,12 +408,7 @@ export interface MonthOverMonthResponse {
 }
 
 export interface CurrentTotalMoneyResponse {
-    current_total: number;
-    money_baseline: number;
-    income_since_start: number;
-    expenses_since_start: number;
-    net_change: number;
-    tracking_start_date: string;
+    total_money: number;
 }
 
 export interface IncomeOccurrence {
