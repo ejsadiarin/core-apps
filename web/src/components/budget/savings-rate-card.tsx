@@ -2,7 +2,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useSavingsRate } from '@/hooks/use-budget';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, safeFixed } from '@/lib/utils';
 
 interface SavingsRateCardProps {
   startDate?: string;
@@ -49,7 +49,7 @@ export function SavingsRateCard({ startDate, endDate, className }: SavingsRateCa
     negative: { color: 'text-red-500', bgColor: 'bg-red-500/10', icon: TrendingDown }
   };
 
-  const config = statusConfig[data.status];
+  const config = statusConfig[data.status] || statusConfig.fair;
   const Icon = config.icon;
 
   return (
@@ -62,7 +62,7 @@ export function SavingsRateCard({ startDate, endDate, className }: SavingsRateCa
         <div className="flex items-center justify-between">
           <div>
             <div className={cn('text-3xl font-bold', config.color)}>
-              {data.savings_rate.toFixed(1)}%
+              {safeFixed(data.savings_rate, 1)}%
             </div>
             <div className="text-xs text-muted-foreground mt-1 capitalize">
               {data.status.replace('_', ' ')}

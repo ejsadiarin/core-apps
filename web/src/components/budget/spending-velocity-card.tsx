@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { useSpendingVelocity } from '@/hooks/use-budget';
 import { Gauge, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, safeFixed } from '@/lib/utils';
 
 interface SpendingVelocityCardProps {
   startDate?: string;
@@ -85,7 +85,7 @@ export function SpendingVelocityCard({ startDate, endDate, className }: Spending
     }
   };
 
-  const config = statusConfig[data.status];
+  const config = statusConfig[data.status] || statusConfig.unknown;
   const Icon = config.icon;
 
   const percentage = data.total_budget > 0
@@ -119,7 +119,7 @@ export function SpendingVelocityCard({ startDate, endDate, className }: Spending
           <div className="mt-4">
             <div className="flex justify-between text-xs mb-1">
               <span className="text-muted-foreground">Budget Usage</span>
-              <span className={cn('font-medium', config.color)}>{percentage.toFixed(0)}%</span>
+              <span className={cn('font-medium', config.color)}>{safeFixed(percentage, 0)}%</span>
             </div>
             <Progress
               value={Math.min(percentage, 100)}
